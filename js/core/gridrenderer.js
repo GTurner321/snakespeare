@@ -157,4 +157,189 @@ class GridRenderer {
                 }
                 
                 // Add the cell to the grid
-                this.gridContainer
+                this.gridContainer.appendChild(cell);
+                
+                // Keep track of cell in our grid model
+                if (!this.grid[y]) this.grid[y] = {};
+                this.grid[y][x] = { element: cell, letter: letter };
+            }
+        }
+        
+        // Center the grid on the start position initially
+        this.centerGridOnPath();
+        
+        // Update which cells are visible
+        this.updateVisibleCells();
+    }
+    
+    /**
+     * Get a random letter for the grid
+     * @returns {string} - Random letter
+     */
+    getRandomLetter() {
+        return this.config.alphabet.charAt(Math.floor(Math.random() * this.config.alphabet.length));
+    }
+    
+    /**
+     * Calculate the boundaries of the grid based on the path
+     * @param {Array} pathCoordinates - Array of coordinates for the path
+     * @returns {Object} - Minimum and maximum x and y coordinates
+     */
+    calculateGridBoundaries(pathCoordinates) {
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        
+        for (const coord of pathCoordinates) {
+            minX = Math.min(minX, coord.x);
+            minY = Math.min(minY, coord.y);
+            maxX = Math.max(maxX, coord.x);
+            maxY = Math.max(maxY, coord.y);
+        }
+        
+        return { minX, minY, maxX, maxY };
+    }
+    
+    /**
+     * Center the grid view on the path
+     */
+    centerGridOnPath() {
+        // Default to centering on the start position (0,0)
+        let centerX = 0;
+        let centerY = 0;
+        
+        // If there are selected path indices, center on the latest selected cell
+        if (this.selectedPathIndices.length > 0) {
+            const latestIndex = this.selectedPathIndices[this.selectedPathIndices.length - 1];
+            const latestCoord = this.pathCoordinates[latestIndex];
+            centerX = latestCoord.x;
+            centerY = latestCoord.y;
+        }
+        
+        // Calculate the offset to center the view
+        this.currentOffset = {
+            x: centerX - Math.floor(this.viewSize.width / 2),
+            y: centerY - Math.floor(this.viewSize.height / 2)
+        };
+        
+        // Apply the transform to the grid
+        this.applyGridTransform();
+    }
+    
+    /**
+     * Apply the current transform to the grid
+     */
+    applyGridTransform() {
+        // Calculate pixel offset based on cell size
+        const pixelOffsetX = -this.currentOffset.x * this.config.cellSize;
+        const pixelOffsetY = -this.currentOffset.y * this.config.cellSize;
+        
+        // Apply transform
+        this.gridContainer.style.transform = `translate(${pixelOffsetX}px, ${pixelOffsetY}px)`;
+    }
+    
+    /**
+     * Update which cells are visible based on the current offset
+     */
+    updateVisibleCells() {
+        // Calculate visible boundaries
+        const visibleBounds = {
+            minX: this.currentOffset.x,
+            minY: this.currentOffset.y,
+            maxX: this.currentOffset.x + this.viewSize.width,
+            maxY: this.currentOffset.y + this.viewSize.height
+        };
+        
+        // Update all cells
+        const cells = this.gridContainer.querySelectorAll('.grid-cell');
+        cells.forEach(cell => {
+            const x = parseInt(cell.dataset.x);
+            const y = parseInt(cell.dataset.y);
+            
+            // Check if cell is within visible boundaries
+            const isVisible = (
+                x >= visibleBounds.minX && 
+                x < visibleBounds.maxX && 
+                y >= visibleBounds.minY && 
+                y < visibleBounds.maxY
+            );
+            
+            // Toggle visibility
+            cell.style.display = isVisible ? 'flex' : 'none';
+        });
+    }
+    
+    /**
+     * Scroll the grid in a specified direction
+     * @param {number} dx - Horizontal scroll amount (cells)
+     * @param {number} dy - Vertical scroll amount (cells)
+     */
+    scrollGrid(dx, dy) {
+        // Update the offset
+        this.currentOffset.x += dx;
+        this.currentOffset.y += dy;
+        
+        // Apply the transform
+        this.applyGridTransform();
+        
+        // Update visible cells
+        this.updateVisibleCells();
+    }
+    
+    /**
+     * Highlight a path on the grid
+     * @param {Array} indices - Array of indices in the path to highlight
+     */
+    highlightPath(indices) {
+        // Clear previous highlights
+        const cells = this.gridContainer.querySelectorAll('.grid-cell');
+        cells.forEach(cell => {
+            cell.classList.remove('selected');
+            cell.classList.remove('selected-last');
+        });
+        
+        // Save the selected indices
+        this.selectedPathIndices = indices;
+        
+        // Highlight each cell in the selected path
+        indices.forEach((index, i) => {
+            const coord = this.pathCoordinates[index];
+            const coordKey = `${coord.x},${coord.y}`;
+            
+            // Find the cell element
+            const cell = this.gridContainer.querySelector(`.grid-cell[data-coord-key="${coordKey}"]`);
+            if (cell) {
+                cell.classList.add('selected');
+                
+                // Mark the last cell in the path differently
+                if (i === indices.length - 1) {
+                    cell.classList.add('selected-last');
+                }
+            }
+        });
+        
+        // Center the grid on the last selected cell
+        this.centerGridOnPath();
+    }
+    
+    /**
+     * Get the boundaries of the current path
+     * @returns {Object} - Path boundaries
+     */
+    getPathBoundaries() {
+        return this.calculateGridBoundaries(this.pathCoordinates);
+    }
+    
+    /**
+     * Clean up event listeners
+     */
+    destroy() {
+        window.removeEventListener('resize', this.handleResize);
+    }
+}
+
+// Export the GridRenderer for use in other modules
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = GridRenderer;
+} else {
+    // For browser usage
+    window.GridRenderer = GridRenderer;
+}
