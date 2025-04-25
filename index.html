@@ -51,7 +51,7 @@
             
             // Attempt to load phrase data from CSV
             try {
-                gameController.loadPhraseData('phrasedata.csv')
+                gameController.loadPhraseData('assets/phrasedata.csv')
                     .catch(error => {
                         console.error('Failed to load CSV:', error);
                         console.log('Falling back to sample data');
