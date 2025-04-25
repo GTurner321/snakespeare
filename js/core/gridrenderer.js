@@ -18,6 +18,7 @@ class GridRenderer {
       cellSize: options.cellSize || 50,            // Cell size in pixels
       maxScrollDistance: options.maxScrollDistance || 6,  // Max scroll distance from path
       highlightPath: options.highlightPath || false, // Whether to highlight the path initially
+      onCellClick: options.onCellClick || null,     // Cell click callback
       ...options
     };
     
@@ -25,6 +26,7 @@ class GridRenderer {
     this.grid = [];              // 2D array of cell data
     this.viewOffset = { x: 0, y: 0 }; // Current view offset
     this.path = [];              // Current path data
+    this.selectedCells = [];     // Array of selected cell coordinates {x, y}
     this.letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'; // For random letter generation
     
     // Initialize the grid
@@ -51,6 +53,7 @@ class GridRenderer {
       letter: this.getRandomLetter(),
       isPath: false,
       isStart: false,
+      isSelected: false,
       pathIndex: -1
     })));
     
@@ -61,6 +64,7 @@ class GridRenderer {
       letter: '',
       isPath: true,
       isStart: true, 
+      isSelected: false,
       pathIndex: 0
     };
     
@@ -116,13 +120,28 @@ class GridRenderer {
           // Set cell content
           cellElement.textContent = cell.letter;
           
+          // Store grid coordinates as data attributes for click handling
+          cellElement.dataset.gridX = x;
+          cellElement.dataset.gridY = y;
+          
           // Apply styling
           if (cell.isStart) {
             cellElement.classList.add('start-cell');
+          } else if (cell.isSelected) {
+            cellElement.classList.add('selected-cell');
           } else if (cell.isPath && this.options.highlightPath) {
             cellElement.classList.add('path-cell');
-            cellElement.dataset.pathIndex = cell.pathIndex;
           }
+          
+          // Add click event handler for cell selection
+          cellElement.addEventListener('click', () => {
+            this.toggleCellSelection(x, y);
+            
+            // Call the click handler if provided
+            if (this.options.onCellClick) {
+              this.options.onCellClick(x, y, cell);
+            }
+          });
         } else {
           // Out of bounds cell - display as empty
           cellElement.classList.add('out-of-bounds');
@@ -134,16 +153,55 @@ class GridRenderer {
   }
   
   /**
+   * Toggle selection state of a cell
+   * @param {number} x - X coordinate
+   * @param {number} y - Y coordinate
+   */
+  toggleCellSelection(x, y) {
+    // Check if coordinates are within grid bounds
+    if (y >= 0 && y < this.grid.length && x >= 0 && x < this.grid[0].length) {
+      const cell = this.grid[y][x];
+      
+      // If this is the start cell, don't toggle selection
+      if (cell.isStart) {
+        return;
+      }
+      
+      // Toggle selection state
+      cell.isSelected = !cell.isSelected;
+      
+      // Update selectedCells array
+      if (cell.isSelected) {
+        this.selectedCells.push({ x, y });
+      } else {
+        this.selectedCells = this.selectedCells.filter(pos => 
+          !(pos.x === x && pos.y === y)
+        );
+      }
+      
+      // Re-render grid
+      this.renderVisibleGrid();
+      
+      // Update arrow buttons if needed
+      if (this.options.onSelectionChange) {
+        this.options.onSelectionChange(this.selectedCells);
+      }
+    }
+  }
+  
+  /**
    * Set a path on the grid
    * @param {Array} path - Array of {x, y, letter} objects
    */
   setPath(path) {
     this.path = path;
+    this.selectedCells = [];
     
-    // Reset all cells' path status
+    // Reset all cells' path status and selection status
     for (let y = 0; y < this.grid.length; y++) {
       for (let x = 0; x < this.grid[0].length; x++) {
         this.grid[y][x].isPath = false;
+        this.grid[y][x].isSelected = false;
         this.grid[y][x].pathIndex = -1;
       }
     }
@@ -214,36 +272,78 @@ class GridRenderer {
   }
   
   /**
-   * Check if the scroll is within limits relative to the path
+   * Get the extents of selected cells or path
+   * @return {Object} Object with minX, maxX, minY, maxY properties
+   */
+  getSelectionExtents() {
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    
+    // If we have selected cells, use those for boundaries
+    if (this.selectedCells.length > 0) {
+      // Add start cell to the mix
+      const centerX = Math.floor(this.grid[0].length / 2);
+      const centerY = Math.floor(this.grid.length / 2);
+      
+      // Include start cell in calculations
+      minX = centerX;
+      maxX = centerX;
+      minY = centerY;
+      maxY = centerY;
+      
+      // Check all selected cells
+      this.selectedCells.forEach(pos => {
+        minX = Math.min(minX, pos.x);
+        maxX = Math.max(maxX, pos.x);
+        minY = Math.min(minY, pos.y);
+        maxY = Math.max(maxY, pos.y);
+      });
+    } 
+    // If no cells are selected, use the path
+    else if (this.path && this.path.length > 0) {
+      const centerX = Math.floor(this.grid[0].length / 2);
+      const centerY = Math.floor(this.grid.length / 2);
+      
+      // Start with center as min/max
+      minX = centerX;
+      maxX = centerX;
+      minY = centerY;
+      maxY = centerY;
+      
+      // Calculate min/max from path
+      this.path.forEach(point => {
+        const gridX = centerX + point.x;
+        const gridY = centerY + point.y;
+        
+        minX = Math.min(minX, gridX);
+        maxX = Math.max(maxX, gridX);
+        minY = Math.min(minY, gridY);
+        maxY = Math.max(maxY, gridY);
+      });
+    } 
+    // If nothing else, use grid center
+    else {
+      const centerX = Math.floor(this.grid[0].length / 2);
+      const centerY = Math.floor(this.grid.length / 2);
+      minX = centerX;
+      maxX = centerX;
+      minY = centerY;
+      maxY = centerY;
+    }
+    
+    return { minX, maxX, minY, maxY };
+  }
+  
+  /**
+   * Check if the scroll is within limits relative to selected cells
    * @param {number} offsetX - New X offset to check
    * @param {number} offsetY - New Y offset to check
    * @return {boolean} Whether scroll is within limits
    */
   isScrollWithinLimits(offsetX, offsetY) {
-    // If no path exists yet, allow scrolling
-    if (!this.path || this.path.length === 0) {
-      return true;
-    }
+    // Get extents from selection or path
+    const { minX, maxX, minY, maxY } = this.getSelectionExtents();
     
-    // Get path extents
-    const centerX = Math.floor(this.grid[0].length / 2);
-    const centerY = Math.floor(this.grid.length / 2);
-    
-    let minX = centerX, maxX = centerX;
-    let minY = centerY, maxY = centerY;
-    
-    // Calculate min/max coordinates used in the path
-    this.path.forEach(point => {
-      const gridX = centerX + point.x;
-      const gridY = centerY + point.y;
-      
-      minX = Math.min(minX, gridX);
-      maxX = Math.max(maxX, gridX);
-      minY = Math.min(minY, gridY);
-      maxY = Math.max(maxY, gridY);
-    });
-    
-    // Check if new scroll offset would be too far from path
+    // Check if new scroll offset would be too far from selection extents
     const maxDistance = this.options.maxScrollDistance;
     
     const tooFarLeft = offsetX < minX - maxDistance;
@@ -252,6 +352,57 @@ class GridRenderer {
     const tooFarDown = offsetY + this.options.gridHeight > maxY + maxDistance;
     
     return !(tooFarLeft || tooFarRight || tooFarUp || tooFarDown);
+  }
+  
+  /**
+   * Get letters from selected cells in order of selection
+   * @return {Array} Array of letter objects with position and letter
+   */
+  getSelectedLetters() {
+    const letters = [];
+    
+    // Start with the start cell (if it has a letter)
+    const centerX = Math.floor(this.grid[0].length / 2);
+    const centerY = Math.floor(this.grid.length / 2);
+    const startCell = this.grid[centerY][centerX];
+    
+    if (startCell.letter) {
+      letters.push({
+        x: centerX,
+        y: centerY,
+        letter: startCell.letter
+      });
+    }
+    
+    // Add all selected cells
+    this.selectedCells.forEach(pos => {
+      const cell = this.grid[pos.y][pos.x];
+      letters.push({
+        x: pos.x,
+        y: pos.y,
+        letter: cell.letter
+      });
+    });
+    
+    return letters;
+  }
+  
+  /**
+   * Clear all selected cells
+   */
+  clearSelections() {
+    // Reset selected state for all cells
+    for (let y = 0; y < this.grid.length; y++) {
+      for (let x = 0; x < this.grid[0].length; x++) {
+        this.grid[y][x].isSelected = false;
+      }
+    }
+    
+    // Clear selected cells array
+    this.selectedCells = [];
+    
+    // Re-render grid
+    this.renderVisibleGrid();
   }
   
   /**
