@@ -24,6 +24,8 @@ class GameController {
     // Game state
     this.currentPhrase = null;
     this.currentPath = null;
+    this.phrases = [];
+    this.discoveredLetters = [];
     
     // Initialize components
     this.pathGenerator = new PathGenerator();
@@ -52,9 +54,12 @@ class GameController {
    */
   loadPhrase(phraseData) {
     this.currentPhrase = phraseData;
+    this.discoveredLetters = [];
     
     // Parse letter list from phrase data
     const letterList = phraseData.letterlist;
+    
+    console.log(`Loading phrase: "${phraseData.phrase}" with letterlist: "${letterList}"`);
     
     // Generate path using path generator
     this.currentPath = this.pathGenerator.generatePath(letterList);
@@ -64,6 +69,9 @@ class GameController {
     
     // Update arrow button states
     this.arrowButtons.updateButtonStates();
+    
+    // Update the phrase display with underscores
+    this.updatePhraseDisplay(phraseData.phrase, []);
   }
   
   /**
@@ -90,6 +98,35 @@ class GameController {
   }
   
   /**
+   * Update the phrase display with discovered letters
+   * @param {string} phrase - The full phrase
+   * @param {Array} discoveredIndices - Indices of discovered letters
+   */
+  updatePhraseDisplay(phrase, discoveredIndices) {
+    const displayElement = document.getElementById('phrase-text');
+    if (!displayElement) return;
+    
+    // Create a display version with underscores for undiscovered letters
+    const displayArray = phrase.split('').map((char, index) => {
+      // If it's a space or punctuation, show it
+      if (char === ' ' || /[,.!?;:'"()[\]{}-]/.test(char)) {
+        return char;
+      }
+      // If it's discovered, show it
+      else if (discoveredIndices.includes(index)) {
+        return char;
+      }
+      // Otherwise show underscore
+      else {
+        return '_';
+      }
+    });
+    
+    // Join with spaces between characters for readability
+    displayElement.textContent = displayArray.join(' ');
+  }
+  
+  /**
    * Load sample data for testing
    */
   loadSampleData() {
@@ -97,7 +134,7 @@ class GameController {
     const samplePhrase = {
       id: 1,
       phrase: "TIME FLIES LIKE AN ARROW",
-      letterlist: "T,I,M,E, ,F,L,I,E,S, ,L,I,K,E, ,A,N, ,A,R,R,O,W",
+      letterlist: "TIMEFLIESLIKEANARROW",
       lettercount: 23,
       wordcount: 5,
       meaning: "Time passes quickly",
@@ -186,6 +223,94 @@ class GameController {
     } catch (error) {
       console.error('Error parsing CSV:', error);
       return [];
+    }
+  }
+  
+  /**
+   * Move to the next phrase in the list
+   * @return {boolean} True if successful, false if no more phrases
+   */
+  nextPhrase() {
+    if (!this.phrases || this.phrases.length === 0) {
+      return false;
+    }
+    
+    // Find current phrase index
+    const currentIndex = this.phrases.findIndex(phrase => 
+      phrase.id === this.currentPhrase.id
+    );
+    
+    // If found and not the last phrase
+    if (currentIndex !== -1 && currentIndex < this.phrases.length - 1) {
+      this.loadPhrase(this.phrases[currentIndex + 1]);
+      return true;
+    }
+    
+    return false;
+  }
+  
+  /**
+   * Move to the previous phrase in the list
+   * @return {boolean} True if successful, false if at the first phrase
+   */
+  previousPhrase() {
+    if (!this.phrases || this.phrases.length === 0) {
+      return false;
+    }
+    
+    // Find current phrase index
+    const currentIndex = this.phrases.findIndex(phrase => 
+      phrase.id === this.currentPhrase.id
+    );
+    
+    // If found and not the first phrase
+    if (currentIndex > 0) {
+      this.loadPhrase(this.phrases[currentIndex - 1]);
+      return true;
+    }
+    
+    return false;
+  }
+  
+  /**
+   * Select a specific grid cell
+   * @param {number} x - X coordinate of the cell
+   * @param {number} y - Y coordinate of the cell
+   * @return {boolean} True if the selection was valid, false otherwise
+   */
+  selectCell(x, y) {
+    // Implementation of player cell selection would go here
+    // This would check if the selected cell is the next in the path
+    // and update the game state accordingly
+    return false;
+  }
+  
+  /**
+   * Check if the player has discovered the complete phrase
+   * @return {boolean} True if the phrase is complete
+   */
+  isComplete() {
+    if (!this.currentPhrase || !this.discoveredLetters) {
+      return false;
+    }
+    
+    // Count non-space, non-punctuation characters in the phrase
+    const letterCount = this.currentPhrase.phrase
+      .split('')
+      .filter(char => char !== ' ' && !/[,.!?;:'"()[\]{}-]/.test(char))
+      .length;
+    
+    return this.discoveredLetters.length === letterCount;
+  }
+  
+  /**
+   * Reset the current game
+   */
+  resetGame() {
+    if (this.currentPhrase) {
+      this.loadPhrase(this.currentPhrase);
+    } else {
+      this.loadSampleData();
     }
   }
 }
