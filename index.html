@@ -1,1 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grid Word Game</title>
+    <!-- CSS Files -->
+    <link rel="stylesheet" href="buttonsboxes.css">
+    <link rel="stylesheet" href="grid.css">
+    <!-- Google Fonts - Black Ops One for the metallic buttons -->
+    <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="game-container" class="game-container">
+        <h1 class="game-title">Word Path Puzzle</h1>
+        
+        <div id="game-info" class="styled-box">
+            <div class="styled-box-title">Find the phrase</div>
+            <div class="styled-box-content">
+                <p>Move along the grid to discover the hidden phrase, one letter at a time.</p>
+                <p>Use arrow buttons or keyboard arrows to scroll the grid.</p>
+            </div>
+        </div>
+        
+        <div id="grid-container" class="grid-container-wrapper"></div>
+        
+        <div id="phrase-display" class="styled-box">
+            <div class="styled-box-title">Current Phrase</div>
+            <div class="styled-box-content">
+                <p id="phrase-text">_ _ _ _ _   _ _ _ _ _   _ _ _ _   _ _   _ _ _ _ _</p>
+            </div>
+        </div>
+    </div>
 
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    
+    <!-- JavaScript Modules -->
+    <script type="module">
+        import GameController from './gamecontroller.js';
+        
+        // Initialize game when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            // Create game controller
+            const gameController = new GameController({
+                gameContainerId: 'game-container',
+                gridContainerId: 'grid-container',
+                gridSize: { mobile: 8, desktop: 10 },
+                cellSize: 50
+            });
+            
+            // Attempt to load phrase data from CSV
+            try {
+                gameController.loadPhraseData('phrasedata.csv')
+                    .catch(error => {
+                        console.error('Failed to load CSV:', error);
+                        console.log('Falling back to sample data');
+                        gameController.loadSampleData();
+                    });
+            } catch (error) {
+                console.error('Error initializing phrase data:', error);
+                gameController.loadSampleData();
+            }
+        });
+    </script>
+</body>
+</html>
