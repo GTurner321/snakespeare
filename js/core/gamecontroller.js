@@ -1,11 +1,14 @@
 /**
  * Game Controller for Grid Game
  * Coordinates pathGenerator, gridRenderer, and arrowButtons
+ * Handles CSV data loading and game state management
  */
 
 import PathGenerator from './pathgenerator.js';
 import GridRenderer from './gridrenderer.js';
 import ArrowButtons from './arrowbuttons.js';
+
+// Note: We're using PapaParse loaded from CDN in index.html
 
 class GameController {
   constructor(options = {}) {
@@ -113,16 +116,28 @@ class GameController {
   
   /**
    * Load phrases from CSV data
-   * @param {string} csvData - CSV data containing phrases
+   * @param {string} csvUrl - URL to the CSV file containing phrases
+   * @return {Promise<Array>} Promise resolving to array of phrase objects
    */
   async loadPhraseData(csvUrl) {
     try {
       // Fetch CSV file
       const response = await fetch(csvUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch CSV: ${response.status} ${response.statusText}`);
+      }
+      
       const csvData = await response.text();
       
-      // Parse CSV
+      // Check if we have data
+      if (!csvData || csvData.trim() === '') {
+        throw new Error('CSV file is empty');
+      }
+      
+      // Parse CSV using PapaParse (imported via CDN in index.html)
       const phrases = this.parseCSV(csvData);
+      
+      console.log(`Loaded ${phrases.length} phrases from CSV`);
       
       // Store phrase data
       this.phrases = phrases;
@@ -130,6 +145,10 @@ class GameController {
       // Load first phrase
       if (phrases.length > 0) {
         this.loadPhrase(phrases[0]);
+        console.log('Loaded first phrase:', phrases[0].phrase);
+      } else {
+        console.warn('No phrases found in CSV');
+        this.loadSampleData();
       }
       
       return phrases;
@@ -142,31 +161,32 @@ class GameController {
   }
   
   /**
-   * Parse CSV data into an array of phrase objects
+   * Parse CSV data into an array of phrase objects using PapaParse
    * @param {string} csvData - CSV data string
    * @return {Array} Array of phrase objects
    */
   parseCSV(csvData) {
-    // Simple CSV parser (in a real app, use a library like PapaParse)
-    const lines = csvData.split('\n');
-    const headers = lines[0].split(',');
-    
-    const phrases = [];
-    
-    for (let i = 1; i < lines.length; i++) {
-      if (!lines[i].trim()) continue;
-      
-      const values = lines[i].split(',');
-      const phrase = {};
-      
-      headers.forEach((header, index) => {
-        phrase[header.trim()] = values[index] ? values[index].trim() : '';
+    try {
+      // Use PapaParse for more robust CSV parsing
+      const result = Papa.parse(csvData, {
+        header: true,
+        skipEmptyLines: true,
+        dynamicTyping: true, // Convert numeric values automatically
+        transform: (value, field) => {
+          // Trim whitespace from all string values
+          return typeof value === 'string' ? value.trim() : value;
+        }
       });
       
-      phrases.push(phrase);
+      if (result.errors && result.errors.length > 0) {
+        console.warn('CSV parsing had errors:', result.errors);
+      }
+      
+      return result.data || [];
+    } catch (error) {
+      console.error('Error parsing CSV:', error);
+      return [];
     }
-    
-    return phrases;
   }
 }
 
