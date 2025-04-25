@@ -25,7 +25,6 @@ class GameController {
     this.currentPhrase = null;
     this.currentPath = null;
     this.phrases = [];
-    this.discoveredLetters = [];
     
     // Initialize components
     this.pathGenerator = new PathGenerator();
@@ -34,7 +33,9 @@ class GameController {
       gridHeight: this.options.gridSize.desktop,
       cellSize: this.options.cellSize,
       maxScrollDistance: 6,
-      highlightPath: false // Don't show the path initially
+      highlightPath: false,
+      onCellClick: (x, y, cell) => this.handleCellClick(x, y, cell),
+      onSelectionChange: () => this.handleSelectionChange()
     });
     
     this.arrowButtons = new ArrowButtons(this.gridRenderer, {
@@ -46,6 +47,52 @@ class GameController {
     window.addEventListener('resize', () => {
       this.handleResize();
     });
+    
+    // Create refresh button
+    this.createRefreshButton();
+  }
+  
+  /**
+   * Handle cell click events
+   * @param {number} x - X coordinate of clicked cell
+   * @param {number} y - Y coordinate of clicked cell
+   * @param {Object} cell - Cell data
+   */
+  handleCellClick(x, y, cell) {
+    // Cell click is handled by GridRenderer.toggleCellSelection
+    // This method is called after the cell state has been updated
+    
+    // Update UI based on current selections
+    this.handleSelectionChange();
+  }
+  
+  /**
+   * Handle changes to the selected cells
+   */
+  handleSelectionChange() {
+    // Get selected letters
+    const selectedLetters = this.gridRenderer.getSelectedLetters();
+    
+    // Update phrase display with currently selected letters
+    this.updatePhraseFromSelections(selectedLetters);
+    
+    // Update arrow button states in case scrolling limits have changed
+    this.arrowButtons.updateButtonStates();
+  }
+  
+  /**
+   * Update the phrase display based on selected cells
+   * @param {Array} selectedLetters - Array of letter objects
+   */
+  updatePhraseFromSelections(selectedLetters) {
+    const displayElement = document.getElementById('phrase-text');
+    if (!displayElement) return;
+    
+    // Create string from selected letters
+    const selectedString = selectedLetters.map(cell => cell.letter).join('');
+    
+    // Display selected letters
+    displayElement.textContent = selectedString || "Select letters to form a phrase";
   }
   
   /**
@@ -54,7 +101,9 @@ class GameController {
    */
   loadPhrase(phraseData) {
     this.currentPhrase = phraseData;
-    this.discoveredLetters = [];
+    
+    // Reset any highlighting
+    this.gridRenderer.options.highlightPath = false;
     
     // Parse letter list from phrase data
     const letterList = phraseData.letterlist;
@@ -70,8 +119,17 @@ class GameController {
     // Update arrow button states
     this.arrowButtons.updateButtonStates();
     
-    // Update the phrase display with underscores
-    this.updatePhraseDisplay(phraseData.phrase, []);
+    // Reset phrase display
+    const displayElement = document.getElementById('phrase-text');
+    if (displayElement) {
+      displayElement.textContent = "Select letters to form a phrase";
+    }
+    
+    // Clear any additional elements
+    const meaningEl = document.querySelector('.phrase-meaning');
+    if (meaningEl) {
+      meaningEl.remove();
+    }
   }
   
   /**
@@ -95,35 +153,6 @@ class GameController {
     return window.innerWidth < 768 ? 
       this.options.gridSize.mobile : 
       this.options.gridSize.desktop;
-  }
-  
-  /**
-   * Update the phrase display with discovered letters
-   * @param {string} phrase - The full phrase
-   * @param {Array} discoveredIndices - Indices of discovered letters
-   */
-  updatePhraseDisplay(phrase, discoveredIndices) {
-    const displayElement = document.getElementById('phrase-text');
-    if (!displayElement) return;
-    
-    // Create a display version with underscores for undiscovered letters
-    const displayArray = phrase.split('').map((char, index) => {
-      // If it's a space or punctuation, show it
-      if (char === ' ' || /[,.!?;:'"()[\]{}-]/.test(char)) {
-        return char;
-      }
-      // If it's discovered, show it
-      else if (discoveredIndices.includes(index)) {
-        return char;
-      }
-      // Otherwise show underscore
-      else {
-        return '_';
-      }
-    });
-    
-    // Join with spaces between characters for readability
-    displayElement.textContent = displayArray.join(' ');
   }
   
   /**
@@ -227,91 +256,60 @@ class GameController {
   }
   
   /**
-   * Move to the next phrase in the list
-   * @return {boolean} True if successful, false if no more phrases
+   * Create refresh button at the bottom
    */
-  nextPhrase() {
+  createRefreshButton() {
+    const container = document.getElementById(this.options.gameContainerId);
+    if (!container) return;
+    
+    // Create button container
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = 'refresh-button-container';
+    
+    // Create the button
+    const refreshButton = document.createElement('button');
+    refreshButton.className = 'metallic-button';
+    refreshButton.textContent = 'New Random Phrase';
+    refreshButton.addEventListener('click', () => this.loadRandomPhrase());
+    
+    // Create a reset selections button
+    const resetButton = document.createElement('button');
+    resetButton.className = 'metallic-button reset-button';
+    resetButton.textContent = 'Reset Selections';
+    resetButton.addEventListener('click', () => this.resetSelections());
+    
+    // Add to DOM
+    buttonContainer.appendChild(refreshButton);
+    buttonContainer.appendChild(resetButton);
+    container.appendChild(buttonContainer);
+  }
+  
+  /**
+   * Load a random phrase from the loaded phrases
+   */
+  loadRandomPhrase() {
     if (!this.phrases || this.phrases.length === 0) {
-      return false;
-    }
-    
-    // Find current phrase index
-    const currentIndex = this.phrases.findIndex(phrase => 
-      phrase.id === this.currentPhrase.id
-    );
-    
-    // If found and not the last phrase
-    if (currentIndex !== -1 && currentIndex < this.phrases.length - 1) {
-      this.loadPhrase(this.phrases[currentIndex + 1]);
-      return true;
-    }
-    
-    return false;
-  }
-  
-  /**
-   * Move to the previous phrase in the list
-   * @return {boolean} True if successful, false if at the first phrase
-   */
-  previousPhrase() {
-    if (!this.phrases || this.phrases.length === 0) {
-      return false;
-    }
-    
-    // Find current phrase index
-    const currentIndex = this.phrases.findIndex(phrase => 
-      phrase.id === this.currentPhrase.id
-    );
-    
-    // If found and not the first phrase
-    if (currentIndex > 0) {
-      this.loadPhrase(this.phrases[currentIndex - 1]);
-      return true;
-    }
-    
-    return false;
-  }
-  
-  /**
-   * Select a specific grid cell
-   * @param {number} x - X coordinate of the cell
-   * @param {number} y - Y coordinate of the cell
-   * @return {boolean} True if the selection was valid, false otherwise
-   */
-  selectCell(x, y) {
-    // Implementation of player cell selection would go here
-    // This would check if the selected cell is the next in the path
-    // and update the game state accordingly
-    return false;
-  }
-  
-  /**
-   * Check if the player has discovered the complete phrase
-   * @return {boolean} True if the phrase is complete
-   */
-  isComplete() {
-    if (!this.currentPhrase || !this.discoveredLetters) {
-      return false;
-    }
-    
-    // Count non-space, non-punctuation characters in the phrase
-    const letterCount = this.currentPhrase.phrase
-      .split('')
-      .filter(char => char !== ' ' && !/[,.!?;:'"()[\]{}-]/.test(char))
-      .length;
-    
-    return this.discoveredLetters.length === letterCount;
-  }
-  
-  /**
-   * Reset the current game
-   */
-  resetGame() {
-    if (this.currentPhrase) {
-      this.loadPhrase(this.currentPhrase);
-    } else {
+      console.warn('No phrases available to load randomly');
       this.loadSampleData();
+      return;
     }
+    
+    // Pick a random phrase
+    const randomIndex = Math.floor(Math.random() * this.phrases.length);
+    const randomPhrase = this.phrases[randomIndex];
+    
+    console.log(`Loading random phrase: "${randomPhrase.phrase}"`);
+    
+    // Load the phrase
+    this.loadPhrase(randomPhrase);
+  }
+  
+  /**
+   * Reset all selections
+   */
+  resetSelections() {
+    this.gridRenderer.clearSelections();
+    this.handleSelectionChange();
   }
 }
 
