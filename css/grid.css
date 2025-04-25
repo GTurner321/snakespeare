@@ -78,19 +78,20 @@ body {
     box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2);
 }
 
-.grid-cell.path-cell {
-    background-color: #2196F3; /* Blue for path */
-    color: white;
-    text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.4);
-}
-
 .grid-cell.selected-cell {
-    background-color: #FF9800; /* Orange for selected */
+    background-color: #2196F3; /* Blue for selected */
     color: white;
     text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.4);
     transform: scale(1.05);
     z-index: 1;
     box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+    border: 2px solid #0D47A1; /* Darker blue border */
+}
+
+.grid-cell.path-cell {
+    background-color: #9C27B0; /* Purple for revealed path */
+    color: white;
+    text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.4);
 }
 
 .grid-cell.out-of-bounds {
@@ -135,6 +136,31 @@ body {
     z-index: 10;
 }
 
+/* Arrow button positions */
+.arrow-button.arrow-up {
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.arrow-button.arrow-right {
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.arrow-button.arrow-down {
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.arrow-button.arrow-left {
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
 /* ==========================================================================
    4. Phrase Display
    ========================================================================== */
@@ -150,7 +176,41 @@ body {
 }
 
 /* ==========================================================================
-   5. Responsive Design
+   5. Refresh Button and Controls
+   ========================================================================== */
+
+.refresh-button-container {
+    margin: 20px 0;
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+.metallic-button.reset-button {
+    background: repeating-linear-gradient(
+        120deg,
+        #f0f0f0 0px,
+        #e0e0e0 10px,
+        #f0f0f0 30px,
+        #e8e8e8 55px,
+        #e0e0e0 80px,
+        #e8e8e8 95px,
+        #f0f0f0 120px,
+        #e0e0e0 135px
+    );
+}
+
+/* ==========================================================================
+   6. Styled Box Adjustments
+   ========================================================================== */
+
+.styled-box-content p {
+    margin: 8px 0;
+}
+
+/* ==========================================================================
+   7. Responsive Design
    ========================================================================== */
 
 /* Medium screens */
@@ -166,6 +226,20 @@ body {
     
     .grid-cell {
         font-size: 1.3rem;
+    }
+    
+    .refresh-button-container {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .arrow-button {
+        width: 36px;
+        height: 36px;
+    }
+    
+    #phrase-text {
+        font-size: 1.1rem;
     }
 }
 
@@ -185,8 +259,18 @@ body {
     }
     
     .arrow-button {
-        width: 35px;
-        height: 35px;
+        width: 32px;
+        height: 32px;
         font-size: 1rem;
+    }
+    
+    #phrase-text {
+        font-size: 1rem;
+        padding: 6px;
+    }
+    
+    .refresh-button-container .metallic-button {
+        font-size: 0.9rem;
+        padding: 6px 12px;
     }
 }
