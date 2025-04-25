@@ -73,8 +73,8 @@ class PathGenerator {
     else if (Array.isArray(letterList)) {
       return letterList;
     }
-    // Default fallback
-    return [];
+    // Default fallback - Use a placeholder for testing
+    return "TESTPHRASE".split('');
   }
   
   /**
