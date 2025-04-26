@@ -78,6 +78,11 @@ class GridRenderer {
     // Clear container
     this.container.innerHTML = '';
     
+    // Ensure container has proper sizing
+    this.container.style.width = '100%';
+    this.container.style.height = 'auto';
+    this.container.style.position = 'relative';
+    
     // Create grid container
     this.gridElement = document.createElement('div');
     this.gridElement.className = 'grid-container';
@@ -103,6 +108,10 @@ class GridRenderer {
     
     this.gridElement.style.gridTemplateColumns = `repeat(${width}, ${this.options.cellSize}px)`;
     this.gridElement.style.gridTemplateRows = `repeat(${height}, ${this.options.cellSize}px)`;
+    
+    // Set explicit dimensions
+    this.gridElement.style.width = `${width * this.options.cellSize + (width - 1) * 2}px`; // Account for gap
+    this.gridElement.style.height = `${height * this.options.cellSize + (height - 1) * 2}px`; // Account for gap
   }
   
   /**
