@@ -118,6 +118,9 @@ updateGridTemplate() {
   // Force reset the grid display
   this.gridElement.style.display = 'grid';
   
+  // Set data attribute for CSS to use
+  this.gridElement.dataset.gridSize = isMobile ? 'mobile' : 'desktop';
+  
   // Set explicit grid template columns and rows
   this.gridElement.style.gridTemplateColumns = `repeat(${width}, ${this.options.cellSize}px)`;
   this.gridElement.style.gridTemplateRows = `repeat(${height}, ${this.options.cellSize}px)`;
@@ -141,7 +144,7 @@ updateGridTemplate() {
     totalHeight
   });
 }
-  
+
   /**
    * Render the currently visible portion of the grid
    */
