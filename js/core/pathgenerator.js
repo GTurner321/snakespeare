@@ -11,6 +11,8 @@ class PathGenerator {
     this.directions = [       // Possible move directions (up, right, down, left)
       [0, -1], [1, 0], [0, 1], [-1, 0]
     ];
+    // NEW: Maximum grid limits to ensure path stays within 51x51 bounds
+    this.maxDistance = 25; // Since 51/2 = 25.5
   }
   
   /**
@@ -103,6 +105,12 @@ class PathGenerator {
     for (const [dx, dy] of shuffledDirs) {
       const newX = x + dx;
       const newY = y + dy;
+      
+      // NEW: Check if new position is within maximum bounds
+      if (Math.abs(newX) > this.maxDistance || Math.abs(newY) > this.maxDistance) {
+        continue;
+      }
+      
       const key = `${newX},${newY}`;
       
       // If this position hasn't been visited, return it
