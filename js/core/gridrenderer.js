@@ -74,107 +74,146 @@ class GridRenderer {
   /**
    * Create DOM elements for the grid
    */
-  createGridElements() {
-    // Clear container
-    this.container.innerHTML = '';
-    
-    // Ensure container has proper sizing
-    this.container.style.width = '100%';
-    this.container.style.height = 'auto';
-    this.container.style.position = 'relative';
-    
-    // Create grid container
-    this.gridElement = document.createElement('div');
-    this.gridElement.className = 'grid-container';
-    this.gridElement.style.display = 'grid';
-    
-    // Update grid template based on screen size
-    this.updateGridTemplate();
-    
-    // Create cells
-    this.renderVisibleGrid();
-    
-    // Add grid to container
-    this.container.appendChild(this.gridElement);
-  }
+createGridElements() {
+  // Clear container
+  this.container.innerHTML = '';
+  
+  // Ensure container has proper dimensions
+  this.container.style.width = '100%';
+  this.container.style.minHeight = '450px';
+  this.container.style.position = 'relative';
+  this.container.style.display = 'flex';
+  this.container.style.justifyContent = 'center';
+  this.container.style.alignItems = 'center';
+  
+  // Create grid container
+  this.gridElement = document.createElement('div');
+  this.gridElement.className = 'grid-container';
+  
+  // Force grid display
+  this.gridElement.style.display = 'grid';
+  this.gridElement.style.gap = '2px';
+  
+  // Update grid template based on screen size
+  this.updateGridTemplate();
+  
+  // Create cells
+  this.renderVisibleGrid();
+  
+  // Add grid to container
+  this.container.appendChild(this.gridElement);
+}
   
   /**
    * Update grid template based on screen size
    */
-  updateGridTemplate() {
-    const isMobile = window.innerWidth < 768;
-    const width = isMobile ? this.options.gridWidthSmall : this.options.gridWidth;
-    const height = isMobile ? this.options.gridHeightSmall : this.options.gridHeight;
-    
-    this.gridElement.style.gridTemplateColumns = `repeat(${width}, ${this.options.cellSize}px)`;
-    this.gridElement.style.gridTemplateRows = `repeat(${height}, ${this.options.cellSize}px)`;
-    
-    // Set explicit dimensions
-    this.gridElement.style.width = `${width * this.options.cellSize + (width - 1) * 2}px`; // Account for gap
-    this.gridElement.style.height = `${height * this.options.cellSize + (height - 1) * 2}px`; // Account for gap
-  }
+updateGridTemplate() {
+  const isMobile = window.innerWidth < 768;
+  const width = isMobile ? this.options.gridWidthSmall : this.options.gridWidth;
+  const height = isMobile ? this.options.gridHeightSmall : this.options.gridHeight;
+  
+  // Force reset the grid display
+  this.gridElement.style.display = 'grid';
+  
+  // Set explicit grid template columns and rows
+  this.gridElement.style.gridTemplateColumns = `repeat(${width}, ${this.options.cellSize}px)`;
+  this.gridElement.style.gridTemplateRows = `repeat(${height}, ${this.options.cellSize}px)`;
+  
+  // Set explicit dimensions including gaps
+  const totalWidth = width * this.options.cellSize + (width - 1) * 2; // 2px gap
+  const totalHeight = height * this.options.cellSize + (height - 1) * 2; // 2px gap
+  
+  this.gridElement.style.width = `${totalWidth}px`;
+  this.gridElement.style.height = `${totalHeight}px`;
+  this.gridElement.style.maxWidth = '100%'; // Prevent overflow on small screens
+  
+  // Debug log to check values
+  console.log('Grid template update:', {
+    width,
+    height,
+    cellSize: this.options.cellSize,
+    gridTemplateColumns: this.gridElement.style.gridTemplateColumns,
+    gridTemplateRows: this.gridElement.style.gridTemplateRows,
+    totalWidth,
+    totalHeight
+  });
+}
   
   /**
    * Render the currently visible portion of the grid
    */
-  renderVisibleGrid() {
-    // Clear grid element
-    this.gridElement.innerHTML = '';
-    
-    const isMobile = window.innerWidth < 768;
-    const width = isMobile ? this.options.gridWidthSmall : this.options.gridWidth;
-    const height = isMobile ? this.options.gridHeightSmall : this.options.gridHeight;
-    
-    // Calculate visible bounds
-    const endX = this.viewOffset.x + width;
-    const endY = this.viewOffset.y + height;
-    
-    // Render visible cells
-    for (let y = this.viewOffset.y; y < endY; y++) {
-      for (let x = this.viewOffset.x; x < endX; x++) {
-        const cellElement = document.createElement('div');
-        cellElement.className = 'grid-cell';
-        cellElement.style.width = `${this.options.cellSize}px`;
-        cellElement.style.height = `${this.options.cellSize}px`;
+renderVisibleGrid() {
+  // Clear grid element
+  this.gridElement.innerHTML = '';
+  
+  const isMobile = window.innerWidth < 768;
+  const width = isMobile ? this.options.gridWidthSmall : this.options.gridWidth;
+  const height = isMobile ? this.options.gridHeightSmall : this.options.gridHeight;
+  
+  // Calculate visible bounds
+  const endX = this.viewOffset.x + width;
+  const endY = this.viewOffset.y + height;
+  
+  // Debug log
+  console.log('Rendering visible grid:', {
+    viewOffset: this.viewOffset,
+    width,
+    height,
+    endX,
+    endY
+  });
+  
+  // Render visible cells
+  for (let y = this.viewOffset.y; y < endY; y++) {
+    for (let x = this.viewOffset.x; x < endX; x++) {
+      const cellElement = document.createElement('div');
+      cellElement.className = 'grid-cell';
+      
+      // Force cell dimensions
+      cellElement.style.width = `${this.options.cellSize}px`;
+      cellElement.style.height = `${this.options.cellSize}px`;
+      
+      // If cell is within grid bounds
+      if (y >= 0 && y < this.grid.length && x >= 0 && x < this.grid[0].length) {
+        const cell = this.grid[y][x];
         
-        // If cell is within grid bounds
-        if (y >= 0 && y < this.grid.length && x >= 0 && x < this.grid[0].length) {
-          const cell = this.grid[y][x];
-          
-          // Set cell content
-          cellElement.textContent = cell.letter;
-          
-          // Store grid coordinates as data attributes for click handling
-          cellElement.dataset.gridX = x;
-          cellElement.dataset.gridY = y;
-          
-          // Apply styling
-          if (cell.isStart) {
-            cellElement.classList.add('start-cell');
-          } else if (cell.isSelected) {
-            cellElement.classList.add('selected-cell');
-          } else if (cell.isPath && this.options.highlightPath) {
-            cellElement.classList.add('path-cell');
-          }
-          
-          // Add click event handler for cell selection
-          cellElement.addEventListener('click', () => {
-            this.toggleCellSelection(x, y);
-            
-            // Call the click handler if provided
-            if (this.options.onCellClick) {
-              this.options.onCellClick(x, y, cell);
-            }
-          });
-        } else {
-          // Out of bounds cell - display as empty
-          cellElement.classList.add('out-of-bounds');
+        // Set cell content
+        cellElement.textContent = cell.letter;
+        
+        // Store grid coordinates as data attributes for click handling
+        cellElement.dataset.gridX = x;
+        cellElement.dataset.gridY = y;
+        
+        // Apply styling
+        if (cell.isStart) {
+          cellElement.classList.add('start-cell');
+        } else if (cell.isSelected) {
+          cellElement.classList.add('selected-cell');
+        } else if (cell.isPath && this.options.highlightPath) {
+          cellElement.classList.add('path-cell');
         }
         
-        this.gridElement.appendChild(cellElement);
+        // Add click event handler for cell selection
+        cellElement.addEventListener('click', () => {
+          this.toggleCellSelection(x, y);
+          
+          // Call the click handler if provided
+          if (this.options.onCellClick) {
+            this.options.onCellClick(x, y, cell);
+          }
+        });
+      } else {
+        // Out of bounds cell - display as empty
+        cellElement.classList.add('out-of-bounds');
       }
+      
+      this.gridElement.appendChild(cellElement);
     }
   }
+  
+  // Force a reflow to ensure grid layout is applied
+  this.gridElement.offsetHeight;
+}
   
   /**
    * Toggle selection state of a cell
