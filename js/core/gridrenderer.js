@@ -3,46 +3,49 @@
  * Renders the game grid with the path and random letters
  */
 
-class GridRenderer {
-  constructor(containerId, options = {}) {
-    // Container element
-    this.container = document.getElementById(containerId);
-    if (!this.container) {
-      throw new Error(`Container element with id '${containerId}' not found`);
-    }
-    
-    // Default options
-    this.options = {
-      gridWidth: options.gridWidth || 13,           // Changed from 8 to 13 for large screens
-      gridHeight: options.gridHeight || 9,          // Changed from 10 to 9
-      gridWidthSmall: options.gridWidthSmall || 9,  // NEW: Added for small screens
-      gridHeightSmall: options.gridHeightSmall || 9,// NEW: Added for small screens
-      cellSize: options.cellSize || 50,            // Cell size in pixels
-      randomFillPercentage: options.randomFillPercentage || 0.5, // NEW: 50% random fill
-      highlightPath: options.highlightPath || false, // Whether to highlight the path initially
-      onCellClick: options.onCellClick || null,     // Cell click callback
-      onSelectionChange: options.onSelectionChange || null,
-      ...options
-    };
-    
-    // Grid state
-    this.fullGridSize = 51;              // NEW: 51x51 grid
-    this.grid = [];                      // 2D array of cell data
-    this.viewOffset = { x: 19, y: 21 };  // Updated for new initial view position
-    this.path = [];                      // Current path data
-    this.selectedCells = [];             // Array of selected cell coordinates {x, y}
-    this.letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'; // For random letter generation
-    
-    // Initialize the grid
-    this.initializeGrid();
-    
-    // Create DOM elements
-    this.createGridElements();
-    
-    // Responsive handling
-    this.handleResponsive();
-    window.addEventListener('resize', () => this.handleResponsive());
+constructor(containerId, options = {}) {
+  // Container element
+  this.container = document.getElementById(containerId);
+  if (!this.container) {
+    throw new Error(`Container element with id '${containerId}' not found`);
   }
+  
+  // Default options - FIXED to ensure values are set
+  this.options = {
+    gridWidth: 13,              // Default for large screens
+    gridHeight: 9,              // Default height
+    gridWidthSmall: 9,          // Default for small screens
+    gridHeightSmall: 9,         // Default for small screens
+    cellSize: 50,               // Cell size in pixels
+    randomFillPercentage: 0.5,  // 50% random fill
+    highlightPath: false,       // Whether to highlight the path initially
+    onCellClick: null,          // Cell click callback
+    onSelectionChange: null,
+    ...options                  // Override with provided options
+  };
+  
+  // Debug log to check options
+  console.log('GridRenderer options:', this.options);
+  
+  // Rest of the constructor...
+  // Grid state
+  this.fullGridSize = 51;              // NEW: 51x51 grid
+  this.grid = [];                      // 2D array of cell data
+  this.viewOffset = { x: 19, y: 21 };  // Updated for new initial view position
+  this.path = [];                      // Current path data
+  this.selectedCells = [];             // Array of selected cell coordinates {x, y}
+  this.letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'; // For random letter generation
+  
+  // Initialize the grid
+  this.initializeGrid();
+  
+  // Create DOM elements
+  this.createGridElements();
+  
+  // Responsive handling
+  this.handleResponsive();
+  window.addEventListener('resize', () => this.handleResponsive());
+}
   
   /**
    * Initialize the grid data structure
