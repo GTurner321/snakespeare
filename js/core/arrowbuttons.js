@@ -10,7 +10,8 @@ class ArrowButtons {
     // Default options
     this.options = {
       container: options.container || 'game-container',
-      buttonSize: options.buttonSize || 50,
+      buttonHeight: options.buttonHeight || 125,  // 2.5 * 50px cell size
+      buttonDepth: options.buttonDepth || 37.5,   // 0.75 * 50px cell size
       ...options
     };
     
@@ -25,26 +26,70 @@ class ArrowButtons {
    * Create the arrow buttons for navigation
    */
   createButtons() {
-    const container = document.getElementById(this.options.container);
-    if (!container) {
-      throw new Error(`Container element with id '${this.options.container}' not found`);
+    // Get grid container for positioning
+    const gridContainer = this.gridRenderer.container;
+    if (!gridContainer) {
+      throw new Error('Grid container not found');
     }
     
     // Create button container
     this.buttonContainer = document.createElement('div');
     this.buttonContainer.className = 'arrow-buttons-container';
     
-    // Position the container
-    this.buttonContainer.style.position = 'relative';
+    // Position container directly over grid
+    this.buttonContainer.style.position = 'absolute';
+    this.buttonContainer.style.top = '0';
+    this.buttonContainer.style.left = '0';
     this.buttonContainer.style.width = '100%';
     this.buttonContainer.style.height = '100%';
+    this.buttonContainer.style.pointerEvents = 'none';
     
     // Create buttons for each direction
     const directions = [
-      { dir: 'up', html: '&#9650;', position: { top: '10px', left: '50%', transform: 'translateX(-50%)' } },
-      { dir: 'right', html: '&#9654;', position: { top: '50%', right: '10px', transform: 'translateY(-50%)' } },
-      { dir: 'down', html: '&#9660;', position: { bottom: '10px', left: '50%', transform: 'translateX(-50%)' } },
-      { dir: 'left', html: '&#9664;', position: { top: '50%', left: '10px', transform: 'translateY(-50%)' } }
+      { 
+        dir: 'up', 
+        html: '&#9650;', 
+        position: { 
+          top: '0', 
+          left: '50%', 
+          transform: 'translateX(-50%)',
+          width: `${this.options.buttonHeight}px`,
+          height: `${this.options.buttonDepth}px`
+        } 
+      },
+      { 
+        dir: 'right', 
+        html: '&#9654;', 
+        position: { 
+          top: '50%', 
+          right: '0', 
+          transform: 'translateY(-50%)',
+          width: `${this.options.buttonDepth}px`,
+          height: `${this.options.buttonHeight}px`
+        } 
+      },
+      { 
+        dir: 'down', 
+        html: '&#9660;', 
+        position: { 
+          bottom: '0', 
+          left: '50%', 
+          transform: 'translateX(-50%)',
+          width: `${this.options.buttonHeight}px`,
+          height: `${this.options.buttonDepth}px`
+        } 
+      },
+      { 
+        dir: 'left', 
+        html: '&#9664;', 
+        position: { 
+          top: '50%', 
+          left: '0', 
+          transform: 'translateY(-50%)',
+          width: `${this.options.buttonDepth}px`,
+          height: `${this.options.buttonHeight}px`
+        } 
+      }
     ];
     
     this.buttons = {};
@@ -58,6 +103,9 @@ class ArrowButtons {
       
       // Apply positioning
       button.style.position = 'absolute';
+      button.style.pointerEvents = 'auto';
+      
+      // Apply size and positioning
       Object.entries(position).forEach(([prop, value]) => {
         button.style[prop] = value;
       });
@@ -69,8 +117,9 @@ class ArrowButtons {
       this.buttonContainer.appendChild(button);
     });
     
-    // Add button container to game container
-    container.appendChild(this.buttonContainer);
+    // Add to grid container instead of game container
+    gridContainer.style.position = 'relative';
+    gridContainer.appendChild(this.buttonContainer);
   }
   
   /**
@@ -130,14 +179,15 @@ class ArrowButtons {
   updateButtonStates() {
     // Get current view offset
     const { x: offsetX, y: offsetY } = this.gridRenderer.viewOffset;
+    const isMobile = window.innerWidth < 768;
+    const width = isMobile ? this.gridRenderer.options.gridWidthSmall : this.gridRenderer.options.gridWidth;
+    const height = isMobile ? this.gridRenderer.options.gridHeightSmall : this.gridRenderer.options.gridHeight;
     
     // Check each direction for possible scrolling
-    const canScrollUp = this.gridRenderer.isScrollWithinLimits(offsetX, offsetY - 1) && offsetY > 0;
-    const canScrollRight = this.gridRenderer.isScrollWithinLimits(offsetX + 1, offsetY) && 
-                          offsetX + this.gridRenderer.options.gridWidth < this.gridRenderer.grid[0].length;
-    const canScrollDown = this.gridRenderer.isScrollWithinLimits(offsetX, offsetY + 1) && 
-                         offsetY + this.gridRenderer.options.gridHeight < this.gridRenderer.grid.length;
-    const canScrollLeft = this.gridRenderer.isScrollWithinLimits(offsetX - 1, offsetY) && offsetX > 0;
+    const canScrollUp = offsetY > 0;
+    const canScrollRight = offsetX + width < this.gridRenderer.fullGridSize;
+    const canScrollDown = offsetY + height < this.gridRenderer.fullGridSize;
+    const canScrollLeft = offsetX > 0;
     
     // Update button disabled states
     this.buttons.up.disabled = !canScrollUp;
