@@ -371,3 +371,26 @@ body {
     align-items: center;
     position: relative;
 }
+
+/* TEMPORARY VISIBILITY TEST - Add to your CSS */
+
+/* Make grid container visible with bright color */
+.grid-container {
+    background-color: #ff0000 !important; /* Bright red background */
+    min-width: 650px !important; /* 13 * 50px */
+    min-height: 450px !important; /* 9 * 50px */
+}
+
+/* Make all cells visible with contrasting colors */
+.grid-cell {
+    background-color: #00ff00 !important; /* Bright green */
+    border: 2px solid #000000 !important; /* Black border */
+    color: #000000 !important; /* Black text */
+    font-weight: bold !important;
+}
+
+/* Extra visibility for start cell */
+.grid-cell.start-cell {
+    background-color: #0000ff !important; /* Blue */
+    color: #ffffff !important; /* White text */
+}
