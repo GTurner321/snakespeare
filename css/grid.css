@@ -35,13 +35,18 @@ body {
    2. Grid Container & Cells
    ========================================================================== */
 
-.grid-container-wrapper {
+/* Grid container wrapper - ensure proper dimensions */
+.grid-container-wrapper,
+#grid-container {
     width: 100%;
-    overflow: hidden;
     margin: 20px auto;
     position: relative;
     display: flex;
     justify-content: center;
+}
+
+#grid-container {
+    min-height: 450px; /* Ensure minimum height */
 }
 
 .grid-container {
@@ -52,7 +57,9 @@ body {
     border-radius: 4px;
     padding: 2px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    position: relative; /* Add for button positioning */
+    position: relative;
+    margin: 0 auto; /* Center the grid */
+    width: fit-content; /* Allow grid to size based on content */
 }
 
 .grid-cell {
@@ -69,6 +76,7 @@ body {
     transition: all 0.2s ease;
     color: #444;
     text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8);
+    box-sizing: border-box; /* Ensure proper sizing */
 }
 
 /* Different cell states */
@@ -122,19 +130,20 @@ body {
     width: 100%;
     height: 100%;
     pointer-events: none;
-    z-index: 10; /* Ensure buttons are above grid */
+    z-index: 10;
 }
 
 .arrow-button {
     position: absolute;
-    border-radius: 4px; /* Rectangular instead of circular */
+    border-radius: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.6rem; /* Larger arrow symbols */
+    font-size: 1.6rem;
     pointer-events: auto;
     z-index: 10;
-    padding: 8px; /* Add padding for better touch targets */
+    padding: 8px;
+    opacity: 0.9; /* Slight transparency */
 }
 
 /* Horizontal arrow buttons (up/down) */
@@ -151,7 +160,7 @@ body {
     padding: 16px 4px;
 }
 
-/* Arrow button positions (set dynamically in JS, these are fallbacks) */
+/* Arrow button positions */
 .arrow-button.arrow-up {
     top: 0;
     left: 50%;
