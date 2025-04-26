@@ -11,19 +11,19 @@ import GridRenderer from './gridrenderer.js';
 // Note: We're using PapaParse loaded from CDN in index.html
 
 class GameController {
-  constructor(options = {}) {
-    // Default options
-    this.options = {
-      gameContainerId: options.gameContainerId || 'game-container',
-      gridContainerId: options.gridContainerId || 'grid-container',
-      gridSize: { 
-        mobile: { width: 9, height: 9 },
-        desktop: { width: 13, height: 9 }
-      },
-      cellSize: options.cellSize || 50,
-      randomFillPercentage: options.randomFillPercentage || 0.5, // 50% random fill
-      ...options
-    };
+constructor(options = {}) {
+  // Default options
+  this.options = {
+    gameContainerId: options.gameContainerId || 'game-container',
+    gridContainerId: options.gridContainerId || 'grid-container',
+    gridSize: { 
+      mobile: { width: 9, height: 9 },
+      desktop: { width: 13, height: 9 }
+    },
+    cellSize: options.cellSize || 50,
+    randomFillPercentage: options.randomFillPercentage || 0.5,
+    ...options
+  };
     
     // Game state
     this.currentPhrase = null;
@@ -32,17 +32,17 @@ class GameController {
     
     // Initialize components
     this.pathGenerator = new PathGenerator();
-    this.gridRenderer = new GridRenderer(this.options.gridContainerId, {
-      gridWidth: this.options.gridSize.desktop.width,
-      gridHeight: this.options.gridSize.desktop.height,
-      gridWidthSmall: this.options.gridSize.mobile.width,
-      gridHeightSmall: this.options.gridSize.mobile.height,
-      cellSize: this.options.cellSize,
-      randomFillPercentage: this.options.randomFillPercentage,
-      highlightPath: false,
-      onCellClick: (x, y, cell) => this.handleCellClick(x, y, cell),
-      onSelectionChange: () => this.handleSelectionChange()
-    });
+  this.gridRenderer = new GridRenderer(this.options.gridContainerId, {
+    gridWidth: this.options.gridSize.desktop.width,
+    gridHeight: this.options.gridSize.desktop.height,
+    gridWidthSmall: this.options.gridSize.mobile.width,
+    gridHeightSmall: this.options.gridSize.mobile.height,
+    cellSize: this.options.cellSize,
+    randomFillPercentage: this.options.randomFillPercentage,
+    highlightPath: false,
+    onCellClick: (x, y, cell) => this.handleCellClick(x, y, cell),
+    onSelectionChange: () => this.handleSelectionChange()
+  });
     
     // TEMPORARILY COMMENTED OUT ARROW BUTTONS
     /*
