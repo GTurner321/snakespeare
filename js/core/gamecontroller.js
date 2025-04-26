@@ -16,8 +16,12 @@ class GameController {
     this.options = {
       gameContainerId: options.gameContainerId || 'game-container',
       gridContainerId: options.gridContainerId || 'grid-container',
-      gridSize: options.gridSize || { mobile: 8, desktop: 10 },
+      gridSize: { 
+        mobile: { width: 9, height: 9 },
+        desktop: { width: 13, height: 9 }
+      },
       cellSize: options.cellSize || 50,
+      randomFillPercentage: options.randomFillPercentage || 0.5, // 50% random fill
       ...options
     };
     
@@ -29,10 +33,12 @@ class GameController {
     // Initialize components
     this.pathGenerator = new PathGenerator();
     this.gridRenderer = new GridRenderer(this.options.gridContainerId, {
-      gridWidth: this.getResponsiveGridSize(),
-      gridHeight: this.options.gridSize.desktop,
+      gridWidth: this.options.gridSize.desktop.width,
+      gridHeight: this.options.gridSize.desktop.height,
+      gridWidthSmall: this.options.gridSize.mobile.width,
+      gridHeightSmall: this.options.gridSize.mobile.height,
       cellSize: this.options.cellSize,
-      maxScrollDistance: 6,
+      randomFillPercentage: this.options.randomFillPercentage,
       highlightPath: false,
       onCellClick: (x, y, cell) => this.handleCellClick(x, y, cell),
       onSelectionChange: () => this.handleSelectionChange()
@@ -40,7 +46,8 @@ class GameController {
     
     this.arrowButtons = new ArrowButtons(this.gridRenderer, {
       container: this.options.gameContainerId,
-      buttonSize: this.options.cellSize
+      buttonHeight: this.options.cellSize * 2.5,  // 2.5 squares height
+      buttonDepth: this.options.cellSize * 0.75   // 0.75 square depth
     });
     
     // Add window resize handler
@@ -136,23 +143,9 @@ class GameController {
    * Handle window resize events
    */
   handleResize() {
-    // Update grid size based on screen width
-    const newSize = this.getResponsiveGridSize();
-    if (newSize !== this.gridRenderer.options.gridWidth) {
-      this.gridRenderer.options.gridWidth = newSize;
-      this.gridRenderer.renderVisibleGrid();
-      this.arrowButtons.updateButtonStates();
-    }
-  }
-  
-  /**
-   * Get the appropriate grid size based on screen width
-   * @return {number} Grid width
-   */
-  getResponsiveGridSize() {
-    return window.innerWidth < 768 ? 
-      this.options.gridSize.mobile : 
-      this.options.gridSize.desktop;
+    // Just let gridRenderer handle it
+    this.gridRenderer.handleResponsive();
+    this.arrowButtons.updateButtonStates();
   }
   
   /**
