@@ -6,7 +6,7 @@
 
 import PathGenerator from './pathgenerator.js';
 import GridRenderer from './gridrenderer.js';
-import ArrowButtons from './arrowbuttons.js';
+// import ArrowButtons from './arrowbuttons.js'; // TEMPORARILY COMMENTED OUT
 
 // Note: We're using PapaParse loaded from CDN in index.html
 
@@ -44,11 +44,14 @@ class GameController {
       onSelectionChange: () => this.handleSelectionChange()
     });
     
+    // TEMPORARILY COMMENTED OUT ARROW BUTTONS
+    /*
     this.arrowButtons = new ArrowButtons(this.gridRenderer, {
       container: this.options.gameContainerId,
       buttonHeight: this.options.cellSize * 2.5,  // 2.5 squares height
       buttonDepth: this.options.cellSize * 0.75   // 0.75 square depth
     });
+    */
     
     // Add window resize handler
     window.addEventListener('resize', () => {
@@ -84,7 +87,8 @@ class GameController {
     this.updatePhraseFromSelections(selectedLetters);
     
     // Update arrow button states in case scrolling limits have changed
-    this.arrowButtons.updateButtonStates();
+    // TEMPORARILY COMMENTED OUT
+    // this.arrowButtons.updateButtonStates();
   }
   
   /**
@@ -123,8 +127,8 @@ class GameController {
     // Apply path to grid renderer
     this.gridRenderer.setPath(this.currentPath);
     
-    // Update arrow button states
-    this.arrowButtons.updateButtonStates();
+    // Update arrow button states - TEMPORARILY COMMENTED OUT
+    // this.arrowButtons.updateButtonStates();
     
     // Reset phrase display
     const displayElement = document.getElementById('phrase-text');
@@ -145,7 +149,8 @@ class GameController {
   handleResize() {
     // Just let gridRenderer handle it
     this.gridRenderer.handleResponsive();
-    this.arrowButtons.updateButtonStates();
+    // TEMPORARILY COMMENTED OUT
+    // this.arrowButtons.updateButtonStates();
   }
   
   /**
