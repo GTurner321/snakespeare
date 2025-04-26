@@ -160,8 +160,12 @@ renderVisibleGrid() {
     width,
     height,
     endX,
-    endY
+    endY,
+    gridLength: this.grid.length,
+    gridWidth: this.grid[0]?.length
   });
+  
+  let cellCount = 0;
   
   // Render visible cells
   for (let y = this.viewOffset.y; y < endY; y++) {
@@ -173,12 +177,18 @@ renderVisibleGrid() {
       cellElement.style.width = `${this.options.cellSize}px`;
       cellElement.style.height = `${this.options.cellSize}px`;
       
+      // Debug: Add visible border
+      cellElement.style.border = '1px solid red';
+      
       // If cell is within grid bounds
       if (y >= 0 && y < this.grid.length && x >= 0 && x < this.grid[0].length) {
         const cell = this.grid[y][x];
         
         // Set cell content
-        cellElement.textContent = cell.letter;
+        cellElement.textContent = cell.letter || '•'; // Use dot if no letter
+        
+        // Debug log
+        console.log(`Cell at (${x},${y}):`, cell.letter, cell.isStart);
         
         // Store grid coordinates as data attributes for click handling
         cellElement.dataset.gridX = x;
@@ -187,6 +197,7 @@ renderVisibleGrid() {
         // Apply styling
         if (cell.isStart) {
           cellElement.classList.add('start-cell');
+          console.log('Start cell found at:', x, y);
         } else if (cell.isSelected) {
           cellElement.classList.add('selected-cell');
         } else if (cell.isPath && this.options.highlightPath) {
@@ -205,11 +216,18 @@ renderVisibleGrid() {
       } else {
         // Out of bounds cell - display as empty
         cellElement.classList.add('out-of-bounds');
+        cellElement.textContent = '×'; // Use × for out of bounds
+        console.log(`Out of bounds cell at (${x},${y})`);
       }
       
       this.gridElement.appendChild(cellElement);
+      cellCount++;
     }
   }
+  
+  console.log(`Created ${cellCount} cells`);
+  console.log('Grid element children:', this.gridElement.children.length);
+  console.log('Grid element computed style:', window.getComputedStyle(this.gridElement).display);
   
   // Force a reflow to ensure grid layout is applied
   this.gridElement.offsetHeight;
