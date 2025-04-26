@@ -13,20 +13,24 @@ class GridRenderer {
     
     // Default options
     this.options = {
-      gridWidth: options.gridWidth || 8,           // Grid width for mobile
-      gridHeight: options.gridHeight || 10,        // Grid height for desktop
+      gridWidth: options.gridWidth || 13,           // Changed from 8 to 13 for large screens
+      gridHeight: options.gridHeight || 9,          // Changed from 10 to 9
+      gridWidthSmall: options.gridWidthSmall || 9,  // NEW: Added for small screens
+      gridHeightSmall: options.gridHeightSmall || 9,// NEW: Added for small screens
       cellSize: options.cellSize || 50,            // Cell size in pixels
-      maxScrollDistance: options.maxScrollDistance || 6,  // Max scroll distance from path
+      randomFillPercentage: options.randomFillPercentage || 0.5, // NEW: 50% random fill
       highlightPath: options.highlightPath || false, // Whether to highlight the path initially
       onCellClick: options.onCellClick || null,     // Cell click callback
+      onSelectionChange: options.onSelectionChange || null,
       ...options
     };
     
     // Grid state
-    this.grid = [];              // 2D array of cell data
-    this.viewOffset = { x: 0, y: 0 }; // Current view offset
-    this.path = [];              // Current path data
-    this.selectedCells = [];     // Array of selected cell coordinates {x, y}
+    this.fullGridSize = 51;              // NEW: 51x51 grid
+    this.grid = [];                      // 2D array of cell data
+    this.viewOffset = { x: 19, y: 21 };  // Updated for new initial view position
+    this.path = [];                      // Current path data
+    this.selectedCells = [];             // Array of selected cell coordinates {x, y}
     this.letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'; // For random letter generation
     
     // Initialize the grid
@@ -44,22 +48,20 @@ class GridRenderer {
    * Initialize the grid data structure
    */
   initializeGrid() {
-    // Calculate grid dimensions to ensure they're odd (for center placement)
-    const width = this.options.gridWidth % 2 === 0 ? this.options.gridWidth + 1 : this.options.gridWidth;
-    const height = this.options.gridHeight % 2 === 0 ? this.options.gridHeight + 1 : this.options.gridHeight;
+    // Create 51x51 grid
+    this.grid = Array(this.fullGridSize).fill().map(() => 
+      Array(this.fullGridSize).fill().map(() => ({
+        letter: '',
+        isPath: false,
+        isStart: false,
+        isSelected: false,
+        pathIndex: -1
+      }))
+    );
     
-    // Initialize empty grid
-    this.grid = Array(height).fill().map(() => Array(width).fill().map(() => ({
-      letter: this.getRandomLetter(),
-      isPath: false,
-      isStart: false,
-      isSelected: false,
-      pathIndex: -1
-    })));
-    
-    // Set center as start
-    const centerX = Math.floor(width / 2);
-    const centerY = Math.floor(height / 2);
+    // Set center as start (changed to 25,25 for 51x51 grid)
+    const centerX = 25;
+    const centerY = 25;
     this.grid[centerY][centerX] = {
       letter: '',
       isPath: true,
@@ -67,10 +69,6 @@ class GridRenderer {
       isSelected: false,
       pathIndex: 0
     };
-    
-    // Center the view
-    this.viewOffset.x = centerX - Math.floor(this.options.gridWidth / 2);
-    this.viewOffset.y = centerY - Math.floor(this.options.gridHeight / 2);
   }
   
   /**
@@ -84,8 +82,9 @@ class GridRenderer {
     this.gridElement = document.createElement('div');
     this.gridElement.className = 'grid-container';
     this.gridElement.style.display = 'grid';
-    this.gridElement.style.gridTemplateColumns = `repeat(${this.options.gridWidth}, ${this.options.cellSize}px)`;
-    this.gridElement.style.gridTemplateRows = `repeat(${this.options.gridHeight}, ${this.options.cellSize}px)`;
+    
+    // Update grid template based on screen size
+    this.updateGridTemplate();
     
     // Create cells
     this.renderVisibleGrid();
@@ -95,15 +94,31 @@ class GridRenderer {
   }
   
   /**
+   * Update grid template based on screen size
+   */
+  updateGridTemplate() {
+    const isMobile = window.innerWidth < 768;
+    const width = isMobile ? this.options.gridWidthSmall : this.options.gridWidth;
+    const height = isMobile ? this.options.gridHeightSmall : this.options.gridHeight;
+    
+    this.gridElement.style.gridTemplateColumns = `repeat(${width}, ${this.options.cellSize}px)`;
+    this.gridElement.style.gridTemplateRows = `repeat(${height}, ${this.options.cellSize}px)`;
+  }
+  
+  /**
    * Render the currently visible portion of the grid
    */
   renderVisibleGrid() {
     // Clear grid element
     this.gridElement.innerHTML = '';
     
+    const isMobile = window.innerWidth < 768;
+    const width = isMobile ? this.options.gridWidthSmall : this.options.gridWidth;
+    const height = isMobile ? this.options.gridHeightSmall : this.options.gridHeight;
+    
     // Calculate visible bounds
-    const endX = this.viewOffset.x + this.options.gridWidth;
-    const endY = this.viewOffset.y + this.options.gridHeight;
+    const endX = this.viewOffset.x + width;
+    const endY = this.viewOffset.y + height;
     
     // Render visible cells
     for (let y = this.viewOffset.y; y < endY; y++) {
@@ -197,18 +212,19 @@ class GridRenderer {
     this.path = path;
     this.selectedCells = [];
     
-    // Reset all cells' path status and selection status
+    // Reset all cells
     for (let y = 0; y < this.grid.length; y++) {
       for (let x = 0; x < this.grid[0].length; x++) {
         this.grid[y][x].isPath = false;
         this.grid[y][x].isSelected = false;
         this.grid[y][x].pathIndex = -1;
+        this.grid[y][x].letter = ''; // Clear all letters initially
       }
     }
     
     // Set start cell
-    const centerX = Math.floor(this.grid[0].length / 2);
-    const centerY = Math.floor(this.grid.length / 2);
+    const centerX = 25;
+    const centerY = 25;
     this.grid[centerY][centerX].isPath = true;
     this.grid[centerY][centerX].isStart = true;
     this.grid[centerY][centerX].pathIndex = 0;
@@ -227,8 +243,33 @@ class GridRenderer {
       }
     });
     
+    // NEW: Fill random letters based on percentage
+    this.fillRandomLetters();
+    
     // Re-render grid
     this.renderVisibleGrid();
+  }
+  
+  /**
+   * Fill empty cells with random letters based on configured percentage
+   */
+  fillRandomLetters() {
+    const totalCells = this.fullGridSize * this.fullGridSize;
+    const pathCells = this.path.length + 1; // +1 for start cell
+    const emptyCells = totalCells - pathCells;
+    const randomFillCount = Math.floor(emptyCells * this.options.randomFillPercentage);
+    
+    let filled = 0;
+    
+    while (filled < randomFillCount) {
+      const x = Math.floor(Math.random() * this.fullGridSize);
+      const y = Math.floor(Math.random() * this.fullGridSize);
+      
+      if (!this.grid[y][x].isPath && this.grid[y][x].letter === '') {
+        this.grid[y][x].letter = this.getRandomLetter();
+        filled++;
+      }
+    }
   }
   
   /**
@@ -240,13 +281,17 @@ class GridRenderer {
     let newOffsetX = this.viewOffset.x;
     let newOffsetY = this.viewOffset.y;
     
+    const isMobile = window.innerWidth < 768;
+    const width = isMobile ? this.options.gridWidthSmall : this.options.gridWidth;
+    const height = isMobile ? this.options.gridHeightSmall : this.options.gridHeight;
+    
     switch (direction) {
       case 'up':
         newOffsetY = Math.max(0, this.viewOffset.y - 1);
         break;
       case 'down':
         newOffsetY = Math.min(
-          this.grid.length - this.options.gridHeight,
+          this.fullGridSize - height,
           this.viewOffset.y + 1
         );
         break;
@@ -255,103 +300,16 @@ class GridRenderer {
         break;
       case 'right':
         newOffsetX = Math.min(
-          this.grid[0].length - this.options.gridWidth,
+          this.fullGridSize - width,
           this.viewOffset.x + 1
         );
         break;
     }
     
-    // Check if we're scrolling too far from the path
-    const canScroll = this.isScrollWithinLimits(newOffsetX, newOffsetY);
-    
-    if (canScroll) {
-      this.viewOffset.x = newOffsetX;
-      this.viewOffset.y = newOffsetY;
-      this.renderVisibleGrid();
-    }
-  }
-  
-  /**
-   * Get the extents of selected cells or path
-   * @return {Object} Object with minX, maxX, minY, maxY properties
-   */
-  getSelectionExtents() {
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    
-    // If we have selected cells, use those for boundaries
-    if (this.selectedCells.length > 0) {
-      // Add start cell to the mix
-      const centerX = Math.floor(this.grid[0].length / 2);
-      const centerY = Math.floor(this.grid.length / 2);
-      
-      // Include start cell in calculations
-      minX = centerX;
-      maxX = centerX;
-      minY = centerY;
-      maxY = centerY;
-      
-      // Check all selected cells
-      this.selectedCells.forEach(pos => {
-        minX = Math.min(minX, pos.x);
-        maxX = Math.max(maxX, pos.x);
-        minY = Math.min(minY, pos.y);
-        maxY = Math.max(maxY, pos.y);
-      });
-    } 
-    // If no cells are selected, use the path
-    else if (this.path && this.path.length > 0) {
-      const centerX = Math.floor(this.grid[0].length / 2);
-      const centerY = Math.floor(this.grid.length / 2);
-      
-      // Start with center as min/max
-      minX = centerX;
-      maxX = centerX;
-      minY = centerY;
-      maxY = centerY;
-      
-      // Calculate min/max from path
-      this.path.forEach(point => {
-        const gridX = centerX + point.x;
-        const gridY = centerY + point.y;
-        
-        minX = Math.min(minX, gridX);
-        maxX = Math.max(maxX, gridX);
-        minY = Math.min(minY, gridY);
-        maxY = Math.max(maxY, gridY);
-      });
-    } 
-    // If nothing else, use grid center
-    else {
-      const centerX = Math.floor(this.grid[0].length / 2);
-      const centerY = Math.floor(this.grid.length / 2);
-      minX = centerX;
-      maxX = centerX;
-      minY = centerY;
-      maxY = centerY;
-    }
-    
-    return { minX, maxX, minY, maxY };
-  }
-  
-  /**
-   * Check if the scroll is within limits relative to selected cells
-   * @param {number} offsetX - New X offset to check
-   * @param {number} offsetY - New Y offset to check
-   * @return {boolean} Whether scroll is within limits
-   */
-  isScrollWithinLimits(offsetX, offsetY) {
-    // Get extents from selection or path
-    const { minX, maxX, minY, maxY } = this.getSelectionExtents();
-    
-    // Check if new scroll offset would be too far from selection extents
-    const maxDistance = this.options.maxScrollDistance;
-    
-    const tooFarLeft = offsetX < minX - maxDistance;
-    const tooFarRight = offsetX + this.options.gridWidth > maxX + maxDistance;
-    const tooFarUp = offsetY < minY - maxDistance;
-    const tooFarDown = offsetY + this.options.gridHeight > maxY + maxDistance;
-    
-    return !(tooFarLeft || tooFarRight || tooFarUp || tooFarDown);
+    // Update view offset
+    this.viewOffset.x = newOffsetX;
+    this.viewOffset.y = newOffsetY;
+    this.renderVisibleGrid();
   }
   
   /**
@@ -362,8 +320,8 @@ class GridRenderer {
     const letters = [];
     
     // Start with the start cell (if it has a letter)
-    const centerX = Math.floor(this.grid[0].length / 2);
-    const centerY = Math.floor(this.grid.length / 2);
+    const centerX = 25;
+    const centerY = 25;
     const startCell = this.grid[centerY][centerX];
     
     if (startCell.letter) {
@@ -409,20 +367,20 @@ class GridRenderer {
    * Handle responsive layout changes
    */
   handleResponsive() {
-    // Check if we're on mobile
     const isMobile = window.innerWidth < 768;
     
+    // Update view offset for different screen sizes
     if (isMobile) {
-      // Mobile layout: narrower grid
-      this.options.gridWidth = 8;
-      this.gridElement.style.gridTemplateColumns = `repeat(8, ${this.options.cellSize}px)`;
+      // Small screen: 9x9 starting at position 21,21
+      this.viewOffset.x = 21;
+      this.viewOffset.y = 21;
     } else {
-      // Desktop layout: wider grid
-      this.options.gridWidth = 10;
-      this.gridElement.style.gridTemplateColumns = `repeat(10, ${this.options.cellSize}px)`;
+      // Large screen: 13x9 starting at position 19,21
+      this.viewOffset.x = 19;
+      this.viewOffset.y = 21;
     }
     
-    // Re-render with updated dimensions
+    this.updateGridTemplate();
     this.renderVisibleGrid();
   }
   
