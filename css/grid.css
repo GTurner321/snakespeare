@@ -315,3 +315,59 @@ body {
         padding: 6px 12px;
     }
 }
+
+/* Critical Fix for Vertical Grid Issue */
+
+/* Force grid container to use proper grid layout */
+.grid-container {
+    display: grid !important;
+    /* Explicitly set the grid template */
+    grid-template-columns: repeat(13, 50px) !important; /* Default desktop view */
+    grid-template-rows: repeat(9, 50px) !important;
+    gap: 2px !important;
+    width: max-content !important;
+    height: max-content !important;
+    background-color: #ccc;
+    border: 2px solid #888;
+    border-radius: 4px;
+    padding: 2px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    position: relative;
+    margin: 0 auto;
+}
+
+/* Ensure grid cells are properly sized */
+.grid-cell {
+    width: 50px !important;
+    height: 50px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-family: 'Trebuchet MS', Arial, sans-serif;
+    font-weight: bold;
+    font-size: 1.5rem;
+    user-select: none;
+    color: #444;
+    text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8);
+    box-sizing: border-box;
+}
+
+/* Responsive adjustment */
+@media (max-width: 768px) {
+    .grid-container {
+        grid-template-columns: repeat(9, 50px) !important; /* Mobile view */
+        grid-template-rows: repeat(9, 50px) !important;
+    }
+}
+
+/* Ensure grid container wrapper doesn't constrain the grid */
+#grid-container {
+    min-height: 500px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
