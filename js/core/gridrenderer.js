@@ -478,3 +478,5 @@ class GridRenderer {
     return this.letters.charAt(Math.floor(Math.random() * this.letters.length));
   }
 }
+
+export default GridRenderer;
