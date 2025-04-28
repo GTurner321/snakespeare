@@ -28,11 +28,10 @@ class GridRenderer {
     // Debug log to check options
     console.log('GridRenderer options:', this.options);
     
-    // Rest of the constructor...
     // Grid state
-    this.fullGridSize = 51;              // NEW: 51x51 grid
+    this.fullGridSize = 51;              // 51x51 grid
     this.grid = [];                      // 2D array of cell data
-    this.viewOffset = { x: 19, y: 21 };  // Updated for new initial view position
+    this.viewOffset = { x: 19, y: 21 };  // Initial view position
     this.path = [];                      // Current path data
     this.selectedCells = [];             // Array of selected cell coordinates {x, y}
     this.letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'; // For random letter generation
@@ -73,6 +72,17 @@ class GridRenderer {
       isSelected: false,
       pathIndex: 0
     };
+    
+    // Fill some random cells for testing (to ensure we see something)
+    for (let i = 0; i < 100; i++) {
+      const randomX = Math.floor(Math.random() * this.fullGridSize);
+      const randomY = Math.floor(Math.random() * this.fullGridSize);
+      
+      // Skip the center cell
+      if (randomX === centerX && randomY === centerY) continue;
+      
+      this.grid[randomY][randomX].letter = this.getRandomLetter();
+    }
   }
   
   /**
@@ -94,7 +104,7 @@ class GridRenderer {
     this.gridElement = document.createElement('div');
     this.gridElement.className = 'grid-container';
     
-    // Force grid display
+    // Explicitly set grid display style
     this.gridElement.style.display = 'grid';
     this.gridElement.style.gap = '2px';
     
@@ -106,6 +116,13 @@ class GridRenderer {
     
     // Add grid to container
     this.container.appendChild(this.gridElement);
+    
+    // Force a reflow to make sure the grid is rendered
+    void this.gridElement.offsetHeight;
+    
+    // Add debug info
+    console.log('Grid element after appending:', this.gridElement);
+    console.log('Container children:', this.container.children);
   }
   
   /**
@@ -115,9 +132,6 @@ class GridRenderer {
     const isMobile = window.innerWidth < 768;
     const width = isMobile ? this.options.gridWidthSmall : this.options.gridWidth;
     const height = isMobile ? this.options.gridHeightSmall : this.options.gridHeight;
-    
-    // Force reset the grid display
-    this.gridElement.style.display = 'grid';
     
     // Set data attribute for CSS to use
     this.gridElement.dataset.gridSize = isMobile ? 'mobile' : 'desktop';
@@ -134,11 +148,10 @@ class GridRenderer {
     this.gridElement.style.height = `${totalHeight}px`;
     this.gridElement.style.maxWidth = '100%'; // Prevent overflow on small screens
     
-    // Debug log to check values
-    console.log('Grid template update:', {
+    console.log('Updated grid template:', {
       width,
       height,
-      cellSize: this.options.cellSize,
+      isMobile,
       gridTemplateColumns: this.gridElement.style.gridTemplateColumns,
       gridTemplateRows: this.gridElement.style.gridTemplateRows,
       totalWidth,
@@ -161,7 +174,6 @@ class GridRenderer {
     const endX = this.viewOffset.x + width;
     const endY = this.viewOffset.y + height;
     
-    // Debug log
     console.log('Rendering visible grid:', {
       viewOffset: this.viewOffset,
       width,
@@ -174,28 +186,28 @@ class GridRenderer {
     
     let cellCount = 0;
     
-    // Render visible cells
-    for (let y = this.viewOffset.y; y < endY; y++) {
-      for (let x = this.viewOffset.x; x < endX; x++) {
+    // Render visible cells - ENSURE LOOPS ARE RUNNING
+    for (let y = this.viewOffset.y; y < endY && y < this.fullGridSize; y++) {
+      for (let x = this.viewOffset.x; x < endX && x < this.fullGridSize; x++) {
+        // Debug
+        console.log(`Creating cell at (${x},${y})`);
+        
         const cellElement = document.createElement('div');
         cellElement.className = 'grid-cell';
         
-        // Force cell dimensions
+        // Ensure proper cell dimensions
         cellElement.style.width = `${this.options.cellSize}px`;
         cellElement.style.height = `${this.options.cellSize}px`;
         
-        // Debug: Add visible border
+        // Add visible border to debug
         cellElement.style.border = '1px solid red';
         
         // If cell is within grid bounds
         if (y >= 0 && y < this.grid.length && x >= 0 && x < this.grid[0].length) {
           const cell = this.grid[y][x];
           
-          // Set cell content
+          // Set cell content - ensure it has something visible
           cellElement.textContent = cell.letter || '•'; // Use dot if no letter
-          
-          // Debug log
-          console.log(`Cell at (${x},${y}):`, cell.letter, cell.isStart);
           
           // Store grid coordinates as data attributes for click handling
           cellElement.dataset.gridX = x;
@@ -224,20 +236,21 @@ class GridRenderer {
           // Out of bounds cell - display as empty
           cellElement.classList.add('out-of-bounds');
           cellElement.textContent = '×'; // Use × for out of bounds
-          console.log(`Out of bounds cell at (${x},${y})`);
         }
         
+        // Add to grid
         this.gridElement.appendChild(cellElement);
         cellCount++;
+        
+        // Debug info for first few cells
+        if (cellCount < 5) {
+          console.log(`Added cell ${cellCount}:`, cellElement);
+        }
       }
     }
     
     console.log(`Created ${cellCount} cells`);
     console.log('Grid element children:', this.gridElement.children.length);
-    console.log('Grid element computed style:', window.getComputedStyle(this.gridElement).display);
-    
-    // Force a reflow to ensure grid layout is applied
-    this.gridElement.offsetHeight;
   }
   
   /**
@@ -316,7 +329,7 @@ class GridRenderer {
       }
     });
     
-    // NEW: Fill random letters based on percentage
+    // Fill random letters based on percentage
     this.fillRandomLetters();
     
     // Re-render grid
@@ -465,6 +478,3 @@ class GridRenderer {
     return this.letters.charAt(Math.floor(Math.random() * this.letters.length));
   }
 }
-
-// Export class for use in other modules
-export default GridRenderer;
