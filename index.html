@@ -45,7 +45,10 @@
             const gameController = new GameController({
                 gameContainerId: 'game-container',
                 gridContainerId: 'grid-container',
-                gridSize: { mobile: 8, desktop: 10 },
+                gridSize: { 
+                    mobile: { width: 9, height: 9 },
+                    desktop: { width: 13, height: 9 }
+                },
                 cellSize: 50
             });
             
