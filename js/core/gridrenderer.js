@@ -18,7 +18,7 @@ class GridRenderer {
       gridWidthSmall: 9,          // Default for small screens
       gridHeightSmall: 9,         // Default for small screens
       cellSize: 50,               // Cell size in pixels
-      randomFillPercentage: 0.5,  // 50% random fill
+      randomFillPercentage: 0,  // 50% random fill - adapted to 0% temporary
       highlightPath: false,       // Whether to highlight the path initially
       onCellClick: null,          // Cell click callback
       onSelectionChange: null,
