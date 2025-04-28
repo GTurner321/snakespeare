@@ -214,56 +214,56 @@ class GameController {
     this.loadPhrase(samplePhrase);
   }
   
-/**
- * Load phrases from CSV data
- * @param {string} csvUrl - URL to the CSV file containing phrases
- * @return {Promise<Array>} Promise resolving to array of phrase objects
- */
-async loadPhraseData(csvUrl) {
-  try {
-    // Fetch CSV file
-    const response = await fetch(csvUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch CSV: ${response.status} ${response.statusText}`);
-    }
-    
-    const csvData = await response.text();
-    
-    // Check if we have data
-    if (!csvData || csvData.trim() === '') {
-      throw new Error('CSV file is empty');
-    }
-    
-    // Parse CSV using PapaParse (imported via CDN in index.html)
-    const phrases = this.parseCSV(csvData);
-    
-    console.log(`Loaded ${phrases.length} phrases from CSV`);
-    
-    // Store phrase data
-    this.phrases = phrases;
-    
-    // Load a random phrase instead of the first one
-    if (phrases.length > 0) {
-      // Pick a random phrase index
-      const randomIndex = Math.floor(Math.random() * phrases.length);
-      const randomPhrase = phrases[randomIndex];
+  /**
+   * Load phrases from CSV data
+   * @param {string} csvUrl - URL to the CSV file containing phrases
+   * @return {Promise<Array>} Promise resolving to array of phrase objects
+   */
+  async loadPhraseData(csvUrl) {
+    try {
+      // Fetch CSV file
+      const response = await fetch(csvUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch CSV: ${response.status} ${response.statusText}`);
+      }
       
-      // Load the random phrase
-      this.loadPhrase(randomPhrase);
-      console.log('Loaded random phrase:', randomPhrase.phrase);
-    } else {
-      console.warn('No phrases found in CSV');
+      const csvData = await response.text();
+      
+      // Check if we have data
+      if (!csvData || csvData.trim() === '') {
+        throw new Error('CSV file is empty');
+      }
+      
+      // Parse CSV using PapaParse (imported via CDN in index.html)
+      const phrases = this.parseCSV(csvData);
+      
+      console.log(`Loaded ${phrases.length} phrases from CSV`);
+      
+      // Store phrase data
+      this.phrases = phrases;
+      
+      // Load a random phrase instead of the first one
+      if (phrases.length > 0) {
+        // Pick a random phrase index
+        const randomIndex = Math.floor(Math.random() * phrases.length);
+        const randomPhrase = phrases[randomIndex];
+        
+        // Load the random phrase
+        this.loadPhrase(randomPhrase);
+        console.log('Loaded random phrase:', randomPhrase.phrase);
+      } else {
+        console.warn('No phrases found in CSV');
+        this.loadSampleData();
+      }
+      
+      return phrases;
+    } catch (error) {
+      console.error('Error loading phrase data:', error);
+      // Load sample data as fallback
       this.loadSampleData();
+      return [];
     }
-    
-    return phrases;
-  } catch (error) {
-    console.error('Error loading phrase data:', error);
-    // Load sample data as fallback
-    this.loadSampleData();
-    return [];
   }
-}
   
   /**
    * Parse CSV data into an array of phrase objects using PapaParse
