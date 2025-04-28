@@ -12,7 +12,7 @@ import ArrowButtons from './arrowbuttons.js';
 
 class GameController {
   constructor(options = {}) {
-    // Default options
+    // Default options with proper structure for gridSize
     this.options = {
       gameContainerId: options.gameContainerId || 'game-container',
       gridContainerId: options.gridContainerId || 'grid-container',
@@ -22,8 +22,46 @@ class GameController {
       },
       cellSize: options.cellSize || 50,
       randomFillPercentage: options.randomFillPercentage || 0.5,
-      ...options
     };
+    
+    // Override default gridSize if provided with correct structure
+    if (options.gridSize) {
+      // Make sure we have proper objects with width/height properties
+      if (options.gridSize.mobile) {
+        // If it's already an object with width/height, use it
+        if (typeof options.gridSize.mobile.width === 'number' && 
+            typeof options.gridSize.mobile.height === 'number') {
+          this.options.gridSize.mobile = options.gridSize.mobile;
+        } 
+        // If it's just a number, convert to object (backwards compatibility)
+        else if (typeof options.gridSize.mobile === 'number') {
+          console.warn('Deprecated: gridSize.mobile should be an object with width/height properties');
+          this.options.gridSize.mobile = { 
+            width: options.gridSize.mobile, 
+            height: options.gridSize.mobile 
+          };
+        }
+      }
+      
+      if (options.gridSize.desktop) {
+        // If it's already an object with width/height, use it
+        if (typeof options.gridSize.desktop.width === 'number' && 
+            typeof options.gridSize.desktop.height === 'number') {
+          this.options.gridSize.desktop = options.gridSize.desktop;
+        } 
+        // If it's just a number, convert to object (backwards compatibility)
+        else if (typeof options.gridSize.desktop === 'number') {
+          console.warn('Deprecated: gridSize.desktop should be an object with width/height properties');
+          this.options.gridSize.desktop = { 
+            width: options.gridSize.desktop, 
+            height: 9 // Default height
+          };
+        }
+      }
+    }
+    
+    // Log the final configuration to help with debugging
+    console.log('GameController initialized with options:', this.options);
     
     // Game state
     this.currentPhrase = null;
@@ -32,6 +70,8 @@ class GameController {
     
     // Initialize components
     this.pathGenerator = new PathGenerator();
+    
+    // Pass gridSize correctly to GridRenderer
     this.gridRenderer = new GridRenderer(this.options.gridContainerId, {
       gridWidth: this.options.gridSize.desktop.width,
       gridHeight: this.options.gridSize.desktop.height,
