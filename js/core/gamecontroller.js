@@ -21,7 +21,8 @@ class GameController {
         desktop: { width: 13, height: 9 }
       },
       cellSize: options.cellSize || 50,
-      randomFillPercentage: options.randomFillPercentage || 0.5,
+      randomFillPercentage: options.randomFillPercentage,
+      // fill percentage of random cells is being passed through here
     };
     
     // Override default gridSize if provided with correct structure
