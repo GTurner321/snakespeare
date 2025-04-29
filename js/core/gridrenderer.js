@@ -191,8 +191,8 @@ class GridRenderer {
         cellElement.style.width = `${this.options.cellSize}px`;
         cellElement.style.height = `${this.options.cellSize}px`;
         
-        // Add visible border to debug
-        cellElement.style.border = '1px solid red';
+        // Remove debug red border
+        // cellElement.style.border = '1px solid red';
         
         // If cell is within grid bounds
         if (y >= 0 && y < this.grid.length && x >= 0 && x < this.grid[0].length) {
@@ -205,14 +205,22 @@ class GridRenderer {
           cellElement.dataset.gridX = x;
           cellElement.dataset.gridY = y;
           
-          // Apply styling
+          // Apply styling for different cell states
           if (cell.isStart) {
             cellElement.classList.add('start-cell');
             console.log('Start cell found at:', x, y);
           } else if (cell.isSelected) {
             cellElement.classList.add('selected-cell');
-          } else if (cell.isPath && this.options.highlightPath) {
+          } 
+          
+          // Path cells are now always marked, but only highlighted in purple if option is enabled
+          if (cell.isPath) {
             cellElement.classList.add('path-cell');
+            
+            // Add highlight-enabled class only if path highlighting is turned on
+            if (this.options.highlightPath) {
+              cellElement.classList.add('highlight-enabled');
+            }
           }
           
           // Add click event handler for cell selection
