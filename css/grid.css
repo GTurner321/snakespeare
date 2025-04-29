@@ -135,18 +135,27 @@ body {
     box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2);
 }
 
+/* NEW: Path cell highlighting in light yellow */
+.grid-cell.path-cell:not(.selected-cell):not(.start-cell) {
+    background-color: #FFF9C4; /* Light yellow for path letters */
+    color: #444;
+    text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8);
+    border: 1px solid #E6DD93; /* Slightly darker yellow border */
+}
+
 .grid-cell.selected-cell {
     background-color: #2196F3; /* Blue for selected */
     color: white;
     text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.4);
     transform: scale(1.05);
-    z-index: 1;
+    z-index: 2; /* Ensure selected is on top of path */
     box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
     border: 2px solid #0D47A1; /* Darker blue border */
 }
 
-.grid-cell.path-cell {
-    background-color: #9C27B0; /* Purple for revealed path */
+/* Only show the purple path when highlighting is enabled */
+.grid-cell.path-cell.highlight-enabled:not(.selected-cell):not(.start-cell) {
+    background-color: #9C27B0; /* Purple for revealed path (when highlight enabled) */
     color: white;
     text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.4);
 }
@@ -164,6 +173,18 @@ body {
         transform: scale(1.05);
         cursor: pointer;
         box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+        z-index: 1; /* Ensure hover is above regular cells */
+    }
+    
+    /* Ensure selected state always overrides hover */
+    .grid-cell.selected-cell:hover {
+        background-color: #2196F3; /* Keep blue for selected when hovering */
+        z-index: 2; /* Keep selected on top */
+    }
+    
+    /* Special hover for path cells */
+    .grid-cell.path-cell:not(.selected-cell):not(.start-cell):hover {
+        background-color: #F0E68C; /* Darker yellow on hover */
     }
 }
 
