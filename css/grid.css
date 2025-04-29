@@ -1,6 +1,15 @@
 /* ==========================================================================
    Grid Game Main Styles
-   Contains styles for the game grid and general layout
+   Contains styles for the game grid, arrow buttons, and general layout
+   
+   CONTENTS:
+   1. Game Container & General Layout
+   2. Grid Container & Cells
+   3. Arrow Button Layout
+   4. Phrase Display
+   5. Refresh Button and Controls
+   6. Button Animation (No Translation)
+   7. Styled Box Adjustments
    ========================================================================== */
 
 /* ==========================================================================
@@ -29,6 +38,30 @@ body {
     color: #444;
     text-shadow: 0px 2px 2px rgba(255, 255, 255, 0.8), 
                  0px -1px 1px rgba(0, 0, 0, 0.4);
+}
+
+/* Medium screens */
+@media (max-width: 768px) {
+    .game-container {
+        padding: 10px;
+    }
+    
+    .game-title {
+        font-size: 1.8rem;
+        margin: 15px 0;
+    }
+}
+
+/* Small screens */
+@media (max-width: 480px) {
+    .game-container {
+        padding: 8px;
+    }
+    
+    .game-title {
+        font-size: 1.5rem;
+        margin: 10px 0;
+    }
 }
 
 /* ==========================================================================
@@ -134,6 +167,20 @@ body {
     }
 }
 
+/* Medium screens */
+@media (max-width: 768px) {
+    .grid-cell {
+        font-size: 1.3rem;
+    }
+}
+
+/* Small screens */
+@media (max-width: 480px) {
+    .grid-cell {
+        font-size: 1.1rem;
+    }
+}
+
 /* ==========================================================================
    3. Arrow Button Layout
    ========================================================================== */
@@ -200,6 +247,40 @@ body {
     transform: translateY(-50%);
 }
 
+/* Medium screens */
+@media (max-width: 768px) {
+    .arrow-button {
+        font-size: 1.4rem;
+    }
+    
+    .arrow-button.arrow-up,
+    .arrow-button.arrow-down {
+        padding: 3px 12px;
+    }
+    
+    .arrow-button.arrow-left,
+    .arrow-button.arrow-right {
+        padding: 12px 3px;
+    }
+}
+
+/* Small screens */
+@media (max-width: 480px) {
+    .arrow-button {
+        font-size: 1.2rem;
+    }
+    
+    .arrow-button.arrow-up,
+    .arrow-button.arrow-down {
+        padding: 2px 8px;
+    }
+    
+    .arrow-button.arrow-left,
+    .arrow-button.arrow-right {
+        padding: 8px 2px;
+    }
+}
+
 /* ==========================================================================
    4. Phrase Display
    ========================================================================== */
@@ -212,6 +293,21 @@ body {
     padding: 10px;
     font-family: monospace;
     min-height: 1.5em;
+}
+
+/* Medium screens */
+@media (max-width: 768px) {
+    #phrase-text {
+        font-size: 1.1rem;
+    }
+}
+
+/* Small screens */
+@media (max-width: 480px) {
+    #phrase-text {
+        font-size: 1rem;
+        padding: 6px;
+    }
 }
 
 /* ==========================================================================
@@ -240,93 +336,120 @@ body {
     );
 }
 
-/* ==========================================================================
-   6. Styled Box Adjustments
-   ========================================================================== */
-
-.styled-box-content p {
-    margin: 8px 0;
-}
-
-/* ==========================================================================
-   7. Responsive Design
-   ========================================================================== */
-
 /* Medium screens */
 @media (max-width: 768px) {
-    .game-container {
-        padding: 10px;
-    }
-    
-    .game-title {
-        font-size: 1.8rem;
-        margin: 15px 0;
-    }
-    
-    .grid-cell {
-        font-size: 1.3rem;
-    }
-    
     .refresh-button-container {
         flex-direction: column;
         gap: 8px;
-    }
-    
-    .arrow-button {
-        font-size: 1.4rem;
-    }
-    
-    .arrow-button.arrow-up,
-    .arrow-button.arrow-down {
-        padding: 3px 12px;
-    }
-    
-    .arrow-button.arrow-left,
-    .arrow-button.arrow-right {
-        padding: 12px 3px;
-    }
-    
-    #phrase-text {
-        font-size: 1.1rem;
     }
 }
 
 /* Small screens */
 @media (max-width: 480px) {
-    .game-container {
-        padding: 8px;
-    }
-    
-    .game-title {
-        font-size: 1.5rem;
-        margin: 10px 0;
-    }
-    
-    .grid-cell {
-        font-size: 1.1rem;
-    }
-    
-    .arrow-button {
-        font-size: 1.2rem;
-    }
-    
-    .arrow-button.arrow-up,
-    .arrow-button.arrow-down {
-        padding: 2px 8px;
-    }
-    
-    .arrow-button.arrow-left,
-    .arrow-button.arrow-right {
-        padding: 8px 2px;
-    }
-    
-    #phrase-text {
-        font-size: 1rem;
-        padding: 6px;
-    }
-    
     .refresh-button-container .metallic-button {
         font-size: 0.9rem;
         padding: 6px 12px;
     }
+}
+
+/* ==========================================================================
+   6. Button Animation (No Translation)
+   ========================================================================== */
+
+/* Animation for button clicks - WITHOUT TRANSLATION */
+@keyframes button-pulse {
+    0% { transform: scale(1); }
+    50% { 
+        transform: scale(1.02);
+        background: repeating-linear-gradient(
+            120deg,
+            var(--btn-metal-lighter) 0px,
+            var(--btn-metal-light) 15px,
+            var(--btn-metal-lighter) 35px,
+            var(--btn-metal-mediumlight) 60px,
+            var(--btn-metal-light) 85px,
+            var(--btn-metal-mediumlight) 100px,
+            var(--btn-metal-lighter) 125px,
+            var(--btn-metal-light) 140px
+        );
+    }
+    100% { 
+        transform: scale(1);
+        background: repeating-linear-gradient(
+            120deg,
+            var(--btn-metal-light) 0px,
+            var(--btn-metal-medium) 10px,
+            var(--btn-metal-light) 30px,
+            var(--btn-metal-mediumlight) 55px,
+            var(--btn-metal-medium) 80px,
+            var(--btn-metal-mediumlight) 95px,
+            var(--btn-metal-light) 120px,
+            var(--btn-metal-medium) 135px
+        );
+    }
+}
+
+/* Active/pressed state - REVISED to remove translation */
+.metallic-button:active:not(:disabled) {
+    /* Darker metallic effect when pressed */
+    background: repeating-linear-gradient(
+        120deg,
+        var(--btn-metal-medium) 0px,
+        var(--btn-metal-mediumlight) 32px,
+        var(--btn-metal-dark) 57px,
+        var(--btn-metal-medium) 66px,
+        var(--btn-metal-mediumlight) 97px,
+        var(--btn-metal-medium) 122px,
+        var(--btn-metal-dark) 137px
+    );
+
+    /* Remove press down effect (translateY) - NO TRANSLATION */
+    border-bottom-width: 1px;
+    
+    /* No shadow when pressed */
+    box-shadow: none;
+                
+    /* Adjusted text shadow for pressed effect */
+    text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.5),
+                 0px -1px 1px rgba(0, 0, 0, 0.3);
+}
+
+/* Clicked state - consistent animation WITHOUT TRANSLATION */
+.metallic-button.clicked {
+    animation: button-pulse var(--pulse-speed) ease-in-out forwards;
+    box-shadow: none !important;
+    /* Ensure no translation happens during animation */
+    transform: none !important;
+}
+
+/* Fix for arrow buttons specifically */
+.arrow-button.clicked {
+    animation: button-pulse var(--pulse-speed) ease-in-out forwards;
+    box-shadow: none !important;
+    /* Preserve original transforms for positioning while removing animation translation */
+}
+
+/* Special fixes for each direction to preserve original positioning transforms */
+.arrow-button.arrow-up.clicked {
+    transform: translateX(-50%) !important;
+}
+
+.arrow-button.arrow-down.clicked {
+    transform: translateX(-50%) !important;
+}
+
+.arrow-button.arrow-left.clicked {
+    transform: translateY(-50%) !important;
+}
+
+.arrow-button.arrow-right.clicked {
+    transform: translateY(-50%) !important;
+}
+
+/* ==========================================================================
+   7. Styled Box Adjustments
+   ========================================================================== */
+
+.styled-box-content p {
+    margin: 8px 0;
 }
