@@ -119,7 +119,13 @@ class ArrowButtons {
     
     // Add to grid container instead of game container
     gridContainer.style.position = 'relative';
-    gridContainer.appendChild(this.buttonContainer);
+    
+    // Position button container relative to the grid element, not the container
+    if (this.gridRenderer.gridElement) {
+      this.gridRenderer.gridElement.appendChild(this.buttonContainer);
+    } else {
+      gridContainer.appendChild(this.buttonContainer);
+    }
   }
   
   /**
