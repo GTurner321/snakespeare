@@ -18,7 +18,7 @@ class GridRenderer {
       gridWidthSmall: 9,          // Default for small screens
       gridHeightSmall: 9,         // Default for small screens
       cellSize: 50,               // Cell size in pixels
-      randomFillPercentage: 0,  // 50% random fill - adapted to 0% temporary
+      randomFillPercentage: 0,    // 50% random fill - adapted to 0% temporary
       highlightPath: false,       // Whether to highlight the path initially
       onCellClick: null,          // Cell click callback
       onSelectionChange: null,
@@ -73,16 +73,8 @@ class GridRenderer {
       pathIndex: 0
     };
     
-    // Fill some random cells for testing (to ensure we see something)
-    for (let i = 0; i < 100; i++) {
-      const randomX = Math.floor(Math.random() * this.fullGridSize);
-      const randomY = Math.floor(Math.random() * this.fullGridSize);
-      
-      // Skip the center cell
-      if (randomX === centerX && randomY === centerY) continue;
-      
-      this.grid[randomY][randomX].letter = this.getRandomLetter();
-    }
+    // REMOVED: The code that added 100 random letters for testing
+    // This was causing random letters to appear even when randomFillPercentage is set to 0
   }
   
   /**
