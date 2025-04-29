@@ -11,7 +11,7 @@ class PathGenerator {
     this.directions = [       // Possible move directions (up, right, down, left)
       [0, -1], [1, 0], [0, 1], [-1, 0]
     ];
-    // NEW: Maximum grid limits to ensure path stays within 51x51 bounds
+    // Maximum grid limits to ensure path stays within 51x51 bounds
     this.maxDistance = 25; // Since 51/2 = 25.5
   }
   
@@ -92,7 +92,55 @@ class PathGenerator {
   }
   
   /**
-   * Find next valid position (not visited)
+   * Check if a position is valid for the next move
+   * @param {number} newX - Candidate X coordinate
+   * @param {number} newY - Candidate Y coordinate
+   * @param {number} currentX - Current X coordinate
+   * @param {number} currentY - Current Y coordinate
+   * @return {boolean} Whether the position is valid
+   */
+  isValidNextPosition(newX, newY, currentX, currentY) {
+    // Check if position is already visited
+    const key = `${newX},${newY}`;
+    if (this.visited.has(key)) {
+      return false;
+    }
+    
+    // Check if position is within bounds
+    if (Math.abs(newX) > this.maxDistance || Math.abs(newY) > this.maxDistance) {
+      return false;
+    }
+    
+    // Check if position is adjacent to current position
+    const isAdjacentToCurrent = (Math.abs(newX - currentX) === 1 && newY === currentY) || 
+                               (Math.abs(newY - currentY) === 1 && newX === currentX);
+    if (!isAdjacentToCurrent) {
+      return false;
+    }
+    
+    // Check that it's not adjacent to any other visited cells
+    // except the current one
+    for (const point of this.path) {
+      // Skip checking against current position
+      if (point.x === currentX && point.y === currentY) {
+        continue;
+      }
+      
+      // Check if adjacent to this path point
+      const isAdjacent = (Math.abs(newX - point.x) === 1 && newY === point.y) || 
+                         (Math.abs(newY - point.y) === 1 && newX === point.x);
+      
+      // If adjacent to any other point, it's not valid
+      if (isAdjacent) {
+        return false;
+      }
+    }
+    
+    return true;
+  }
+  
+  /**
+   * Find next valid position (not visited and adjacent to only current cell)
    * @param {number} x - Current X coordinate
    * @param {number} y - Current Y coordinate
    * @return {Object|null} Next position {x, y} or null if no valid position
@@ -106,15 +154,8 @@ class PathGenerator {
       const newX = x + dx;
       const newY = y + dy;
       
-      // NEW: Check if new position is within maximum bounds
-      if (Math.abs(newX) > this.maxDistance || Math.abs(newY) > this.maxDistance) {
-        continue;
-      }
-      
-      const key = `${newX},${newY}`;
-      
-      // If this position hasn't been visited, return it
-      if (!this.visited.has(key)) {
+      // Check if this is a valid next position
+      if (this.isValidNextPosition(newX, newY, x, y)) {
         return { x: newX, y: newY };
       }
     }
