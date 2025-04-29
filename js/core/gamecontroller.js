@@ -84,12 +84,20 @@ class GameController {
       onSelectionChange: () => this.handleSelectionChange()
     });
     
-    // Initialize arrow buttons
+    // Initialize arrow buttons AFTER grid renderer is fully created
+    // This ensures the grid element exists for proper positioning
     this.arrowButtons = new ArrowButtons(this.gridRenderer, {
       container: this.options.gameContainerId,
       buttonHeight: this.options.cellSize * 2.5,  // 2.5 squares height
       buttonDepth: this.options.cellSize * 0.75   // 0.75 square depth
     });
+    
+    // Update arrow button positions after grid renderer is fully initialized
+    setTimeout(() => {
+      if (this.arrowButtons.updateButtonPosition) {
+        this.arrowButtons.updateButtonPosition();
+      }
+    }, 100);
     
     // Add window resize handler
     window.addEventListener('resize', () => {
@@ -126,6 +134,11 @@ class GameController {
     
     // Update arrow button states in case scrolling limits have changed
     this.arrowButtons.updateButtonStates();
+    
+    // Also update button positions after selection changes
+    if (this.arrowButtons.updateButtonPosition) {
+      this.arrowButtons.updateButtonPosition();
+    }
   }
   
   /**
@@ -167,6 +180,11 @@ class GameController {
     // Update arrow button states
     this.arrowButtons.updateButtonStates();
     
+    // Also update button positions after loading a new phrase
+    if (this.arrowButtons.updateButtonPosition) {
+      this.arrowButtons.updateButtonPosition();
+    }
+    
     // Reset phrase display
     const displayElement = document.getElementById('phrase-text');
     if (displayElement) {
@@ -184,9 +202,18 @@ class GameController {
    * Handle window resize events
    */
   handleResize() {
-    // Just let gridRenderer handle it
+    // Let gridRenderer handle it
     this.gridRenderer.handleResponsive();
+    
+    // Update arrow buttons
     this.arrowButtons.updateButtonStates();
+    
+    // Update button positions after resize
+    if (this.arrowButtons.updateButtonPosition) {
+      setTimeout(() => {
+        this.arrowButtons.updateButtonPosition();
+      }, 50); // Small delay to ensure grid has updated
+    }
   }
   
   /**
