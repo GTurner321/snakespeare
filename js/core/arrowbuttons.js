@@ -32,14 +32,27 @@ class ArrowButtons {
       throw new Error('Grid container not found');
     }
     
-    // Create button container
+    // Create a wrapper div for arrow buttons that sits OUTSIDE the grid element
+    // but overlays the grid using absolute positioning
+    const arrowButtonsWrapper = document.createElement('div');
+    arrowButtonsWrapper.className = 'arrow-buttons-wrapper';
+    arrowButtonsWrapper.style.position = 'absolute';
+    arrowButtonsWrapper.style.top = '0';
+    arrowButtonsWrapper.style.left = '0';
+    arrowButtonsWrapper.style.width = '100%';
+    arrowButtonsWrapper.style.height = '100%';
+    arrowButtonsWrapper.style.pointerEvents = 'none';
+    arrowButtonsWrapper.style.zIndex = '20'; // Higher than grid cells
+    
+    // Store reference to wrapper
+    this.arrowButtonsWrapper = arrowButtonsWrapper;
+    
+    // Create button container inside the wrapper
     this.buttonContainer = document.createElement('div');
     this.buttonContainer.className = 'arrow-buttons-container';
     
-    // Position container directly over grid
-    this.buttonContainer.style.position = 'absolute';
-    this.buttonContainer.style.top = '0';
-    this.buttonContainer.style.left = '0';
+    // Position container
+    this.buttonContainer.style.position = 'relative';
     this.buttonContainer.style.width = '100%';
     this.buttonContainer.style.height = '100%';
     this.buttonContainer.style.pointerEvents = 'none';
@@ -117,15 +130,46 @@ class ArrowButtons {
       this.buttonContainer.appendChild(button);
     });
     
-    // Add to grid container instead of game container
-    gridContainer.style.position = 'relative';
+    // Add button container to wrapper
+    arrowButtonsWrapper.appendChild(this.buttonContainer);
     
-    // Position button container relative to the grid element, not the container
-    if (this.gridRenderer.gridElement) {
-      this.gridRenderer.gridElement.appendChild(this.buttonContainer);
-    } else {
-      gridContainer.appendChild(this.buttonContainer);
+    // Clean up any existing button wrapper to prevent duplicates
+    const existingWrapper = gridContainer.querySelector('.arrow-buttons-wrapper');
+    if (existingWrapper) {
+      existingWrapper.remove();
     }
+    
+    // Add wrapper directly to the grid container, NOT the grid element
+    // This is crucial - we want it overlaying the grid but not inside it
+    // so it doesn't get removed on grid re-renders
+    this.gridRenderer.container.appendChild(arrowButtonsWrapper);
+    
+    // Position the wrapper to match the grid element's position
+    this.updateButtonPosition();
+    
+    // Add resize handler to update button position when window size changes
+    window.addEventListener('resize', () => this.updateButtonPosition());
+  }
+  
+  /**
+   * Update button position to match current grid element position
+   */
+  updateButtonPosition() {
+    if (!this.gridRenderer.gridElement || !this.arrowButtonsWrapper) return;
+    
+    // Get the current position and dimensions of the grid element
+    const gridRect = this.gridRenderer.gridElement.getBoundingClientRect();
+    const containerRect = this.gridRenderer.container.getBoundingClientRect();
+    
+    // Calculate position relative to container
+    const top = gridRect.top - containerRect.top;
+    const left = gridRect.left - containerRect.left;
+    
+    // Update wrapper position and size to match grid element
+    this.arrowButtonsWrapper.style.top = `${top}px`;
+    this.arrowButtonsWrapper.style.left = `${left}px`;
+    this.arrowButtonsWrapper.style.width = `${gridRect.width}px`;
+    this.arrowButtonsWrapper.style.height = `${gridRect.height}px`;
   }
   
   /**
@@ -139,6 +183,9 @@ class ArrowButtons {
         
         // Scroll grid in the clicked direction
         this.gridRenderer.scroll(direction);
+        
+        // Update button position after scrolling
+        this.updateButtonPosition();
         
         // Update button states after scrolling
         this.updateButtonStates();
@@ -207,7 +254,7 @@ class ArrowButtons {
    * @param {boolean} show - Whether to show the buttons
    */
   setVisibility(show) {
-    this.buttonContainer.style.display = show ? 'block' : 'none';
+    this.arrowButtonsWrapper.style.display = show ? 'block' : 'none';
   }
 }
 
