@@ -211,7 +211,7 @@ class GridRenderer {
     return false;
   }
   
-  /**
+/**
  * Handle touch start event
  * @param {TouchEvent} e - Touch event
  */
@@ -242,8 +242,7 @@ handleTouchStart(e) {
     startX: x,
     startY: y,
     startCellSelected: false,
-    // Track cells we've processed during this swipe to avoid duplicates
-    processedCells: new Set(`${x},${y}`) 
+    // No longer track processed cells - we want to process every touch point
   };
   
   // Add visual indicator that the cell is being touched
@@ -285,14 +284,10 @@ handleTouchMove(e) {
   
   const { x, y, element, cell } = cellInfo;
   
-  // Generate a unique key for this cell position
-  const cellKey = `${x},${y}`;
-  
-  // If we've already processed this cell during this swipe and it's already selected, skip
-  if (this.touchState.processedCells.has(cellKey) && cell.isSelected) return;
-  
-  // Mark this cell as processed during this swipe
-  this.touchState.processedCells.add(cellKey);
+  // Skip if we're on the same cell as last processed touch point
+  if (x === this.touchState.lastCellX && y === this.touchState.lastCellY) {
+    return;
+  }
   
   console.log(`Touch moved to new cell (${x}, ${y})`);
   
@@ -326,8 +321,13 @@ handleTouchMove(e) {
   
   // At this point we should have at least one cell selected
   if (this.selectedCells.length > 0) {
-    // Skip if cell is already selected - we've already processed it
-    if (cell.isSelected) return;
+    // Skip if cell is already selected
+    if (cell.isSelected) {
+      // Update last cell position even if already selected
+      this.touchState.lastCellX = x;
+      this.touchState.lastCellY = y;
+      return;
+    }
     
     // Check if this is a valid cell to select (must be part of the path)
     if (!cell.isPath) {
@@ -337,6 +337,9 @@ handleTouchMove(e) {
       setTimeout(() => {
         element.classList.remove('invalid-selection');
       }, 300);
+      
+      // Stop swipe selection entirely when an invalid cell is encountered
+      this.touchState.active = false;
       return;
     }
     
@@ -346,130 +349,122 @@ handleTouchMove(e) {
     // Check if this cell is adjacent to the last selected cell
     if (this.areCellsAdjacent(x, y, lastSelected.x, lastSelected.y)) {
       // Valid next cell - select it
-      this.handleCellSelection(x, y, false);
+      const selectionSucceeded = this.handleCellSelection(x, y, false);
       
-      // Update tracking for next cell in the swipe
-      this.touchState.lastCellX = x;
-      this.touchState.lastCellY = y;
-    } 
-    // NEW: Try to find a path from the last selected cell to this cell
-    else if (cell.isPath) {
-      // Try to find and select a path between the last selected cell and this one
-      const foundPath = this.findAndSelectPathTo(lastSelected.x, lastSelected.y, x, y);
-      if (foundPath) {
-        // Update tracking for the newly selected cell
+      if (selectionSucceeded) {
+        // Update tracking for next cell in the swipe
         this.touchState.lastCellX = x;
         this.touchState.lastCellY = y;
       } else {
-        // Cell is not adjacent and no valid path - show invalid feedback
-        element.classList.add('invalid-selection');
-        setTimeout(() => {
-          element.classList.remove('invalid-selection');
-        }, 300);
-        console.log('Cannot find valid path to this cell');
+        // If selection failed for some reason, stop the swipe
+        this.touchState.active = false;
       }
-    }
-    else {
+    } else {
       // Cell is not adjacent - show invalid feedback
       element.classList.add('invalid-selection');
       setTimeout(() => {
         element.classList.remove('invalid-selection');
       }, 300);
       console.log('Cell is not adjacent to last selected cell');
+      
+      // Stop swipe selection entirely when a non-adjacent cell is encountered
+      this.touchState.active = false;
     }
   }
 }
 
 /**
- * Find and select a valid path between two cells
- * @param {number} startX - Starting X coordinate
- * @param {number} startY - Starting Y coordinate
- * @param {number} endX - Ending X coordinate
- * @param {number} endY - Ending Y coordinate
- * @return {boolean} True if a valid path was found and selected
+ * Unified cell selection handler for both click and touch
+ * This version returns a boolean indicating success/failure
+ * @param {number} x - X coordinate
+ * @param {number} y - Y coordinate
+ * @param {boolean} forceSelect - Force selection without adjacency check
+ * @return {boolean} True if selection was successful
  */
-findAndSelectPathTo(startX, startY, endX, endY) {
-  // Simple implementation: try to find a Manhattan path between cells
-  // We'll use a greedy approach, moving in one direction first then the other
-  
-  // Calculate direction
-  const dx = endX - startX;
-  const dy = endY - startY;
-  
-  // Current position
-  let currentX = startX;
-  let currentY = startY;
-  
-  // Track if we made any successful selections
-  let madeSelections = false;
-  
-  // Try horizontal movement first
-  const horizontalStep = dx > 0 ? 1 : -1;
-  for (let i = 0; i < Math.abs(dx); i++) {
-    currentX += horizontalStep;
+handleCellSelection(x, y, forceSelect = false) {
+  // Check if coordinates are within grid bounds
+  if (y >= 0 && y < this.grid.length && x >= 0 && x < this.grid[0].length) {
+    const cell = this.grid[y][x];
     
-    // Check if this cell is a valid path cell
-    if (currentY >= 0 && currentY < this.grid.length && 
-        currentX >= 0 && currentX < this.grid[0].length) {
-      
-      const cell = this.grid[currentY][currentX];
-      
-      // If it's a path cell and not already selected, select it
-      if (cell.isPath && !cell.isSelected) {
-        // Should be adjacent to the last selected cell
-        if (this.areCellsAdjacent(currentX, currentY, 
-                                 this.lastSelectedCell.x, this.lastSelectedCell.y)) {
-          this.handleCellSelection(currentX, currentY, false);
-          madeSelections = true;
+    // If this cell is already selected, deselect it only if it's the last one selected
+    if (cell.isSelected) {
+      // Only allow deselecting the last selected cell
+      if (this.selectedCells.length > 0) {
+        const lastSelected = this.selectedCells[this.selectedCells.length - 1];
+        if (lastSelected.x === x && lastSelected.y === y) {
+          // Deselect this cell
+          cell.isSelected = false;
+          this.selectedCells.pop();
           
-          // Add to processed cells to avoid duplicate processing
-          this.touchState.processedCells.add(`${currentX},${currentY}`);
-        } else {
-          // Break the path if we hit a non-adjacent cell
-          return madeSelections;
+          // Update last selected cell reference
+          if (this.selectedCells.length > 0) {
+            const newLastSelected = this.selectedCells[this.selectedCells.length - 1];
+            this.lastSelectedCell = { x: newLastSelected.x, y: newLastSelected.y };
+          } else {
+            this.lastSelectedCell = null;
+          }
+          
+          // Re-render and notify
+          this.renderVisibleGrid();
+          if (this.options.onSelectionChange) {
+            this.options.onSelectionChange(this.selectedCells);
+          }
+          return true;
         }
-      } else if (!cell.isPath) {
-        // Break the path if we hit a non-path cell
-        return madeSelections;
+      }
+      return false;
+    }
+    
+    // First selection must be the start cell
+    if (this.selectedCells.length === 0) {
+      if (!cell.isStart) {
+        console.log('First selection must be the start cell');
+        // Find the element for this cell to show invalid selection
+        const element = document.querySelector(`.grid-cell[data-grid-x="${x}"][data-grid-y="${y}"]`);
+        if (element) {
+          element.classList.add('invalid-selection');
+          setTimeout(() => {
+            element.classList.remove('invalid-selection');
+          }, 300);
+        }
+        return false;
+      }
+    } 
+    // For subsequent selections, check adjacency (unless forceSelect is true)
+    else if (this.lastSelectedCell && !forceSelect) {
+      if (!this.areCellsAdjacent(x, y, this.lastSelectedCell.x, this.lastSelectedCell.y)) {
+        console.log('Selection must be adjacent to the last selected cell');
+        // Find the element for this cell to show invalid selection
+        const element = document.querySelector(`.grid-cell[data-grid-x="${x}"][data-grid-y="${y}"]`);
+        if (element) {
+          element.classList.add('invalid-selection');
+          setTimeout(() => {
+            element.classList.remove('invalid-selection');
+          }, 300);
+        }
+        return false;
       }
     }
-  }
-  
-  // Then try vertical movement
-  const verticalStep = dy > 0 ? 1 : -1;
-  for (let i = 0; i < Math.abs(dy); i++) {
-    currentY += verticalStep;
     
-    // Check if this cell is a valid path cell
-    if (currentY >= 0 && currentY < this.grid.length && 
-        currentX >= 0 && currentX < this.grid[0].length) {
-      
-      const cell = this.grid[currentY][currentX];
-      
-      // If it's a path cell and not already selected, select it
-      if (cell.isPath && !cell.isSelected) {
-        // Should be adjacent to the last selected cell
-        if (this.areCellsAdjacent(currentX, currentY, 
-                                 this.lastSelectedCell.x, this.lastSelectedCell.y)) {
-          this.handleCellSelection(currentX, currentY, false);
-          madeSelections = true;
-          
-          // Add to processed cells to avoid duplicate processing
-          this.touchState.processedCells.add(`${currentX},${currentY}`);
-        } else {
-          // Break the path if we hit a non-adjacent cell
-          return madeSelections;
-        }
-      } else if (!cell.isPath) {
-        // Break the path if we hit a non-path cell
-        return madeSelections;
-      }
+    // If we got here, we can select the cell
+    cell.isSelected = true;
+    this.selectedCells.push({ x, y });
+    this.lastSelectedCell = { x, y };
+    
+    // Re-render grid
+    this.renderVisibleGrid();
+    
+    // Notify of selection change
+    if (this.options.onSelectionChange) {
+      this.options.onSelectionChange(this.selectedCells);
     }
+    
+    return true;
   }
   
-  return madeSelections;
+  return false;
 }
-  
+
 /**
  * Handle touch end event
  * @param {TouchEvent} e - Touch event
@@ -507,8 +502,7 @@ handleTouchEnd(e) {
     lastCellX: -1,
     lastCellY: -1,
     isDragging: false,
-    startCellSelected: false,
-    processedCells: new Set()
+    startCellSelected: false
   };
   
   // Clear the recently handled touch flag after a short delay
@@ -516,7 +510,7 @@ handleTouchEnd(e) {
     this.recentlyHandledTouch = false;
   }, 300);
 }
-  
+
   /**
    * Unified cell selection handler for both click and touch
    * @param {number} x - X coordinate
