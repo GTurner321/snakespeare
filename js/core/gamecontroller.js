@@ -68,6 +68,7 @@ class GameController {
     this.currentPhrase = null;
     this.currentPath = null;
     this.phrases = [];
+    this.phraseTemplate = null; // New: Store the underscores template
     
     // Initialize components
     this.pathGenerator = new PathGenerator();
@@ -143,18 +144,74 @@ class GameController {
   }
   
   /**
+   * Create a template for the phrase with underscores for letters and spaces preserved
+   * @param {string} phrase - The complete phrase
+   * @return {string} Template with underscores for letters and preserved spaces
+   */
+  createPhraseTemplate(phrase) {
+    return phrase.replace(/[a-zA-Z0-9]/g, '_');
+  }
+  
+  /**
+   * Fill in the phrase template with selected letters
+   * @param {string} template - The underscore template
+   * @param {string} phrase - The complete phrase
+   * @param {Array} selectedLetters - Array of selected letter objects
+   * @return {string} Updated template with selected letters filled in
+   */
+  fillPhraseTemplate(template, phrase, selectedLetters) {
+    const templateArray = template.split('');
+    const phraseArray = phrase.toUpperCase().split('');
+    
+    // Create an array of just the letters in the order they appear in the phrase
+    const phraseLetters = phraseArray.filter(char => char !== ' ');
+    
+    // Get letters from selected cells as a simple array of characters
+    const selectedChars = selectedLetters.map(cell => cell.letter);
+    
+    // Keep track of which letters have been filled in
+    let filledCount = 0;
+    
+    // Go through the phrase character by character
+    for (let i = 0; i < phraseArray.length; i++) {
+      // Skip spaces in the phrase
+      if (phraseArray[i] === ' ') continue;
+      
+      // If we have selected this letter (based on position in the phrase)
+      if (filledCount < selectedChars.length) {
+        // Fill in this letter in the template
+        templateArray[i] = phraseArray[i];
+        filledCount++;
+      }
+    }
+    
+    return templateArray.join('');
+  }
+  
+  /**
    * Update the phrase display based on selected cells
    * @param {Array} selectedLetters - Array of letter objects
    */
   updatePhraseFromSelections(selectedLetters) {
     const displayElement = document.getElementById('phrase-text');
-    if (!displayElement) return;
+    if (!displayElement || !this.currentPhrase) return;
     
-    // Create string from selected letters
-    const selectedString = selectedLetters.map(cell => cell.letter).join('');
-    
-    // Display selected letters
-    displayElement.textContent = selectedString || "Select letters to form a phrase";
+    // If we have a phrase and template
+    if (this.phraseTemplate) {
+      // Fill in the template with selected letters
+      const updatedDisplay = this.fillPhraseTemplate(
+        this.phraseTemplate,
+        this.currentPhrase.phrase,
+        selectedLetters
+      );
+      
+      // Display the updated template
+      displayElement.textContent = updatedDisplay;
+    } else {
+      // Fallback if no template (shouldn't happen)
+      const selectedString = selectedLetters.map(cell => cell.letter).join('');
+      displayElement.textContent = selectedString || "Select letters to form a phrase";
+    }
   }
   
   /**
@@ -167,12 +224,15 @@ class GameController {
     // Reset any highlighting
     this.gridRenderer.options.highlightPath = false;
     
-    // Parse letter list from phrase data
+    // Parse letter list from phrase data (now with spaces)
     const letterList = phraseData.letterlist;
     
     console.log(`Loading phrase: "${phraseData.phrase}" with letterlist: "${letterList}"`);
     
-    // Generate path using path generator
+    // Create the phrase template with underscores
+    this.phraseTemplate = this.createPhraseTemplate(phraseData.phrase);
+    
+    // Generate path using path generator (will filter out spaces)
     this.currentPath = this.pathGenerator.generatePath(letterList);
     
     // Apply path to grid renderer
@@ -186,10 +246,10 @@ class GameController {
       this.arrowButtons.updateButtonPosition();
     }
     
-    // Reset phrase display
+    // Display the initial template
     const displayElement = document.getElementById('phrase-text');
     if (displayElement) {
-      displayElement.textContent = "Select letters to form a phrase";
+      displayElement.textContent = this.phraseTemplate;
     }
     
     // Clear any additional elements
@@ -225,7 +285,7 @@ class GameController {
     const samplePhrase = {
       id: 1,
       phrase: "TIME FLIES LIKE AN ARROW",
-      letterlist: "TIMEFLIESLIKEANARROW",
+      letterlist: "TIME FLIES LIKE AN ARROW", // Now with spaces
       lettercount: 23,
       wordcount: 5,
       meaning: "Time passes quickly",
@@ -377,8 +437,12 @@ class GameController {
   resetSelections() {
     this.gridRenderer.clearSelections();
     this.handleSelectionChange();
+    
+    // Reset the phrase display to show just the template
+    if (this.phraseTemplate) {
+      const displayElement = document.getElementById('phrase-text');
+      if (displayElement) {
+        displayElement.textContent = this.phraseTemplate;
+      }
+    }
   }
-}
-
-// Export class for use in other modules
-export default GameController;
