@@ -212,55 +212,57 @@ class GridRenderer {
   }
   
   /**
-   * Handle touch start event
-   * @param {TouchEvent} e - Touch event
-   */
-  handleTouchStart(e) {
-    // Only handle single touches
-    if (e.touches.length !== 1) return;
-    
-    const touch = e.touches[0];
-    const cellInfo = this.getCellFromTouchCoordinates(touch.clientX, touch.clientY);
-    
-    // If no valid cell was touched, exit
-    if (!cellInfo) return;
-    
-    // Prevent default behavior to avoid scrolling
-    e.preventDefault();
-    
-    const { x, y, element, cell } = cellInfo;
-    
-    // Start tracking touch
-    this.touchState = {
-      active: true,
-      lastCellX: x,
-      lastCellY: y,
-      // Start with isDragging as false and set true after movement
-      isDragging: false,
-      startTime: Date.now(),
-      // Track initial cell position for drag detection
-      startX: x,
-      startY: y,
-      startCellSelected: false
-    };
-    
-    // Add visual indicator that the cell is being touched
-    element.classList.add('touch-active');
-    
-    console.log(`Touch started on cell (${x}, ${y})`);
-    
-    // If this is the start cell and no cells are selected yet, select it immediately
-    if (cell.isStart && this.selectedCells.length === 0) {
-      this.handleCellSelection(x, y, true);
-      this.touchState.startCellSelected = true;
-      console.log('Start cell selected on touch start');
-    } 
-    // If we already have a start cell selected, try to continue from there
-    else if (this.selectedCells.length > 0) {
-      this.touchState.startCellSelected = true;
-    }
-  }
+ * Handle touch start event
+ * @param {TouchEvent} e - Touch event
+ */
+handleTouchStart(e) {
+  // Only handle single touches
+  if (e.touches.length !== 1) return;
   
+  const touch = e.touches[0];
+  const cellInfo = this.getCellFromTouchCoordinates(touch.clientX, touch.clientY);
+  
+  // If no valid cell was touched, exit
+  if (!cellInfo) return;
+  
+  // Prevent default behavior to avoid scrolling
+  e.preventDefault();
+  
+  const { x, y, element, cell } = cellInfo;
+  
+  // Start tracking touch
+  this.touchState = {
+    active: true,
+    lastCellX: x,
+    lastCellY: y,
+    // Start with isDragging as false and set true after movement
+    isDragging: false,
+    startTime: Date.now(),
+    // Track initial cell position for drag detection
+    startX: x,
+    startY: y,
+    startCellSelected: false,
+    // Track cells we've processed during this swipe to avoid duplicates
+    processedCells: new Set(`${x},${y}`) 
+  };
+  
+  // Add visual indicator that the cell is being touched
+  element.classList.add('touch-active');
+  
+  console.log(`Touch started on cell (${x}, ${y})`);
+  
+  // If this is the start cell and no cells are selected yet, select it immediately
+  if (cell.isStart && this.selectedCells.length === 0) {
+    this.handleCellSelection(x, y, true);
+    this.touchState.startCellSelected = true;
+    console.log('Start cell selected on touch start');
+  } 
+  // If we already have a start cell selected, try to continue from there
+  else if (this.selectedCells.length > 0) {
+    this.touchState.startCellSelected = true;
+  }
+}
+
 /**
  * Handle touch move event for swiping
  * @param {TouchEvent} e - Touch event
@@ -283,10 +285,17 @@ handleTouchMove(e) {
   
   const { x, y, element, cell } = cellInfo;
   
-  // Skip if we're still on the same cell
-  if (x === this.touchState.lastCellX && y === this.touchState.lastCellY) return;
+  // Generate a unique key for this cell position
+  const cellKey = `${x},${y}`;
   
-  console.log(`Touch moved to cell (${x}, ${y})`);
+  // Skip if we've already processed this cell during this swipe
+  // This prevents cells from being processed multiple times in the same swipe
+  if (this.touchState.processedCells.has(cellKey)) return;
+  
+  // Mark this cell as processed during this swipe
+  this.touchState.processedCells.add(cellKey);
+  
+  console.log(`Touch moved to new cell (${x}, ${y})`);
   
   // Determine if this is now a drag operation
   if (!this.touchState.isDragging) {
@@ -321,15 +330,10 @@ handleTouchMove(e) {
     // Get current last selected cell as the reference point
     const lastSelected = this.selectedCells[this.selectedCells.length - 1];
     
-    // Check if cell is already selected
-    if (cell.isSelected) {
-      // Just update the last cell position for tracking
-      this.touchState.lastCellX = x;
-      this.touchState.lastCellY = y;
-      return;
-    }
+    // Skip if cell is already selected - we've already processed it
+    if (cell.isSelected) return;
     
-    // IMPORTANT: Check if this is a valid cell to select (must be part of the path)
+    // Check if this is a valid cell to select (must be part of the path)
     if (!cell.isPath) {
       console.log('Cannot select non-path cell');
       // Show invalid feedback
@@ -359,7 +363,7 @@ handleTouchMove(e) {
     }
   }
 }
-  
+
 /**
  * Find and select a path from a starting cell to a target cell
  * @param {number} startX - Starting cell X coordinate
@@ -429,51 +433,52 @@ findAndSelectPathToCell(startX, startY, targetX, targetY) {
   return false;
 }
   
-  /**
-   * Handle touch end event
-   * @param {TouchEvent} e - Touch event
-   */
-  handleTouchEnd(e) {
-    // If touch wasn't active, nothing to do
-    if (!this.touchState.active) return;
+/**
+ * Handle touch end event
+ * @param {TouchEvent} e - Touch event
+ */
+handleTouchEnd(e) {
+  // If touch wasn't active, nothing to do
+  if (!this.touchState.active) return;
+  
+  e.preventDefault();
+  
+  // Flag that we just handled a touch to prevent double triggers with click
+  this.recentlyHandledTouch = true;
+  
+  // If this was a tap (not a drag), handle as click
+  if (!this.touchState.isDragging) {
+    const x = this.touchState.lastCellX;
+    const y = this.touchState.lastCellY;
     
-    e.preventDefault();
-    
-    // Flag that we just handled a touch to prevent double triggers with click
-    this.recentlyHandledTouch = true;
-    
-    // If this was a tap (not a drag), handle as click
-    if (!this.touchState.isDragging) {
-      const x = this.touchState.lastCellX;
-      const y = this.touchState.lastCellY;
-      
-      if (x >= 0 && y >= 0) {
-        console.log(`Touch ended as tap on cell (${x}, ${y})`);
-        // For taps, we always want to attempt selection
-        this.handleCellSelection(x, y, false);
-      }
-    } else {
-      console.log('Touch ended as drag/swipe');
+    if (x >= 0 && y >= 0) {
+      console.log(`Touch ended as tap on cell (${x}, ${y})`);
+      // For taps, we always want to attempt selection
+      this.handleCellSelection(x, y, false);
     }
-    
-    // Remove the touch active class from all cells
-    const cells = document.querySelectorAll('.grid-cell.touch-active');
-    cells.forEach(cell => cell.classList.remove('touch-active'));
-    
-    // Reset touch state
-    this.touchState = {
-      active: false,
-      lastCellX: -1,
-      lastCellY: -1,
-      isDragging: false,
-      startCellSelected: false
-    };
-    
-    // Clear the recently handled touch flag after a short delay
-    setTimeout(() => {
-      this.recentlyHandledTouch = false;
-    }, 300);
+  } else {
+    console.log('Touch ended as drag/swipe');
   }
+  
+  // Remove the touch active class from all cells
+  const cells = document.querySelectorAll('.grid-cell.touch-active');
+  cells.forEach(cell => cell.classList.remove('touch-active'));
+  
+  // Reset touch state
+  this.touchState = {
+    active: false,
+    lastCellX: -1,
+    lastCellY: -1,
+    isDragging: false,
+    startCellSelected: false,
+    processedCells: new Set()
+  };
+  
+  // Clear the recently handled touch flag after a short delay
+  setTimeout(() => {
+    this.recentlyHandledTouch = false;
+  }, 300);
+}
   
   /**
    * Unified cell selection handler for both click and touch
