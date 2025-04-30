@@ -289,12 +289,11 @@ class GridRenderer {
     console.log(`Touch moved to cell (${x}, ${y})`);
     
     // Determine if this is now a drag operation
-    // Only mark as dragging if we've moved to a different cell
     if (!this.touchState.isDragging) {
       this.touchState.isDragging = true;
     }
     
-    // If this is the first selection and it's not the start cell
+    // If no cells are selected yet, we need to handle the start case
     if (this.selectedCells.length === 0) {
       // If this cell is the start cell, select it
       if (cell.isStart) {
@@ -317,18 +316,46 @@ class GridRenderer {
       }
     }
     
-    // Now we can try to select the new cell if it's adjacent to the last selected cell
+    // At this point we should have at least one cell selected
     if (this.selectedCells.length > 0) {
-      // Update last cell position before attempting selection
-      const oldX = this.touchState.lastCellX;
-      const oldY = this.touchState.lastCellY;
+      // Get current last selected cell as the reference point
+      const lastSelected = this.selectedCells[this.selectedCells.length - 1];
       
-      // Update tracking before trying to select
-      this.touchState.lastCellX = x;
-      this.touchState.lastCellY = y;
+      // Check if cell is already selected (we might have moved back to a selected cell)
+      if (cell.isSelected) {
+        // Just update the last cell position for tracking
+        this.touchState.lastCellX = x;
+        this.touchState.lastCellY = y;
+        return;
+      }
       
-      // Try to select this cell (will check adjacency internally)
-      this.handleCellSelection(x, y, false);
+      // Check if this cell is adjacent to the last selected cell
+      if (this.areCellsAdjacent(x, y, lastSelected.x, lastSelected.y)) {
+        // Valid next cell - select it
+        this.handleCellSelection(x, y, false);
+        
+        // Update tracking for next cell in the swipe
+        this.touchState.lastCellX = x;
+        this.touchState.lastCellY = y;
+      } 
+      else {
+        // Cell is not adjacent - check if it's adjacent to any other selected cell
+        // This is useful for handling swipes that take shortcuts across diagonals
+        
+        for (let i = this.selectedCells.length - 1; i >= 0; i--) {
+          const selectedCell = this.selectedCells[i];
+          if (this.areCellsAdjacent(x, y, selectedCell.x, selectedCell.y)) {
+            // We found a selected cell that's adjacent to the current touch
+            // Update the last cell position
+            this.touchState.lastCellX = x;
+            this.touchState.lastCellY = y;
+            
+            // Try to select this cell
+            this.handleCellSelection(x, y, false);
+            break;
+          }
+        }
+      }
     }
   }
   
