@@ -446,3 +446,7 @@ class GameController {
       }
     }
   }
+}
+
+// Export class for use in other modules
+export default GameController;
