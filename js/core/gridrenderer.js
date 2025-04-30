@@ -262,102 +262,170 @@ class GridRenderer {
   }
   
   /**
-   * Handle touch move event for swiping
-   * @param {TouchEvent} e - Touch event
-   */
-  handleTouchMove(e) {
-    // Only process if touch is active
-    if (!this.touchState.active) return;
-    
-    // Prevent default to avoid page scrolling
-    e.preventDefault();
-    
-    // Get the current touch
-    if (e.touches.length !== 1) return;
-    
-    const touch = e.touches[0];
-    const cellInfo = this.getCellFromTouchCoordinates(touch.clientX, touch.clientY);
-    
-    // If no valid cell under touch point, exit
-    if (!cellInfo) return;
-    
-    const { x, y, element, cell } = cellInfo;
-    
-    // Skip if we're still on the same cell
-    if (x === this.touchState.lastCellX && y === this.touchState.lastCellY) return;
-    
-    console.log(`Touch moved to cell (${x}, ${y})`);
-    
-    // Determine if this is now a drag operation
-    if (!this.touchState.isDragging) {
-      this.touchState.isDragging = true;
-    }
-    
-    // If no cells are selected yet, we need to handle the start case
-    if (this.selectedCells.length === 0) {
-      // If this cell is the start cell, select it
-      if (cell.isStart) {
-        this.handleCellSelection(x, y, true);
+ * Handle touch move event for swiping
+ * @param {TouchEvent} e - Touch event
+ */
+handleTouchMove(e) {
+  // Only process if touch is active
+  if (!this.touchState.active) return;
+  
+  // Prevent default to avoid page scrolling
+  e.preventDefault();
+  
+  // Get the current touch
+  if (e.touches.length !== 1) return;
+  
+  const touch = e.touches[0];
+  const cellInfo = this.getCellFromTouchCoordinates(touch.clientX, touch.clientY);
+  
+  // If no valid cell under touch point, exit
+  if (!cellInfo) return;
+  
+  const { x, y, element, cell } = cellInfo;
+  
+  // Skip if we're still on the same cell
+  if (x === this.touchState.lastCellX && y === this.touchState.lastCellY) return;
+  
+  console.log(`Touch moved to cell (${x}, ${y})`);
+  
+  // Determine if this is now a drag operation
+  if (!this.touchState.isDragging) {
+    this.touchState.isDragging = true;
+  }
+  
+  // If no cells are selected yet, we need to handle the start case
+  if (this.selectedCells.length === 0) {
+    // If this cell is the start cell, select it
+    if (cell.isStart) {
+      this.handleCellSelection(x, y, true);
+      this.touchState.startCellSelected = true;
+    } else {
+      // Try to find and select the start cell first
+      const startSelected = this.findAndSelectStartCell();
+      if (startSelected) {
         this.touchState.startCellSelected = true;
       } else {
-        // Try to find and select the start cell first
-        const startSelected = this.findAndSelectStartCell();
-        if (startSelected) {
-          this.touchState.startCellSelected = true;
-        } else {
-          // Invalid - show feedback
-          element.classList.add('invalid-selection');
-          setTimeout(() => {
-            element.classList.remove('invalid-selection');
-          }, 300);
-          console.log('Cannot select: must select start cell first');
-          return;
-        }
-      }
-    }
-    
-    // At this point we should have at least one cell selected
-    if (this.selectedCells.length > 0) {
-      // Get current last selected cell as the reference point
-      const lastSelected = this.selectedCells[this.selectedCells.length - 1];
-      
-      // Check if cell is already selected (we might have moved back to a selected cell)
-      if (cell.isSelected) {
-        // Just update the last cell position for tracking
-        this.touchState.lastCellX = x;
-        this.touchState.lastCellY = y;
+        // Invalid - show feedback
+        element.classList.add('invalid-selection');
+        setTimeout(() => {
+          element.classList.remove('invalid-selection');
+        }, 300);
+        console.log('Cannot select: must select start cell first');
         return;
-      }
-      
-      // Check if this cell is adjacent to the last selected cell
-      if (this.areCellsAdjacent(x, y, lastSelected.x, lastSelected.y)) {
-        // Valid next cell - select it
-        this.handleCellSelection(x, y, false);
-        
-        // Update tracking for next cell in the swipe
-        this.touchState.lastCellX = x;
-        this.touchState.lastCellY = y;
-      } 
-      else {
-        // Cell is not adjacent - check if it's adjacent to any other selected cell
-        // This is useful for handling swipes that take shortcuts across diagonals
-        
-        for (let i = this.selectedCells.length - 1; i >= 0; i--) {
-          const selectedCell = this.selectedCells[i];
-          if (this.areCellsAdjacent(x, y, selectedCell.x, selectedCell.y)) {
-            // We found a selected cell that's adjacent to the current touch
-            // Update the last cell position
-            this.touchState.lastCellX = x;
-            this.touchState.lastCellY = y;
-            
-            // Try to select this cell
-            this.handleCellSelection(x, y, false);
-            break;
-          }
-        }
       }
     }
   }
+  
+  // At this point we should have at least one cell selected
+  if (this.selectedCells.length > 0) {
+    // Get current last selected cell as the reference point
+    const lastSelected = this.selectedCells[this.selectedCells.length - 1];
+    
+    // Check if cell is already selected
+    if (cell.isSelected) {
+      // Just update the last cell position for tracking
+      this.touchState.lastCellX = x;
+      this.touchState.lastCellY = y;
+      return;
+    }
+    
+    // Check if this cell is adjacent to the last selected cell
+    if (this.areCellsAdjacent(x, y, lastSelected.x, lastSelected.y)) {
+      // Valid next cell - select it
+      this.handleCellSelection(x, y, false);
+      
+      // Update tracking for next cell in the swipe
+      this.touchState.lastCellX = x;
+      this.touchState.lastCellY = y;
+    } 
+    else {
+      // Cell is not adjacent to the last selected cell
+      // Check if there's a path from the last selected cell to this cell through valid adjacent cells
+      const foundPath = this.findAndSelectPathToCell(lastSelected.x, lastSelected.y, x, y);
+      
+      if (foundPath) {
+        // Successfully found and selected a path to this cell
+        this.touchState.lastCellX = x;
+        this.touchState.lastCellY = y;
+      } else {
+        // No valid path found - show invalid feedback
+        element.classList.add('invalid-selection');
+        setTimeout(() => {
+          element.classList.remove('invalid-selection');
+        }, 300);
+      }
+    }
+  }
+}
+
+/**
+ * Find and select a path from a starting cell to a target cell
+ * @param {number} startX - Starting cell X coordinate
+ * @param {number} startY - Starting cell Y coordinate
+ * @param {number} targetX - Target cell X coordinate
+ * @param {number} targetY - Target cell Y coordinate
+ * @return {boolean} True if a path was found and selected
+ */
+findAndSelectPathToCell(startX, startY, targetX, targetY) {
+  // Simple breadth-first search to find path
+  const queue = [{ x: startX, y: startY, path: [] }];
+  const visited = new Set();
+  
+  // Mark the start position as visited
+  visited.add(`${startX},${startY}`);
+  
+  // Start BFS
+  while (queue.length > 0) {
+    const { x, y, path } = queue.shift();
+    
+    // Check all four adjacent positions
+    const adjacentPositions = [
+      { x: x + 1, y }, // right
+      { x: x - 1, y }, // left
+      { x, y: y + 1 }, // down
+      { x, y: y - 1 }, // up
+    ];
+    
+    for (const pos of adjacentPositions) {
+      // Skip if out of bounds
+      if (pos.y < 0 || pos.y >= this.grid.length || pos.x < 0 || pos.x >= this.grid[0].length) {
+        continue;
+      }
+      
+      // Skip if already visited
+      const posKey = `${pos.x},${pos.y}`;
+      if (visited.has(posKey)) {
+        continue;
+      }
+      
+      // Skip if cell is already selected
+      if (this.grid[pos.y][pos.x].isSelected) {
+        continue;
+      }
+      
+      // Mark as visited
+      visited.add(posKey);
+      
+      // Create new path with this position
+      const newPath = [...path, { x: pos.x, y: pos.y }];
+      
+      // Check if we reached the target
+      if (pos.x === targetX && pos.y === targetY) {
+        // We found a path! Select all cells in the path
+        for (const cell of newPath) {
+          this.handleCellSelection(cell.x, cell.y, false);
+        }
+        return true;
+      }
+      
+      // Add to queue to continue searching
+      queue.push({ x: pos.x, y: pos.y, path: newPath });
+    }
+  }
+  
+  // No path found
+  return false;
+}
   
   /**
    * Handle touch end event
