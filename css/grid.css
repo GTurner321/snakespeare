@@ -94,13 +94,15 @@ body {
     margin: 0 auto;
     width: fit-content;
     height: fit-content;
-    /* NEW: Disable browser touch behaviors on the grid container */
-    touch-action: none;
+    /* Enhanced touch behaviors for more reliable swipe handling */
+    touch-action: none !important;
     user-select: none;
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
+    /* Prevent highlight color on tap for iOS */
+    -webkit-tap-highlight-color: transparent;
 }
 
 /* Default grid template for desktop */
@@ -126,12 +128,21 @@ body {
     font-weight: bold;
     font-size: 1.5rem;
     user-select: none;
-    transition: all 0.2s ease;
+    /* CHANGED: Targeted transitions instead of 'all' for better performance */
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
     color: #444;
     text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8);
     box-sizing: border-box;
     width: 50px;
     height: 50px;
+    /* Hardware acceleration for smoother performance */
+    transform: translateZ(0);
+    /* Signal to browser that these properties will change */
+    will-change: background-color, color, border-color;
+    /* Prevent text selection on cells */
+    pointer-events: auto;
+    /* Fix for occasional touch events not registering */
+    z-index: 1;
 }
 
 /* Different cell states */
@@ -142,7 +153,7 @@ body {
     box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2);
 }
 
-/* NEW: Path cell highlighting in light yellow */
+/* Path cell highlighting in light yellow */
 .grid-cell.path-cell:not(.selected-cell):not(.start-cell) {
     background-color: #FFF9C4; /* Light yellow for path letters */
     color: #444;
@@ -172,14 +183,15 @@ body {
     border-color: #bbb;
 }
 
-/* NEW: Style for cells being touched */
+/* Style for cells being touched - improved for better visual feedback */
 .grid-cell.touch-active {
-    box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0 8px rgba(33, 150, 243, 0.5);
     border-color: #0D47A1;
+    /* Speed up the touch feedback transition */
     transition: box-shadow 0.1s ease, border-color 0.1s ease;
 }
 
-/* NEW: Animation for invalid selections - no transform */
+/* Animation for invalid selections - no transform */
 @keyframes invalid-selection-pulse {
     0% { background-color: #f0f0f0; border-color: #ccc; }
     50% { background-color: #ff6b6b; border-color: #d32f2f; }
@@ -222,6 +234,33 @@ body {
 @media (max-width: 480px) {
     .grid-cell {
         font-size: 1.1rem;
+    }
+}
+
+/* Disable transitions on touch devices for more responsive swiping */
+@media (pointer: coarse) {
+    .grid-cell {
+        transition: none;
+    }
+    
+    /* Improve touch handling on mobile */
+    .grid-container {
+        touch-action: none !important;
+    }
+    
+    /* Make selected cells more visible on touch devices */
+    .grid-cell.selected-cell {
+        border-width: 3px;
+    }
+}
+
+/* Additional fix for iOS and Safari */
+@supports (-webkit-touch-callout: none) {
+    .grid-cell {
+        /* Prevent highlight color on tap */
+        -webkit-tap-highlight-color: transparent;
+        /* Disable iOS callouts */
+        -webkit-touch-callout: none;
     }
 }
 
