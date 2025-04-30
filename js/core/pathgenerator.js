@@ -25,7 +25,7 @@ class PathGenerator {
     this.visited = new Set();
     this.path = [];
     
-    // Parse letter list to ensure it's in the right format
+    // Parse letter list to ensure it's in the right format (skipping spaces)
     const letters = this.parseLetterList(letterList);
     
     // Start at coordinate (0,0)
@@ -58,9 +58,9 @@ class PathGenerator {
   }
   
   /**
-   * Parse letter list to ensure it's an array of characters
+   * Parse letter list to ensure it's an array of characters, skipping spaces
    * @param {Array|String} letterList - Input letter list
-   * @return {Array} Array of letters
+   * @return {Array} Array of letters without spaces
    */
   parseLetterList(letterList) {
     // If it's a comma-separated string
@@ -69,11 +69,12 @@ class PathGenerator {
     }
     // If it's a single string without separators
     else if (typeof letterList === 'string') {
-      return letterList.split('');
+      // Filter out spaces when splitting the string
+      return letterList.split('').filter(char => char !== ' ');
     }
     // If it's already an array
     else if (Array.isArray(letterList)) {
-      return letterList;
+      return letterList.filter(char => char !== ' ');
     }
     // Default fallback - Use a placeholder for testing
     return "TESTPHRASE".split('');
