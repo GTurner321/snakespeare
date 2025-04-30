@@ -238,6 +238,9 @@ class GameController {
     // Apply path to grid renderer
     this.gridRenderer.setPath(this.currentPath);
     
+    // NEW: Center the grid on the start cell
+    this.gridRenderer.centerGridOnStartCell();
+    
     // Update arrow button states
     this.arrowButtons.updateButtonStates();
     
