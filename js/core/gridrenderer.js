@@ -42,7 +42,8 @@ class GridRenderer {
     this.touchState = {
       active: false,
       lastCellX: -1,
-      lastCellY: -1
+      lastCellY: -1,
+      isDragging: false // Track if we're in a swiping/dragging operation
     };
     
     // Initialize the grid
@@ -81,9 +82,6 @@ class GridRenderer {
       isSelected: false,
       pathIndex: 0
     };
-    
-    // REMOVED: The code that added 100 random letters for testing
-    // This was causing random letters to appear even when randomFillPercentage is set to 0
   }
   
   /**
@@ -124,20 +122,55 @@ class GridRenderer {
     // Force a reflow to make sure the grid is rendered
     void this.gridElement.offsetHeight;
     
-    // Add debug info
-    console.log('Grid element after appending:', this.gridElement);
-    console.log('Container children:', this.container.children);
+    // Debug info
+    console.log('Grid element created:', this.gridElement);
   }
   
   /**
    * NEW: Set up touch events for swiping
    */
   setupTouchEvents() {
-    // Add touch events to the grid element
-    this.gridElement.addEventListener('touchstart', (e) => this.handleTouchStart(e), { passive: false });
-    this.gridElement.addEventListener('touchmove', (e) => this.handleTouchMove(e), { passive: false });
-    this.gridElement.addEventListener('touchend', (e) => this.handleTouchEnd(e), { passive: false });
-    this.gridElement.addEventListener('touchcancel', (e) => this.handleTouchEnd(e), { passive: false });
+    console.log('Setting up touch events for grid');
+    
+    // Add touch events to the grid container itself
+    this.gridElement.addEventListener('touchstart', (e) => this.handleTouchStart(e));
+    this.gridElement.addEventListener('touchmove', (e) => this.handleTouchMove(e));
+    this.gridElement.addEventListener('touchend', (e) => this.handleTouchEnd(e));
+    this.gridElement.addEventListener('touchcancel', (e) => this.handleTouchEnd(e));
+    
+    // Debug message to confirm event listeners are attached
+    console.log('Touch event listeners attached to grid container');
+  }
+  
+  /**
+   * Get grid cell from touch coordinates
+   * @param {number} clientX - Touch X coordinate
+   * @param {number} clientY - Touch Y coordinate
+   * @return {Object|null} Object with cell info or null if no valid cell found
+   */
+  getCellFromTouchCoordinates(clientX, clientY) {
+    // Get the element at the touch point
+    const element = document.elementFromPoint(clientX, clientY);
+    
+    // Check if it's a grid cell
+    if (!element || !element.classList.contains('grid-cell')) {
+      return null;
+    }
+    
+    // Get cell coordinates from data attributes
+    const x = parseInt(element.dataset.gridX, 10);
+    const y = parseInt(element.dataset.gridY, 10);
+    
+    // Validate coordinates
+    if (isNaN(x) || isNaN(y)) {
+      return null;
+    }
+    
+    // Get the cell data
+    const cell = this.grid[y][x];
+    
+    // Return cell info
+    return { x, y, element, cell };
   }
   
   /**
@@ -145,42 +178,34 @@ class GridRenderer {
    * @param {TouchEvent} e - Touch event
    */
   handleTouchStart(e) {
-    // Prevent default to avoid page scrolling
-    e.preventDefault();
-    
-    if (e.touches.length !== 1) return; // Only handle single touches
+    // Only handle single touches
+    if (e.touches.length !== 1) return;
     
     const touch = e.touches[0];
-    const cellElement = document.elementFromPoint(touch.clientX, touch.clientY);
+    const cellInfo = this.getCellFromTouchCoordinates(touch.clientX, touch.clientY);
     
-    if (!cellElement || !cellElement.classList.contains('grid-cell')) return;
+    // If no valid cell was touched, exit
+    if (!cellInfo) return;
     
-    // Get cell coordinates
-    const x = parseInt(cellElement.dataset.gridX, 10);
-    const y = parseInt(cellElement.dataset.gridY, 10);
+    // Prevent default behavior to avoid scrolling
+    e.preventDefault();
     
-    if (isNaN(x) || isNaN(y)) return;
+    const { x, y, element, cell } = cellInfo;
     
-    // If this is our first selection, make sure it's the start cell
-    if (this.selectedCells.length === 0) {
-      const cell = this.grid[y][x];
-      if (!cell.isStart) {
-        // Show a quick visual feedback that the first cell must be the start
-        cellElement.classList.add('invalid-selection');
-        setTimeout(() => {
-          cellElement.classList.remove('invalid-selection');
-        }, 300);
-        return;
-      }
-    }
+    // Start tracking touch
+    this.touchState = {
+      active: true,
+      lastCellX: x,
+      lastCellY: y,
+      isDragging: false,
+      startTime: Date.now()
+    };
     
-    // Set touch as active
-    this.touchState.active = true;
-    this.touchState.lastCellX = x;
-    this.touchState.lastCellY = y;
+    // We don't immediately select on touchstart to differentiate between taps and swipes
+    // Instead, add a visual indicator that the cell is being touched
+    element.classList.add('touch-active');
     
-    // Try to select this cell
-    this.toggleCellSelection(x, y);
+    console.log(`Touch started on cell (${x}, ${y})`);
   }
   
   /**
@@ -194,28 +219,33 @@ class GridRenderer {
     // Prevent default to avoid page scrolling
     e.preventDefault();
     
+    // Mark as dragging after a small movement threshold
+    if (!this.touchState.isDragging) {
+      this.touchState.isDragging = true;
+    }
+    
+    // Get the current touch
     if (e.touches.length !== 1) return;
     
     const touch = e.touches[0];
-    const cellElement = document.elementFromPoint(touch.clientX, touch.clientY);
+    const cellInfo = this.getCellFromTouchCoordinates(touch.clientX, touch.clientY);
     
-    if (!cellElement || !cellElement.classList.contains('grid-cell')) return;
+    // If no valid cell under touch point, exit
+    if (!cellInfo) return;
     
-    // Get cell coordinates
-    const x = parseInt(cellElement.dataset.gridX, 10);
-    const y = parseInt(cellElement.dataset.gridY, 10);
-    
-    if (isNaN(x) || isNaN(y)) return;
+    const { x, y, element, cell } = cellInfo;
     
     // Skip if we're still on the same cell
     if (x === this.touchState.lastCellX && y === this.touchState.lastCellY) return;
+    
+    console.log(`Touch moved to cell (${x}, ${y})`);
     
     // Update last cell position
     this.touchState.lastCellX = x;
     this.touchState.lastCellY = y;
     
-    // Try to select this cell (adjacency will be checked in toggleCellSelection)
-    this.toggleCellSelection(x, y);
+    // Try to select this cell
+    this.handleCellSelection(x, y);
   }
   
   /**
@@ -223,13 +253,119 @@ class GridRenderer {
    * @param {TouchEvent} e - Touch event
    */
   handleTouchEnd(e) {
-    // Reset touch state
-    this.touchState.active = false;
-    this.touchState.lastCellX = -1;
-    this.touchState.lastCellY = -1;
+    // If touch wasn't active, nothing to do
+    if (!this.touchState.active) return;
     
-    // Prevent default to be safe
     e.preventDefault();
+    
+    // If this was a tap (not a drag), handle as click
+    if (!this.touchState.isDragging) {
+      const x = this.touchState.lastCellX;
+      const y = this.touchState.lastCellY;
+      
+      if (x >= 0 && y >= 0) {
+        console.log(`Touch ended as tap on cell (${x}, ${y})`);
+        this.handleCellSelection(x, y);
+      }
+    } else {
+      console.log('Touch ended as drag/swipe');
+    }
+    
+    // Remove the touch active class from all cells
+    const cells = document.querySelectorAll('.grid-cell.touch-active');
+    cells.forEach(cell => cell.classList.remove('touch-active'));
+    
+    // Reset touch state
+    this.touchState = {
+      active: false,
+      lastCellX: -1,
+      lastCellY: -1,
+      isDragging: false
+    };
+  }
+  
+  /**
+   * NEW: Unified cell selection handler for both click and touch
+   * @param {number} x - X coordinate
+   * @param {number} y - Y coordinate
+   */
+  handleCellSelection(x, y) {
+    // Check if coordinates are within grid bounds
+    if (y >= 0 && y < this.grid.length && x >= 0 && x < this.grid[0].length) {
+      const cell = this.grid[y][x];
+      
+      // If this cell is already selected, deselect it only if it's the last one selected
+      if (cell.isSelected) {
+        // Only allow deselecting the last selected cell
+        if (this.selectedCells.length > 0) {
+          const lastSelected = this.selectedCells[this.selectedCells.length - 1];
+          if (lastSelected.x === x && lastSelected.y === y) {
+            // Deselect this cell
+            cell.isSelected = false;
+            this.selectedCells.pop();
+            
+            // Update last selected cell reference
+            if (this.selectedCells.length > 0) {
+              const newLastSelected = this.selectedCells[this.selectedCells.length - 1];
+              this.lastSelectedCell = { x: newLastSelected.x, y: newLastSelected.y };
+            } else {
+              this.lastSelectedCell = null;
+            }
+            
+            // Re-render and notify
+            this.renderVisibleGrid();
+            if (this.options.onSelectionChange) {
+              this.options.onSelectionChange(this.selectedCells);
+            }
+          }
+        }
+        return;
+      }
+      
+      // First selection must be the start cell
+      if (this.selectedCells.length === 0) {
+        if (!cell.isStart) {
+          console.log('First selection must be the start cell');
+          // Find the element for this cell to show invalid selection
+          const element = document.querySelector(`.grid-cell[data-grid-x="${x}"][data-grid-y="${y}"]`);
+          if (element) {
+            element.classList.add('invalid-selection');
+            setTimeout(() => {
+              element.classList.remove('invalid-selection');
+            }, 300);
+          }
+          return;
+        }
+      } 
+      // For subsequent selections, check adjacency
+      else if (this.lastSelectedCell) {
+        if (!this.areCellsAdjacent(x, y, this.lastSelectedCell.x, this.lastSelectedCell.y)) {
+          console.log('Selection must be adjacent to the last selected cell');
+          // Find the element for this cell to show invalid selection
+          const element = document.querySelector(`.grid-cell[data-grid-x="${x}"][data-grid-y="${y}"]`);
+          if (element) {
+            element.classList.add('invalid-selection');
+            setTimeout(() => {
+              element.classList.remove('invalid-selection');
+            }, 300);
+          }
+          return;
+        }
+      }
+      
+      // If we got here, we can select the cell
+      cell.isSelected = true;
+      this.selectedCells.push({ x, y });
+      this.lastSelectedCell = { x, y };
+      
+      // Re-render grid
+      this.renderVisibleGrid();
+      
+      // Notify of selection change
+      if (this.options.onSelectionChange) {
+        this.options.onSelectionChange(this.selectedCells);
+      }
+    }
   }
   
   /**
@@ -286,28 +422,20 @@ class GridRenderer {
       width,
       height,
       endX,
-      endY,
-      gridLength: this.grid.length,
-      gridWidth: this.grid[0]?.length
+      endY
     });
     
     let cellCount = 0;
     
-    // Render visible cells - ENSURE LOOPS ARE RUNNING
+    // Render visible cells
     for (let y = this.viewOffset.y; y < endY && y < this.fullGridSize; y++) {
       for (let x = this.viewOffset.x; x < endX && x < this.fullGridSize; x++) {
-        // Debug
-        console.log(`Creating cell at (${x},${y})`);
-        
         const cellElement = document.createElement('div');
         cellElement.className = 'grid-cell';
         
         // Ensure proper cell dimensions
         cellElement.style.width = `${this.options.cellSize}px`;
         cellElement.style.height = `${this.options.cellSize}px`;
-        
-        // Remove debug red border
-        // cellElement.style.border = '1px solid red';
         
         // If cell is within grid bounds
         if (y >= 0 && y < this.grid.length && x >= 0 && x < this.grid[0].length) {
@@ -323,8 +451,9 @@ class GridRenderer {
           // Apply styling for different cell states
           if (cell.isStart) {
             cellElement.classList.add('start-cell');
-            console.log('Start cell found at:', x, y);
-          } else if (cell.isSelected) {
+          } 
+          
+          if (cell.isSelected) {
             cellElement.classList.add('selected-cell');
           } 
           
@@ -339,8 +468,11 @@ class GridRenderer {
           }
           
           // Add click event handler for cell selection
-          cellElement.addEventListener('click', () => {
-            this.toggleCellSelection(x, y);
+          cellElement.addEventListener('click', (e) => {
+            // Skip if this is part of a touch sequence (prevent double triggering)
+            if (this.touchState.active) return;
+            
+            this.handleCellSelection(x, y);
             
             // Call the click handler if provided
             if (this.options.onCellClick) {
@@ -356,16 +488,10 @@ class GridRenderer {
         // Add to grid
         this.gridElement.appendChild(cellElement);
         cellCount++;
-        
-        // Debug info for first few cells
-        if (cellCount < 5) {
-          console.log(`Added cell ${cellCount}:`, cellElement);
-        }
       }
     }
     
     console.log(`Created ${cellCount} cells`);
-    console.log('Grid element children:', this.gridElement.children.length);
   }
   
   /**
@@ -386,71 +512,13 @@ class GridRenderer {
   }
   
   /**
-   * UPDATED: Toggle selection state of a cell with adjacency enforcement
+   * Toggle selection state of a cell (legacy method, now calls handleCellSelection)
    * @param {number} x - X coordinate
    * @param {number} y - Y coordinate
    */
   toggleCellSelection(x, y) {
-    // Check if coordinates are within grid bounds
-    if (y >= 0 && y < this.grid.length && x >= 0 && x < this.grid[0].length) {
-      const cell = this.grid[y][x];
-      
-      // If this cell is already selected, deselect it only if it's the last one selected
-      if (cell.isSelected) {
-        // Only allow deselecting the last selected cell
-        if (this.selectedCells.length > 0) {
-          const lastSelected = this.selectedCells[this.selectedCells.length - 1];
-          if (lastSelected.x === x && lastSelected.y === y) {
-            // Deselect this cell
-            cell.isSelected = false;
-            this.selectedCells.pop();
-            
-            // Update last selected cell reference
-            if (this.selectedCells.length > 0) {
-              const newLastSelected = this.selectedCells[this.selectedCells.length - 1];
-              this.lastSelectedCell = { x: newLastSelected.x, y: newLastSelected.y };
-            } else {
-              this.lastSelectedCell = null;
-            }
-            
-            // Re-render and notify
-            this.renderVisibleGrid();
-            if (this.options.onSelectionChange) {
-              this.options.onSelectionChange(this.selectedCells);
-            }
-          }
-        }
-        return;
-      }
-      
-      // If first selection, enforce it must be the start cell
-      if (this.selectedCells.length === 0) {
-        if (!cell.isStart) {
-          console.log('First selection must be the start cell');
-          return;
-        }
-      } 
-      // For subsequent selections, check if it's adjacent to the last selected cell
-      else if (this.lastSelectedCell) {
-        if (!this.areCellsAdjacent(x, y, this.lastSelectedCell.x, this.lastSelectedCell.y)) {
-          console.log('Selection must be adjacent to the last selected cell');
-          return;
-        }
-      }
-      
-      // If we got here, we can select the cell
-      cell.isSelected = true;
-      this.selectedCells.push({ x, y });
-      this.lastSelectedCell = { x, y };
-      
-      // Re-render grid
-      this.renderVisibleGrid();
-      
-      // Notify of selection change
-      if (this.options.onSelectionChange) {
-        this.options.onSelectionChange(this.selectedCells);
-      }
-    }
+    // For backward compatibility, just redirect to the new method
+    this.handleCellSelection(x, y);
   }
   
   /**
@@ -501,7 +569,7 @@ class GridRenderer {
   }
   
   /**
-   * NEW: Reset view position to center the grid on the start cell
+   * Reset view position to center the grid on the start cell
    */
   centerGridOnStartCell() {
     const isMobile = window.innerWidth < 768;
@@ -642,19 +710,11 @@ class GridRenderer {
   handleResponsive() {
     const isMobile = window.innerWidth < 768;
     
-    // Update view offset for different screen sizes
-    if (isMobile) {
-      // Small screen: 9x9 starting at position 21,21
-      this.viewOffset.x = 21;
-      this.viewOffset.y = 21;
-    } else {
-      // Large screen: 13x9 starting at position 19,21
-      this.viewOffset.x = 19;
-      this.viewOffset.y = 21;
-    }
-    
+    // Update grid template and size
     this.updateGridTemplate();
-    this.renderVisibleGrid();
+    
+    // Center on the start cell after resizing
+    this.centerGridOnStartCell();
   }
   
   /**
