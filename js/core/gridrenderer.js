@@ -321,24 +321,22 @@ handleTouchMove(e) {
     // Get current last selected cell as the reference point
     const lastSelected = this.selectedCells[this.selectedCells.length - 1];
     
-    // IMPORTANT CHANGE: For already selected cells, we need to find which one it is
-    // and use that as our reference point for continuing the selection
+    // Check if cell is already selected
     if (cell.isSelected) {
-      // Find this cell in our selectedCells array
-      let foundIndex = -1;
-      for (let i = 0; i < this.selectedCells.length; i++) {
-        if (this.selectedCells[i].x === x && this.selectedCells[i].y === y) {
-          foundIndex = i;
-          break;
-        }
-      }
-      
-      // Update tracking position for this cell
+      // Just update the last cell position for tracking
       this.touchState.lastCellX = x;
       this.touchState.lastCellY = y;
-      
-      // Just update position, but don't return - we'll continue processing
-      // This allows swipes to continue from a selected cell
+      return;
+    }
+    
+    // IMPORTANT: Check if this is a valid cell to select (must be part of the path)
+    if (!cell.isPath) {
+      console.log('Cannot select non-path cell');
+      // Show invalid feedback
+      element.classList.add('invalid-selection');
+      setTimeout(() => {
+        element.classList.remove('invalid-selection');
+      }, 300);
       return;
     }
     
@@ -352,21 +350,12 @@ handleTouchMove(e) {
       this.touchState.lastCellY = y;
     } 
     else {
-      // Cell is not adjacent to the last selected cell
-      // Check if there's a path from the last selected cell to this cell
-      const foundPath = this.findAndSelectPathToCell(lastSelected.x, lastSelected.y, x, y);
-      
-      if (foundPath) {
-        // Successfully found and selected a path to this cell
-        this.touchState.lastCellX = x;
-        this.touchState.lastCellY = y;
-      } else {
-        // No valid path found - show invalid feedback
-        element.classList.add('invalid-selection');
-        setTimeout(() => {
-          element.classList.remove('invalid-selection');
-        }, 300);
-      }
+      // Cell is not adjacent - show invalid feedback
+      element.classList.add('invalid-selection');
+      setTimeout(() => {
+        element.classList.remove('invalid-selection');
+      }, 300);
+      console.log('Cell is not adjacent to last selected cell');
     }
   }
 }
