@@ -46,6 +46,8 @@ class GridRenderer {
       isDragging: false,       // Track if we're in a swiping/dragging operation
       startCellSelected: false // Track if the start cell has been selected
     };
+    // New: Flag to prevent double event handling (touch and click)
+    this.recentlyHandledTouch = false;
     
     // Initialize the grid
     this.initializeGrid();
@@ -138,6 +140,15 @@ class GridRenderer {
     this.gridElement.addEventListener('touchend', (e) => this.handleTouchEnd(e), { passive: false });
     this.gridElement.addEventListener('touchcancel', (e) => this.handleTouchEnd(e), { passive: false });
     
+    // Prevent click events from firing on touchend by adding this:
+    this.gridElement.addEventListener('click', (e) => {
+      if (this.recentlyHandledTouch) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+    }, { capture: true });
+    
     console.log('Touch event listeners attached to grid container');
   }
   
@@ -224,8 +235,12 @@ class GridRenderer {
       active: true,
       lastCellX: x,
       lastCellY: y,
+      // Start with isDragging as false and set true after movement
       isDragging: false,
       startTime: Date.now(),
+      // Track initial cell position for drag detection
+      startX: x,
+      startY: y,
       startCellSelected: false
     };
     
@@ -257,11 +272,6 @@ class GridRenderer {
     // Prevent default to avoid page scrolling
     e.preventDefault();
     
-    // Mark as dragging after a small movement threshold
-    if (!this.touchState.isDragging) {
-      this.touchState.isDragging = true;
-    }
-    
     // Get the current touch
     if (e.touches.length !== 1) return;
     
@@ -278,29 +288,48 @@ class GridRenderer {
     
     console.log(`Touch moved to cell (${x}, ${y})`);
     
-    // If no cell is selected yet and this is not the start cell
-    if (this.selectedCells.length === 0 && !cell.isStart) {
-      // Try to find and select the start cell first
-      const startSelected = this.findAndSelectStartCell();
-      if (startSelected) {
+    // Determine if this is now a drag operation
+    // Only mark as dragging if we've moved to a different cell
+    if (!this.touchState.isDragging) {
+      this.touchState.isDragging = true;
+    }
+    
+    // If this is the first selection and it's not the start cell
+    if (this.selectedCells.length === 0) {
+      // If this cell is the start cell, select it
+      if (cell.isStart) {
+        this.handleCellSelection(x, y, true);
         this.touchState.startCellSelected = true;
       } else {
-        // If start cell isn't visible, show feedback that it needs to be selected first
-        element.classList.add('invalid-selection');
-        setTimeout(() => {
-          element.classList.remove('invalid-selection');
-        }, 300);
-        console.log('Cannot select: must select start cell first');
-        return;
+        // Try to find and select the start cell first
+        const startSelected = this.findAndSelectStartCell();
+        if (startSelected) {
+          this.touchState.startCellSelected = true;
+        } else {
+          // Invalid - show feedback
+          element.classList.add('invalid-selection');
+          setTimeout(() => {
+            element.classList.remove('invalid-selection');
+          }, 300);
+          console.log('Cannot select: must select start cell first');
+          return;
+        }
       }
     }
     
-    // Update last cell position
-    this.touchState.lastCellX = x;
-    this.touchState.lastCellY = y;
-    
-    // Try to select this cell
-    this.handleCellSelection(x, y, false);
+    // Now we can try to select the new cell if it's adjacent to the last selected cell
+    if (this.selectedCells.length > 0) {
+      // Update last cell position before attempting selection
+      const oldX = this.touchState.lastCellX;
+      const oldY = this.touchState.lastCellY;
+      
+      // Update tracking before trying to select
+      this.touchState.lastCellX = x;
+      this.touchState.lastCellY = y;
+      
+      // Try to select this cell (will check adjacency internally)
+      this.handleCellSelection(x, y, false);
+    }
   }
   
   /**
@@ -312,6 +341,9 @@ class GridRenderer {
     if (!this.touchState.active) return;
     
     e.preventDefault();
+    
+    // Flag that we just handled a touch to prevent double triggers with click
+    this.recentlyHandledTouch = true;
     
     // If this was a tap (not a drag), handle as click
     if (!this.touchState.isDragging) {
@@ -339,6 +371,11 @@ class GridRenderer {
       isDragging: false,
       startCellSelected: false
     };
+    
+    // Clear the recently handled touch flag after a short delay
+    setTimeout(() => {
+      this.recentlyHandledTouch = false;
+    }, 300);
   }
   
   /**
@@ -528,7 +565,7 @@ class GridRenderer {
           // Add click event handler for cell selection
           cellElement.addEventListener('click', (e) => {
             // Skip if this is part of a touch sequence (prevent double triggering)
-            if (this.touchState.active) return;
+            if (this.recentlyHandledTouch) return;
             
             this.handleCellSelection(x, y, false);
             
