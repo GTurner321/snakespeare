@@ -260,12 +260,10 @@ body {
 /* ==========================================================================
    3. Scroll Areas (Replacing Arrow Buttons)
    ========================================================================== */
-
 /* Hide the original arrow buttons */
 .arrow-buttons-wrapper {
     display: none !important;
 }
-
 /* Gameplay area with grid and scroll regions */
 #gameplay-area {
     position: relative;
@@ -275,7 +273,6 @@ body {
     align-items: center;
     margin: 30px auto 0;
 }
-
 /* Horizontal container for grid and left/right scroll areas */
 #scroll-horizontal-container {
     display: flex;
@@ -283,7 +280,6 @@ body {
     justify-content: center;
     align-items: center;
 }
-
 /* Scroll areas - base styles */
 .scroll-area {
     display: flex;
@@ -295,34 +291,37 @@ body {
     transition: background-color 0.15s ease;
     z-index: 5;
 }
-
 /* Remove hover state background */
 .scroll-area:hover:not(.disabled) {
     background-color: transparent;
 }
-
 /* Active state for scroll areas - visible only during click */
 .scroll-area:active:not(.disabled) {
     background-color: rgba(200, 200, 200, 0.5);
 }
-
 /* Remove lingering background after click using animation */
 .scroll-area.active {
     animation: pulse-and-fade 0.15s ease forwards;
 }
-
 @keyframes pulse-and-fade {
     0% { background-color: rgba(200, 200, 200, 0.5); }
     100% { background-color: transparent; }
 }
-
+/* Auto-scroll feedback animation */
+.scroll-area.auto-scroll-feedback {
+    animation: pulse-highlight 0.3s ease-in-out;
+}
+@keyframes pulse-highlight {
+    0% { background-color: rgba(255, 255, 255, 0.1); }
+    50% { background-color: rgba(200, 200, 200, 0.4); }
+    100% { background-color: rgba(255, 255, 255, 0.1); }
+}
 /* Disabled state for scroll areas */
 .scroll-area.disabled {
     opacity: 0.4;
     cursor: default;
     pointer-events: none;
 }
-
 /* Vertical scroll areas (top & bottom) - updated height and width */
 .scroll-area-top,
 .scroll-area-bottom {
@@ -332,15 +331,12 @@ body {
     margin: 0 auto;
     border-radius: 8px;
 }
-
 .scroll-area-top {
     margin-bottom: 5px;
 }
-
 .scroll-area-bottom {
     margin-top: 5px;
 }
-
 /* Horizontal scroll areas (left & right) - updated width to match top/bottom height */
 .scroll-area-left,
 .scroll-area-right {
@@ -349,7 +345,6 @@ body {
     margin: 0 5px;
     border-radius: 8px;
 }
-
 /* Scroll arrows */
 .scroll-arrow {
     font-size: 2rem;
@@ -360,14 +355,27 @@ body {
     transform: scale(1);
     transition: transform 0.2s ease;
 }
-
 /* Keep arrow hover effect */
 .scroll-area:hover:not(.disabled) .scroll-arrow {
     transform: scale(1.1);
 }
-
 .scroll-area:active:not(.disabled) .scroll-arrow {
     transform: scale(0.9);
+}
+
+/* Auto-scroll improvements */
+.grid-container {
+    transition: transform 0.15s ease-out;
+}
+
+/* Make selected cells more visible during auto-scroll */
+.selected-cell {
+    transition: box-shadow 0.15s ease;
+}
+
+/* Last selected cell highlight for better visibility during auto-scroll */
+.grid-cell.selected-cell:last-of-type {
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
 }
 
 /* Medium screens */
@@ -390,7 +398,6 @@ body {
         font-size: 1.5rem;
     }
 }
-
 /* Small screens */
 @media (max-width: 480px) {
     #gameplay-area {
