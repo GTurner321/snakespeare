@@ -318,7 +318,7 @@ handleTouchStart(e) {
 }
   
 /**
- * Handle touch move event for swiping - with improved handling
+ * Handle touch move event for swiping - with support for initiating swipe from adjacent cells
  * @param {TouchEvent} e - Touch event
  */
 handleTouchMove(e) {
@@ -356,6 +356,16 @@ handleTouchMove(e) {
       // Select the start cell
       this.handleCellSelection(startX, startY, false);
       console.log('Selected start cell for drag');
+    }
+    
+    // IMPORTANT: If we're starting a drag from an adjacent unselected cell,
+    // select that cell first to begin the swipe from there
+    if (this.touchState.selectionIntent === 'select-adjacent' && 
+        !this.isCellSelected(this.touchState.startX, this.touchState.startY)) {
+      // Select the adjacent cell that was tapped to start the swipe
+      this.handleCellSelection(this.touchState.startX, this.touchState.startY, false);
+      console.log('Selected adjacent cell to begin swipe');
+      this.touchState.hasAddedCellsDuringDrag = true;
     }
   }
   
@@ -455,7 +465,7 @@ handleTouchMove(e) {
     }
   }
 }
-
+  
 /**
  * Handle touch end event - with improved selection handling
  * @param {TouchEvent} e - Touch event
