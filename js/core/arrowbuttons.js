@@ -2,6 +2,7 @@
  * Scroll Area Handler for Grid Game
  * Creates and manages the scroll areas for navigating the grid
  * Replaces the original arrow buttons with surrounding scroll areas
+ * Added support for auto-scrolling when cells are near edges
  */
 
 class ScrollAreaHandler {
@@ -13,6 +14,10 @@ class ScrollAreaHandler {
       gameContainerId: options.gameContainerId || 'game-container',
       ...options
     };
+    
+    // Track last known grid offset for auto-scroll feedback
+    this._lastKnownOffset = null;
+    this._hadPreviousOffset = false;
     
     // Create scroll areas
     this.createScrollAreas();
@@ -241,7 +246,7 @@ class ScrollAreaHandler {
   }
   
   /**
-   * Set up event listeners for scroll areas - UPDATED with grid size matching
+   * Set up event listeners for scroll areas - UPDATED with auto-scroll support
    */
   setupEventListeners() {
     // Scroll area click events
@@ -306,6 +311,15 @@ class ScrollAreaHandler {
       }
     });
     
+    // Add listener for auto-scrolling events
+    document.addEventListener('gridAutoScrolled', (e) => {
+      // Update scroll area states when auto-scrolling occurs
+      this.updateScrollAreaStates();
+      
+      // Visual feedback for auto-scroll
+      this.showAutoScrollFeedback(e.detail);
+    });
+    
     // Initial update of scroll area states
     this.updateScrollAreaStates();
     
@@ -339,6 +353,65 @@ class ScrollAreaHandler {
       this.adjustPhraseDisplayWidth();
       this.adjustScrollAreasToGrid(this.gridRenderer);
     }, 100);
+  }
+  
+  /**
+   * Show visual feedback for auto-scrolling to indicate direction
+   * @param {Object} detail - Event detail with offset and lastCell
+   */
+  showAutoScrollFeedback(detail) {
+    if (!detail || !detail.lastCell) return;
+    
+    // Determine which edges the cell was close to
+    const lastCell = detail.lastCell;
+    const oldOffset = this._lastKnownOffset || { x: 0, y: 0 };
+    const newOffset = detail.offset;
+    
+    // Store current offset for next comparison
+    this._lastKnownOffset = { ...newOffset };
+    
+    // If this is the first time, just save the offset without feedback
+    if (!this._hadPreviousOffset) {
+      this._hadPreviousOffset = true;
+      return;
+    }
+    
+    // Determine scroll directions
+    const scrolledUp = newOffset.y < oldOffset.y;
+    const scrolledDown = newOffset.y > oldOffset.y;
+    const scrolledLeft = newOffset.x < oldOffset.x;
+    const scrolledRight = newOffset.x > oldOffset.x;
+    
+    // Apply visual feedback to corresponding scroll areas
+    if (scrolledUp && this.scrollAreas.top) {
+      this.showScrollFeedback(this.scrollAreas.top);
+    }
+    
+    if (scrolledDown && this.scrollAreas.bottom) {
+      this.showScrollFeedback(this.scrollAreas.bottom);
+    }
+    
+    if (scrolledLeft && this.scrollAreas.left) {
+      this.showScrollFeedback(this.scrollAreas.left);
+    }
+    
+    if (scrolledRight && this.scrollAreas.right) {
+      this.showScrollFeedback(this.scrollAreas.right);
+    }
+  }
+  
+  /**
+   * Display brief highlight animation on a scroll area
+   * @param {HTMLElement} scrollArea - The scroll area to highlight
+   */
+  showScrollFeedback(scrollArea) {
+    // Add active class
+    scrollArea.classList.add('auto-scroll-feedback');
+    
+    // Remove after animation
+    setTimeout(() => {
+      scrollArea.classList.remove('auto-scroll-feedback');
+    }, 300);
   }
   
   /**
