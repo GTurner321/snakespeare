@@ -318,7 +318,7 @@ handleTouchStart(e) {
 }
   
 /**
- * Handle touch move event for swiping - with support for initiating swipe from adjacent cells
+ * Handle touch move event for swiping - with support for auto-scrolling
  * @param {TouchEvent} e - Touch event
  */
 handleTouchMove(e) {
@@ -449,6 +449,7 @@ handleTouchMove(e) {
     // Check if this cell is adjacent to the last selected cell
     if (this.areCellsAdjacent(x, y, lastSelected.x, lastSelected.y)) {
       // Do NOT force selection during swipe - let the adjacency check work properly
+      // The handleCellSelection method now includes auto-scrolling
       const selectionResult = this.handleCellSelection(x, y, false);
       
       // Track that we've added cells during this drag (for deselection logic)
@@ -575,6 +576,10 @@ deselectLastCell() {
   if (this.selectedCells.length > 0) {
     const newLastSelected = this.selectedCells[this.selectedCells.length - 1];
     this.lastSelectedCell = { x: newLastSelected.x, y: newLastSelected.y };
+    
+    // NEW: Check if we need to auto-scroll after deselection
+    // This could happen when we deselect a cell and the new last cell is close to an edge
+    this.handleAutoScroll();
   } else {
     this.lastSelectedCell = null;
   }
@@ -603,7 +608,7 @@ isCellSelected(x, y) {
 }
 
 /**
- * Unified cell selection handler for both click and touch
+ * Unified cell selection handler for both click and touch - Updated with auto-scroll
  * @param {number} x - X coordinate
  * @param {number} y - Y coordinate
  * @param {boolean} forceSelect - Force selection without adjacency check
@@ -680,6 +685,9 @@ handleCellSelection(x, y, forceSelect = false) {
     this.selectedCells.push({ x, y });
     this.lastSelectedCell = { x, y };
     
+    // NEW: Check if we need to auto-scroll after selecting a cell
+    this.handleAutoScroll();
+    
     // Re-render grid
     this.renderVisibleGrid();
     
@@ -693,6 +701,86 @@ handleCellSelection(x, y, forceSelect = false) {
   
   return false;
 }
+
+/**
+ * Handles automatic scrolling when the last selected cell is too close to an edge
+ * Should be called after each successful cell selection
+ */
+handleAutoScroll() {
+  // Only proceed if we have selected cells
+  if (!this.selectedCells.length) return;
+  
+  // Get the last selected cell
+  const lastCell = this.selectedCells[this.selectedCells.length - 1];
+  
+  // Buffer size - how many cells we want to maintain between edge and selected cell
+  const bufferSize = 3;
+  
+  // Minimum distance before scrolling is triggered
+  const minDistance = 2;
+  
+  // Get current view dimensions
+  const isMobile = window.innerWidth < 768;
+  const viewWidth = isMobile ? this.options.gridWidthSmall : this.options.gridWidth;
+  const viewHeight = isMobile ? this.options.gridHeightSmall : this.options.gridHeight;
+  
+  // Calculate distances to each edge
+  const distToLeftEdge = lastCell.x - this.viewOffset.x;
+  const distToRightEdge = (this.viewOffset.x + viewWidth - 1) - lastCell.x;
+  const distToTopEdge = lastCell.y - this.viewOffset.y;
+  const distToBottomEdge = (this.viewOffset.y + viewHeight - 1) - lastCell.y;
+  
+  // Track if we need to scroll
+  let needsScroll = false;
+  
+  // Check proximity to edges and scroll if needed
+  
+  // Check left edge
+  if (distToLeftEdge <= minDistance && this.viewOffset.x > 0) {
+    this.viewOffset.x = Math.max(0, lastCell.x - bufferSize);
+    needsScroll = true;
+  }
+  
+  // Check right edge
+  if (distToRightEdge <= minDistance && this.viewOffset.x + viewWidth < this.fullGridSize) {
+    this.viewOffset.x = Math.min(
+      this.fullGridSize - viewWidth,
+      lastCell.x + bufferSize + 1 - viewWidth
+    );
+    needsScroll = true;
+  }
+  
+  // Check top edge
+  if (distToTopEdge <= minDistance && this.viewOffset.y > 0) {
+    this.viewOffset.y = Math.max(0, lastCell.y - bufferSize);
+    needsScroll = true;
+  }
+  
+  // Check bottom edge
+  if (distToBottomEdge <= minDistance && this.viewOffset.y + viewHeight < this.fullGridSize) {
+    this.viewOffset.y = Math.min(
+      this.fullGridSize - viewHeight,
+      lastCell.y + bufferSize + 1 - viewHeight
+    );
+    needsScroll = true;
+  }
+  
+  // If we scrolled, re-render the grid
+  if (needsScroll) {
+    console.log('Auto-scrolling grid due to cell proximity to edge');
+    
+    // Force a full rebuild
+    this._lastRenderOffset = null;
+    
+    // Re-render the grid
+    this.renderVisibleGrid();
+    
+    // Notify about the scroll
+    document.dispatchEvent(new CustomEvent('gridAutoScrolled', { 
+      detail: { offset: this.viewOffset, lastCell, gridRenderer: this }
+    }));
+  }
+}  
   
   /**
    * Update grid template based on screen size
