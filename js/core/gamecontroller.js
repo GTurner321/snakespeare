@@ -233,32 +233,6 @@ updatePhraseFromSelections(selectedLetters) {
 }
   
   /**
-   * Update the phrase display based on selected cells
-   * @param {Array} selectedLetters - Array of letter objects
-   */
-  updatePhraseFromSelections(selectedLetters) {
-    const displayElement = document.getElementById('phrase-text');
-    if (!displayElement || !this.currentPhrase) return;
-    
-    // If we have a phrase and template
-    if (this.phraseTemplate) {
-      // Fill in the template with selected letters
-      const updatedDisplay = this.fillPhraseTemplate(
-        this.phraseTemplate,
-        this.currentPhrase.phrase,
-        selectedLetters
-      );
-      
-      // Display the updated template
-      displayElement.textContent = updatedDisplay;
-    } else {
-      // Fallback if no template (shouldn't happen)
-      const selectedString = selectedLetters.map(cell => cell.letter).join('');
-      displayElement.textContent = selectedString || "Select letters to form a phrase";
-    }
-  }
-  
-  /**
    * Load a phrase from the phrase data
    * @param {Object} phraseData - Data for the phrase to load
    */
