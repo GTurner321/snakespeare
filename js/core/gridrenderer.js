@@ -221,10 +221,8 @@ class GridRenderer {
     return false;
   }
   
-// First, modify the handleTouchStart function to better track the start position
-
 /**
- * Handle touch start event
+ * Handle touch start event - with updated state tracking for deselection
  * @param {TouchEvent} e - Touch event
  */
 handleTouchStart(e) {
@@ -247,17 +245,14 @@ handleTouchStart(e) {
     active: true,
     lastCellX: x,
     lastCellY: y,
-    // IMPORTANT: Start with isDragging as false
     isDragging: false,
     startTime: Date.now(),
-    // Track physical coordinates for movement detection
     startClientX: touch.clientX,
     startClientY: touch.clientY,
-    // Track initial cell position for drag detection
     startX: x,
     startY: y,
     startCellSelected: false,
-    // Don't set recentlyHandledTouch here
+    hasAddedCellsDuringDrag: false // Track if we've added cells during this drag
   };
   
   // Add visual indicator that the cell is being touched
@@ -281,6 +276,7 @@ handleTouchStart(e) {
     if (x === lastSelected.x && y === lastSelected.y) {
       // Already selected - ready to continue from here
       this.touchState.startCellSelected = true;
+      // This is also the starting point for potential deselection
       return;
     }
     
@@ -290,6 +286,7 @@ handleTouchStart(e) {
       // Select this cell as the next in sequence
       this.handleCellSelection(x, y, true);
       this.touchState.startCellSelected = true;
+      this.touchState.hasAddedCellsDuringDrag = true;
       console.log('Adjacent cell selected on touch start');
       return;
     }
@@ -298,11 +295,9 @@ handleTouchStart(e) {
     this.touchState.startCellSelected = this.selectedCells.length > 0;
   }
 }
-
-// Now modify the handleTouchMove function to better detect real drags/swipes
-
+  
 /**
- * Handle touch move event for swiping
+ * Handle touch move event for swiping - with support for deselection tracking
  * @param {TouchEvent} e - Touch event
  */
 handleTouchMove(e) {
@@ -317,11 +312,11 @@ handleTouchMove(e) {
   
   const touch = e.touches[0];
   
-  // IMPORTANT: Calculate movement distance to determine if this is a drag
+  // Calculate movement distance to determine if this is a drag
   const moveX = Math.abs(touch.clientX - this.touchState.startClientX);
   const moveY = Math.abs(touch.clientY - this.touchState.startClientY);
   
-  // Only consider it a drag if the movement is significant (e.g., more than 10 pixels)
+  // Only consider it a drag if the movement is significant
   const dragThreshold = 10;
   const isDragging = moveX > dragThreshold || moveY > dragThreshold;
   
@@ -350,6 +345,21 @@ handleTouchMove(e) {
   // Only proceed with cell selection logic if we're actually dragging
   if (!this.touchState.isDragging) {
     return;
+  }
+  
+  // DESELECTION SUPPORT: Check if this is a reverse swipe for deselection
+  if (this.selectedCells.length > 1) {
+    // Check if we're on the second-to-last cell in the selection
+    const secondLastIndex = this.selectedCells.length - 2;
+    if (secondLastIndex >= 0) {
+      const secondLastCell = this.selectedCells[secondLastIndex];
+      if (x === secondLastCell.x && y === secondLastCell.y) {
+        // This is a reverse swipe - deselect the last cell
+        console.log('Deselection via reverse swipe detected');
+        this.deselectLastCell();
+        return;
+      }
+    }
   }
   
   // If no cells are selected yet, we need to handle the start case
@@ -396,8 +406,11 @@ handleTouchMove(e) {
     
     // Check if this cell is adjacent to the last selected cell
     if (this.areCellsAdjacent(x, y, lastSelected.x, lastSelected.y)) {
-      // CRITICAL CHANGE: Use forceSelect true to ensure immediate selection during swipe
+      // Use forceSelect true to ensure immediate selection during swipe
       this.handleCellSelection(x, y, true);
+      
+      // Track that we've added cells during this drag (for deselection logic)
+      this.touchState.hasAddedCellsDuringDrag = true;
     } else {
       // Cell is not adjacent - show invalid feedback
       element.classList.add('invalid-selection');
@@ -410,7 +423,7 @@ handleTouchMove(e) {
 }
 
 /**
- * Handle touch end event
+ * Handle touch end event - with support for deselection
  * @param {TouchEvent} e - Touch event
  */
 handleTouchEnd(e) {
@@ -432,16 +445,24 @@ handleTouchEnd(e) {
   const isTap = (touchDuration < MAX_TAP_DURATION) && 
                 (!this.touchState.isDragging || (x === startX && y === startY));
   
-  // CRITICAL FIX: Check if the cell at (x,y) is already selected
-  // If it is, don't try to select it again to avoid toggling the selection off
+  // Check if cell is already selected
   const cellAlreadySelected = this.isCellSelected(x, y);
   
-  if (isTap && !cellAlreadySelected) {
+  // DESELECTION SUPPORT: Check if this is the last selected cell
+  const isLastSelectedCell = this.isLastSelectedCell(x, y);
+  
+  if (isTap) {
     console.log(`Touch ended as tap on cell (${x}, ${y})`);
     
-    // For taps on unselected cells, we handle the selection here
-    // but we AVOID re-selecting already selected cells to prevent toggling
-    this.handleCellSelection(x, y, true); // Force selection to avoid deselect
+    // If this is the last selected cell, we should deselect it on tap
+    if (cellAlreadySelected && isLastSelectedCell) {
+      console.log(`Deselecting last cell at (${x}, ${y})`);
+      this.deselectLastCell();
+    } 
+    // Otherwise, for taps on unselected cells, we handle the selection here
+    else if (!cellAlreadySelected) {
+      this.handleCellSelection(x, y, true); // Force selection to avoid deselect
+    }
     
     // Set flag with a shorter timeout for taps
     this.recentlyHandledTouch = true;
@@ -449,7 +470,13 @@ handleTouchEnd(e) {
       this.recentlyHandledTouch = false;
     }, 100); // Shorter timeout for taps
   } else {
-    console.log('Touch ended as drag/swipe or on already selected cell');
+    // For drags ending on the last selected cell, consider deselection
+    if (cellAlreadySelected && isLastSelectedCell && !this.touchState.hasAddedCellsDuringDrag) {
+      console.log(`Deselecting last cell at (${x}, ${y}) after drag`);
+      this.deselectLastCell();
+    }
+    
+    console.log('Touch ended as drag/swipe');
     
     // For drags, we use a slightly longer timeout to prevent accidental clicks
     this.recentlyHandledTouch = true;
@@ -468,10 +495,52 @@ handleTouchEnd(e) {
     lastCellX: -1,
     lastCellY: -1,
     isDragging: false,
-    startCellSelected: false
+    startCellSelected: false,
+    hasAddedCellsDuringDrag: false
   };
 }
 
+/**
+ * Check if the cell at coordinates is the last selected cell
+ * @param {number} x - X coordinate
+ * @param {number} y - Y coordinate
+ * @return {boolean} True if this is the last selected cell
+ */
+isLastSelectedCell(x, y) {
+  if (this.selectedCells.length === 0) return false;
+  
+  const lastSelected = this.selectedCells[this.selectedCells.length - 1];
+  return (lastSelected.x === x && lastSelected.y === y);
+}
+
+/**
+ * Deselect the last cell in the selection
+ */
+deselectLastCell() {
+  if (this.selectedCells.length === 0) return;
+  
+  const lastSelected = this.selectedCells[this.selectedCells.length - 1];
+  const cell = this.grid[lastSelected.y][lastSelected.x];
+  
+  // Deselect this cell
+  cell.isSelected = false;
+  this.selectedCells.pop();
+  
+  // Update last selected cell reference
+  if (this.selectedCells.length > 0) {
+    const newLastSelected = this.selectedCells[this.selectedCells.length - 1];
+    this.lastSelectedCell = { x: newLastSelected.x, y: newLastSelected.y };
+  } else {
+    this.lastSelectedCell = null;
+  }
+  
+  // Re-render and notify
+  this.renderVisibleGrid();
+  if (this.options.onSelectionChange) {
+    this.options.onSelectionChange(this.selectedCells);
+  }
+}
+  
 /**
  * Helper function to check if a cell is already selected
  * @param {number} x - X coordinate
