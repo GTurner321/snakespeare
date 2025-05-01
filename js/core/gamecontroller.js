@@ -1,6 +1,6 @@
 /**
  * Game Controller for Grid Game
- * Coordinates pathGenerator, gridRenderer, and arrowButtons
+ * Coordinates pathGenerator, gridRenderer, and scroll areas
  * Handles CSV data loading and game state management
  */
 
@@ -21,7 +21,7 @@ class GameController {
         desktop: { width: 13, height: 9 }
       },
       cellSize: options.cellSize || 50,
-      randomFillPercentage: options.randomFillPercentage,
+      randomFillPercentage: options.randomFillPercentage || 0,
       // fill percentage of random cells is being passed through here
     };
     
@@ -86,28 +86,49 @@ class GameController {
       onSelectionChange: () => this.handleSelectionChange()
     });
     
-    // Initialize arrow buttons AFTER grid renderer is fully created
+    // Initialize scroll areas AFTER grid renderer is fully created
     // This ensures the grid element exists for proper positioning
-    this.arrowButtons = new ArrowButtons(this.gridRenderer, {
-      container: this.options.gameContainerId,
-      buttonHeight: this.options.cellSize * 2.5,  // 2.5 squares height
-      buttonDepth: this.options.cellSize * 0.75   // 0.75 square depth
+    this.scrollHandler = new ArrowButtons(this.gridRenderer, {
+      gameContainerId: this.options.gameContainerId
     });
     
-    // Update arrow button positions after grid renderer is fully initialized
-    setTimeout(() => {
-      if (this.arrowButtons.updateButtonPosition) {
-        this.arrowButtons.updateButtonPosition();
-      }
-    }, 100);
+    // Set up menu handlers
+    this.setupMenuHandlers();
     
     // Add window resize handler
     window.addEventListener('resize', () => {
       this.handleResize();
     });
     
-    // Create refresh button
-    this.createRefreshButton();
+    // Dispatch custom event for initialization complete
+    document.dispatchEvent(new CustomEvent('gameInitialized', { 
+      detail: { controller: this }
+    }));
+  }
+  
+  /**
+   * Set up menu button handlers
+   */
+  setupMenuHandlers() {
+    // New phrase button
+    const newPhraseButton = document.getElementById('new-phrase-button');
+    if (newPhraseButton) {
+      newPhraseButton.addEventListener('click', () => {
+        this.loadRandomPhrase();
+        document.getElementById('menu-dropdown').classList.remove('active');
+        document.getElementById('menu-toggle').classList.remove('active');
+      });
+    }
+    
+    // Reset selections button
+    const resetSelectionsButton = document.getElementById('reset-selections-button');
+    if (resetSelectionsButton) {
+      resetSelectionsButton.addEventListener('click', () => {
+        this.resetSelections();
+        document.getElementById('menu-dropdown').classList.remove('active');
+        document.getElementById('menu-toggle').classList.remove('active');
+      });
+    }
   }
   
   /**
@@ -134,12 +155,16 @@ class GameController {
     // Update phrase display with currently selected letters
     this.updatePhraseFromSelections(selectedLetters);
     
-    // Update arrow button states in case scrolling limits have changed
-    this.arrowButtons.updateButtonStates();
+    // Update scroll area states
+    if (this.scrollHandler.updateScrollAreaStates) {
+      this.scrollHandler.updateScrollAreaStates();
+    }
     
-    // Also update button positions after selection changes
-    if (this.arrowButtons.updateButtonPosition) {
-      this.arrowButtons.updateButtonPosition();
+    // Adjust phrase display height after content change
+    if (this.scrollHandler.adjustPhraseDisplayHeight) {
+      setTimeout(() => {
+        this.scrollHandler.adjustPhraseDisplayHeight();
+      }, 50);
     }
   }
   
@@ -225,6 +250,11 @@ updatePhraseFromSelections(selectedLetters) {
     
     // Display the updated template
     displayElement.textContent = updatedDisplay;
+    
+    // Adjust phrase display height
+    if (this.scrollHandler && this.scrollHandler.adjustPhraseDisplayHeight) {
+      this.scrollHandler.adjustPhraseDisplayHeight();
+    }
   } else {
     // Fallback if no template (shouldn't happen)
     const selectedString = selectedLetters.map(cell => cell.letter).join('');
@@ -256,21 +286,25 @@ updatePhraseFromSelections(selectedLetters) {
     // Apply path to grid renderer
     this.gridRenderer.setPath(this.currentPath);
     
-    // NEW: Center the grid on the start cell
+    // Center the grid on the start cell
     this.gridRenderer.centerGridOnStartCell();
     
-    // Update arrow button states
-    this.arrowButtons.updateButtonStates();
-    
-    // Also update button positions after loading a new phrase
-    if (this.arrowButtons.updateButtonPosition) {
-      this.arrowButtons.updateButtonPosition();
+    // Update scroll area states
+    if (this.scrollHandler && this.scrollHandler.updateScrollAreaStates) {
+      this.scrollHandler.updateScrollAreaStates();
     }
     
     // Display the initial template
     const displayElement = document.getElementById('phrase-text');
     if (displayElement) {
       displayElement.textContent = this.phraseTemplate;
+      
+      // Adjust phrase display height after loading new content
+      if (this.scrollHandler && this.scrollHandler.adjustPhraseDisplayHeight) {
+        setTimeout(() => {
+          this.scrollHandler.adjustPhraseDisplayHeight();
+        }, 50);
+      }
     }
     
     // Clear any additional elements
@@ -287,14 +321,15 @@ updatePhraseFromSelections(selectedLetters) {
     // Let gridRenderer handle it
     this.gridRenderer.handleResponsive();
     
-    // Update arrow buttons
-    this.arrowButtons.updateButtonStates();
-    
-    // Update button positions after resize
-    if (this.arrowButtons.updateButtonPosition) {
-      setTimeout(() => {
-        this.arrowButtons.updateButtonPosition();
-      }, 50); // Small delay to ensure grid has updated
+    // Adjust scroll areas and phrase display
+    if (this.scrollHandler) {
+      if (this.scrollHandler.updateScrollAreaStates) {
+        this.scrollHandler.updateScrollAreaStates();
+      }
+      
+      if (this.scrollHandler.adjustPhraseDisplayWidth) {
+        this.scrollHandler.adjustPhraseDisplayWidth();
+      }
     }
   }
   
@@ -404,35 +439,6 @@ updatePhraseFromSelections(selectedLetters) {
   }
   
   /**
-   * Create refresh button at the bottom
-   */
-  createRefreshButton() {
-    const container = document.getElementById(this.options.gameContainerId);
-    if (!container) return;
-    
-    // Create button container
-    const buttonContainer = document.createElement('div');
-    buttonContainer.className = 'refresh-button-container';
-    
-    // Create the button
-    const refreshButton = document.createElement('button');
-    refreshButton.className = 'metallic-button';
-    refreshButton.textContent = 'New Random Phrase';
-    refreshButton.addEventListener('click', () => this.loadRandomPhrase());
-    
-    // Create a reset selections button
-    const resetButton = document.createElement('button');
-    resetButton.className = 'metallic-button reset-button';
-    resetButton.textContent = 'Reset Selections';
-    resetButton.addEventListener('click', () => this.resetSelections());
-    
-    // Add to DOM
-    buttonContainer.appendChild(refreshButton);
-    buttonContainer.appendChild(resetButton);
-    container.appendChild(buttonContainer);
-  }
-  
-  /**
    * Load a random phrase from the loaded phrases
    */
   loadRandomPhrase() {
@@ -464,6 +470,13 @@ updatePhraseFromSelections(selectedLetters) {
       const displayElement = document.getElementById('phrase-text');
       if (displayElement) {
         displayElement.textContent = this.phraseTemplate;
+        
+        // Adjust phrase display height
+        if (this.scrollHandler && this.scrollHandler.adjustPhraseDisplayHeight) {
+          setTimeout(() => {
+            this.scrollHandler.adjustPhraseDisplayHeight();
+          }, 50);
+        }
       }
     }
   }
