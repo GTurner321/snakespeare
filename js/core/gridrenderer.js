@@ -268,37 +268,52 @@ handleTouchStart(e) {
   
   // IMPROVED START CELL LOGIC:
   
-  // Case 1: No selections yet, and this is the start cell
-  if (this.selectedCells.length === 0 && cell.isStart) {
-    this.handleCellSelection(x, y, true);
-    this.touchState.startCellSelected = true;
-    console.log('Start cell selected on touch start');
+  // Case 1: No selections yet - this must be the start cell
+  if (this.selectedCells.length === 0) {
+    if (cell.isStart) {
+      // Select the start cell
+      this.handleCellSelection(x, y, true);
+      this.touchState.startCellSelected = true;
+      console.log('Start cell selected on touch start');
+    } else {
+      // Show invalid feedback - must select start cell first
+      element.classList.add('invalid-selection');
+      setTimeout(() => {
+        element.classList.remove('invalid-selection');
+      }, 300);
+      console.log('Cannot select: must select start cell first');
+    }
     return;
   }
   
-  // Case 2: We have selections, and this cell is already the last selected cell
+  // Case 2: We have selections already
   if (this.selectedCells.length > 0) {
     const lastSelected = this.selectedCells[this.selectedCells.length - 1];
+    
+    // Case 2a: This is the same cell as the last selected (potential deselection)
     if (x === lastSelected.x && y === lastSelected.y) {
-      // Already selected - ready to continue from here
+      // Mark that we're already on a selected cell (for potential deselection)
       this.touchState.startCellSelected = true;
-      // This is also the starting point for potential deselection
+      console.log('Touch on already selected cell - potential deselection');
       return;
     }
     
-    // Case 3: This is an unselected cell adjacent to the last selected cell
+    // Case 2b: This is an adjacent unselected cell that's part of the path
     if (!cell.isSelected && cell.isPath && 
         this.areCellsAdjacent(x, y, lastSelected.x, lastSelected.y)) {
-      // Select this cell as the next in sequence
+      // Select this cell immediately
       this.handleCellSelection(x, y, true);
       this.touchState.startCellSelected = true;
-      this.touchState.hasAddedCellsDuringDrag = true;
       console.log('Adjacent cell selected on touch start');
       return;
     }
     
-    // Case 4: This is somewhere else in the grid - maybe trying to start a new selection
-    this.touchState.startCellSelected = this.selectedCells.length > 0;
+    // Case 2c: This is a non-adjacent or non-path cell
+    console.log('Cell is not adjacent or not on path');
+    element.classList.add('invalid-selection');
+    setTimeout(() => {
+      element.classList.remove('invalid-selection');
+    }, 300);
   }
 }
   
