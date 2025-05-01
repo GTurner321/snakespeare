@@ -1,203 +1,295 @@
 /**
- * Arrow Buttons for Grid Game
- * Creates and manages the navigation buttons for scrolling the grid
+ * Scroll Area Handler for Grid Game
+ * Creates and manages the scroll areas for navigating the grid
+ * Replaces the original arrow buttons with surrounding scroll areas
  */
 
-class ArrowButtons {
+class ScrollAreaHandler {
   constructor(gridRenderer, options = {}) {
     this.gridRenderer = gridRenderer;
     
     // Default options
     this.options = {
-      container: options.container || 'game-container',
-      buttonHeight: options.buttonHeight || 125,  // 2.5 * 50px cell size
-      buttonDepth: options.buttonDepth || 37.5,   // 0.75 * 50px cell size
+      gameContainerId: options.gameContainerId || 'game-container',
       ...options
     };
     
-    // Create buttons
-    this.createButtons();
+    // Create scroll areas
+    this.createScrollAreas();
     
     // Add event listeners
     this.setupEventListeners();
   }
   
   /**
-   * Create the arrow buttons for navigation
+   * Create the scroll areas for navigation
    */
-  createButtons() {
-    // Get grid container for positioning
-    const gridContainer = this.gridRenderer.container;
-    if (!gridContainer) {
-      throw new Error('Grid container not found');
+  createScrollAreas() {
+    // Get reference to the game container
+    this.gameContainer = document.getElementById(this.options.gameContainerId);
+    if (!this.gameContainer) {
+      console.error(`Game container with id '${this.options.gameContainerId}' not found`);
+      return;
     }
     
-    // Create a wrapper div for arrow buttons that sits OUTSIDE the grid element
-    // but overlays the grid using absolute positioning
-    const arrowButtonsWrapper = document.createElement('div');
-    arrowButtonsWrapper.className = 'arrow-buttons-wrapper';
-    arrowButtonsWrapper.style.position = 'absolute';
-    arrowButtonsWrapper.style.top = '0';
-    arrowButtonsWrapper.style.left = '0';
-    arrowButtonsWrapper.style.width = '100%';
-    arrowButtonsWrapper.style.height = '100%';
-    arrowButtonsWrapper.style.pointerEvents = 'none';
-    arrowButtonsWrapper.style.zIndex = '20'; // Higher than grid cells
+    // Create the gameplay area that will contain all elements
+    const gameplayArea = document.createElement('div');
+    gameplayArea.id = 'gameplay-area';
     
-    // Store reference to wrapper
-    this.arrowButtonsWrapper = arrowButtonsWrapper;
+    // Create top scroll area
+    const scrollTop = this.createScrollArea('scroll-top', 'scroll-area-top', '▲');
     
-    // Create button container inside the wrapper
-    this.buttonContainer = document.createElement('div');
-    this.buttonContainer.className = 'arrow-buttons-container';
+    // Create horizontal container for left, grid, and right
+    const scrollHorizontalContainer = document.createElement('div');
+    scrollHorizontalContainer.id = 'scroll-horizontal-container';
     
-    // Position container
-    this.buttonContainer.style.position = 'relative';
-    this.buttonContainer.style.width = '100%';
-    this.buttonContainer.style.height = '100%';
-    this.buttonContainer.style.pointerEvents = 'none';
+    // Create left and right scroll areas
+    const scrollLeft = this.createScrollArea('scroll-left', 'scroll-area-left', '◀');
+    const scrollRight = this.createScrollArea('scroll-right', 'scroll-area-right', '▶');
     
-    // Create buttons for each direction
-    const directions = [
-      { 
-        dir: 'up', 
-        html: '&#9650;', 
-        position: { 
-          top: '0', 
-          left: '50%', 
-          transform: 'translateX(-50%)',
-          width: `${this.options.buttonHeight}px`,
-          height: `${this.options.buttonDepth}px`
-        } 
-      },
-      { 
-        dir: 'right', 
-        html: '&#9654;', 
-        position: { 
-          top: '50%', 
-          right: '0', 
-          transform: 'translateY(-50%)',
-          width: `${this.options.buttonDepth}px`,
-          height: `${this.options.buttonHeight}px`
-        } 
-      },
-      { 
-        dir: 'down', 
-        html: '&#9660;', 
-        position: { 
-          bottom: '0', 
-          left: '50%', 
-          transform: 'translateX(-50%)',
-          width: `${this.options.buttonHeight}px`,
-          height: `${this.options.buttonDepth}px`
-        } 
-      },
-      { 
-        dir: 'left', 
-        html: '&#9664;', 
-        position: { 
-          top: '50%', 
-          left: '0', 
-          transform: 'translateY(-50%)',
-          width: `${this.options.buttonDepth}px`,
-          height: `${this.options.buttonHeight}px`
-        } 
+    // Get the existing grid container and move it
+    const gridContainer = document.getElementById(this.gridRenderer.container.id);
+    if (gridContainer) {
+      // Move the grid container between the left and right scroll areas
+      gridContainer.parentNode.removeChild(gridContainer);
+      scrollHorizontalContainer.appendChild(scrollLeft);
+      scrollHorizontalContainer.appendChild(gridContainer);
+      scrollHorizontalContainer.appendChild(scrollRight);
+    } else {
+      console.error('Grid container not found');
+      // Still create the structure even if grid container is missing
+      scrollHorizontalContainer.appendChild(scrollLeft);
+      scrollHorizontalContainer.appendChild(scrollRight);
+    }
+    
+    // Create bottom scroll area
+    const scrollBottom = this.createScrollArea('scroll-bottom', 'scroll-area-bottom', '▼');
+    
+    // Assemble the gameplay area
+    gameplayArea.appendChild(scrollTop);
+    gameplayArea.appendChild(scrollHorizontalContainer);
+    gameplayArea.appendChild(scrollBottom);
+    
+    // Store references to scroll areas
+    this.scrollAreas = {
+      top: scrollTop,
+      right: scrollRight,
+      bottom: scrollBottom,
+      left: scrollLeft
+    };
+    
+    // Create phrase display
+    const phraseDisplay = document.createElement('div');
+    phraseDisplay.id = 'phrase-display';
+    phraseDisplay.className = 'phrase-display';
+    
+    // Move phrase text from the old container to the new one if it exists
+    const oldPhraseDisplay = document.getElementById('phrase-display');
+    const phraseText = oldPhraseDisplay ? 
+                        oldPhraseDisplay.querySelector('#phrase-text') : 
+                        document.createElement('p');
+    
+    if (!phraseText.id) {
+      phraseText.id = 'phrase-text';
+    }
+    
+    if (oldPhraseDisplay && phraseText) {
+      // If we have existing phrase content, use it
+      phraseDisplay.appendChild(phraseText);
+    } else {
+      // Otherwise create a placeholder
+      phraseText.textContent = '_ * * * * * * * * *';
+      phraseDisplay.appendChild(phraseText);
+    }
+    
+    // Insert the gameplay area and phrase display into the game container
+    this.createMenuSystem();
+    
+    // Insert elements at appropriate positions
+    const existingElements = Array.from(this.gameContainer.children);
+    let inserted = false;
+    
+    for (let i = 0; i < existingElements.length; i++) {
+      const element = existingElements[i];
+      // Find the grid container or a suitable injection point
+      if (element.classList.contains('styled-box') ||
+          element.classList.contains('grid-container-wrapper') ||
+          i === existingElements.length - 1) {
+        // Insert our new elements here
+        this.gameContainer.insertBefore(gameplayArea, element);
+        if (element.classList.contains('styled-box') && 
+            element.id === 'phrase-display') {
+          // Replace the existing phrase display
+          this.gameContainer.replaceChild(phraseDisplay, element);
+        } else {
+          // Insert the phrase display after the gameplay area
+          this.gameContainer.insertBefore(phraseDisplay, element);
+        }
+        inserted = true;
+        break;
       }
-    ];
+    }
     
-    this.buttons = {};
+    // If no suitable element was found, append to the end
+    if (!inserted) {
+      this.gameContainer.appendChild(gameplayArea);
+      this.gameContainer.appendChild(phraseDisplay);
+    }
     
-    directions.forEach(({ dir, html, position }) => {
-      // Create button element
-      const button = document.createElement('button');
-      button.className = `metallic-button arrow-button arrow-${dir}`;
-      button.innerHTML = html;
-      button.setAttribute('aria-label', `Scroll ${dir}`);
-      
-      // Apply positioning
-      button.style.position = 'absolute';
-      button.style.pointerEvents = 'auto';
-      
-      // Apply size and positioning
-      Object.entries(position).forEach(([prop, value]) => {
-        button.style[prop] = value;
-      });
-      
-      // Store reference
-      this.buttons[dir] = button;
-      
-      // Add to container
-      this.buttonContainer.appendChild(button);
+    // Remove original boxes if they exist
+    const gameInfo = document.getElementById('game-info');
+    if (gameInfo) {
+      gameInfo.style.display = 'none';
+    }
+    
+    // Store reference to phrase display for resizing
+    this.phraseDisplay = phraseDisplay;
+    
+    // Adjust phrase display to match grid width
+    this.adjustPhraseDisplayWidth();
+  }
+  
+  /**
+   * Create menu system
+   */
+  createMenuSystem() {
+    const menuContainer = document.createElement('div');
+    menuContainer.id = 'menu-button-container';
+    
+    // Create menu toggle button
+    const menuToggle = document.createElement('button');
+    menuToggle.id = 'menu-toggle';
+    menuToggle.className = 'metallic-button menu-button';
+    
+    // Create the menu icon (three bars)
+    const menuIcon = document.createElement('span');
+    menuIcon.className = 'menu-icon';
+    menuIcon.innerHTML = '<span></span>'; // Middle bar
+    
+    menuToggle.appendChild(menuIcon);
+    
+    // Create dropdown menu
+    const menuDropdown = document.createElement('div');
+    menuDropdown.id = 'menu-dropdown';
+    menuDropdown.className = 'menu-dropdown';
+    
+    // Create menu items
+    const newPhraseButton = document.createElement('button');
+    newPhraseButton.id = 'new-phrase-button';
+    newPhraseButton.className = 'menu-item';
+    newPhraseButton.textContent = 'New Random Phrase';
+    
+    const resetSelectionsButton = document.createElement('button');
+    resetSelectionsButton.id = 'reset-selections-button';
+    resetSelectionsButton.className = 'menu-item';
+    resetSelectionsButton.textContent = 'Reset Selections';
+    
+    // Add menu items to dropdown
+    menuDropdown.appendChild(newPhraseButton);
+    menuDropdown.appendChild(resetSelectionsButton);
+    
+    // Assemble menu
+    menuContainer.appendChild(menuToggle);
+    menuContainer.appendChild(menuDropdown);
+    
+    // Add to game container
+    this.gameContainer.appendChild(menuContainer);
+    
+    // Setup menu event handlers
+    this.setupMenuHandlers(menuToggle, menuDropdown);
+  }
+  
+  /**
+   * Setup menu event handlers
+   */
+  setupMenuHandlers(menuToggle, menuDropdown) {
+    // Toggle menu on button click
+    menuToggle.addEventListener('click', (e) => {
+      e.stopPropagation(); // Prevent click from immediately closing menu
+      menuToggle.classList.toggle('active');
+      menuDropdown.classList.toggle('active');
     });
     
-    // Add button container to wrapper
-    arrowButtonsWrapper.appendChild(this.buttonContainer);
-    
-    // Clean up any existing button wrapper to prevent duplicates
-    const existingWrapper = gridContainer.querySelector('.arrow-buttons-wrapper');
-    if (existingWrapper) {
-      existingWrapper.remove();
-    }
-    
-    // Add wrapper directly to the grid container, NOT the grid element
-    // This is crucial - we want it overlaying the grid but not inside it
-    // so it doesn't get removed on grid re-renders
-    this.gridRenderer.container.appendChild(arrowButtonsWrapper);
-    
-    // Position the wrapper to match the grid element's position
-    this.updateButtonPosition();
-    
-    // Add resize handler to update button position when window size changes
-    window.addEventListener('resize', () => this.updateButtonPosition());
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!menuToggle.contains(e.target) && !menuDropdown.contains(e.target)) {
+        menuToggle.classList.remove('active');
+        menuDropdown.classList.remove('active');
+      }
+    });
   }
   
   /**
-   * Update button position to match current grid element position
+   * Create a scroll area with the specified properties
+   * @param {string} id - Element ID
+   * @param {string} className - Additional CSS class
+   * @param {string} arrowSymbol - Unicode arrow symbol to display
+   * @return {HTMLElement} The created scroll area
    */
-  updateButtonPosition() {
-    if (!this.gridRenderer.gridElement || !this.arrowButtonsWrapper) return;
+  createScrollArea(id, className, arrowSymbol) {
+    const scrollArea = document.createElement('div');
+    scrollArea.id = id;
+    scrollArea.className = `scroll-area ${className}`;
     
-    // Get the current position and dimensions of the grid element
-    const gridRect = this.gridRenderer.gridElement.getBoundingClientRect();
-    const containerRect = this.gridRenderer.container.getBoundingClientRect();
+    const arrow = document.createElement('div');
+    arrow.className = 'scroll-arrow';
+    arrow.textContent = arrowSymbol;
     
-    // Calculate position relative to container
-    const top = gridRect.top - containerRect.top;
-    const left = gridRect.left - containerRect.left;
+    scrollArea.appendChild(arrow);
     
-    // Update wrapper position and size to match grid element
-    this.arrowButtonsWrapper.style.top = `${top}px`;
-    this.arrowButtonsWrapper.style.left = `${left}px`;
-    this.arrowButtonsWrapper.style.width = `${gridRect.width}px`;
-    this.arrowButtonsWrapper.style.height = `${gridRect.height}px`;
+    return scrollArea;
   }
   
   /**
-   * Setup event listeners for button clicks
+   * Set up event listeners for scroll areas
    */
   setupEventListeners() {
-    // Arrow button click events
-    Object.entries(this.buttons).forEach(([direction, button]) => {
-      button.addEventListener('click', () => {
-        button.classList.add('clicked');
+    // Scroll area click events
+    if (this.scrollAreas) {
+      // Map directions to scroll areas
+      const directions = {
+        'top': 'up',
+        'right': 'right',
+        'bottom': 'down',
+        'left': 'left'
+      };
+      
+      // Set up click handlers for each scroll area
+      Object.entries(this.scrollAreas).forEach(([position, element]) => {
+        const direction = directions[position];
         
-        // Scroll grid in the clicked direction
-        this.gridRenderer.scroll(direction);
-        
-        // Update button position after scrolling
-        this.updateButtonPosition();
-        
-        // Update button states after scrolling
-        this.updateButtonStates();
-        
-        // Remove clicked class after animation
-        setTimeout(() => {
-          button.classList.remove('clicked');
-        }, 200);
+        element.addEventListener('click', () => {
+          // Add active class briefly
+          element.classList.add('active');
+          
+          // Scroll grid in the clicked direction
+          this.gridRenderer.scroll(direction);
+          
+          // Update scroll area states
+          this.updateScrollAreaStates();
+          
+          // Remove active class after animation
+          setTimeout(() => {
+            element.classList.remove('active');
+          }, 150);
+        });
       });
-    });
+    }
     
-    // Keyboard navigation
+    // Set up menu button handlers
+    const newPhraseButton = document.getElementById('new-phrase-button');
+    if (newPhraseButton) {
+      // The actual event handler will be set up by the game controller
+      // Just making sure the element exists
+    }
+    
+    const resetSelectionsButton = document.getElementById('reset-selections-button');
+    if (resetSelectionsButton) {
+      // The actual event handler will be set up by the game controller
+      // Just making sure the element exists
+    }
+    
+    // Keyboard navigation (preserved from original code)
     document.addEventListener('keydown', (event) => {
       let direction = null;
       
@@ -218,18 +310,38 @@ class ArrowButtons {
       
       if (direction) {
         event.preventDefault();
-        this.buttons[direction].click();
+        // Scroll grid in the pressed direction
+        this.gridRenderer.scroll(direction);
+        
+        // Update scroll area states
+        this.updateScrollAreaStates();
       }
     });
     
-    // Initial button state update
-    this.updateButtonStates();
+    // Initial update of scroll area states
+    this.updateScrollAreaStates();
+    
+    // Listen for window resize
+    window.addEventListener('resize', () => {
+      this.adjustPhraseDisplayWidth();
+      this.updateScrollAreaStates();
+    });
+    
+    // Listen for grid being rerendered
+    document.addEventListener('gridResized', (e) => {
+      this.adjustPhraseDisplayWidth();
+    });
+    
+    // Adjust phrase display on initial load
+    setTimeout(() => {
+      this.adjustPhraseDisplayWidth();
+    }, 100);
   }
   
   /**
-   * Update button states (enabled/disabled) based on grid scroll limits
+   * Update scroll area states (enabled/disabled) based on grid scroll limits
    */
-  updateButtonStates() {
+  updateScrollAreaStates() {
     // Get current view offset
     const { x: offsetX, y: offsetY } = this.gridRenderer.viewOffset;
     const isMobile = window.innerWidth < 768;
@@ -242,19 +354,69 @@ class ArrowButtons {
     const canScrollDown = offsetY + height < this.gridRenderer.fullGridSize;
     const canScrollLeft = offsetX > 0;
     
-    // Update button disabled states
-    this.buttons.up.disabled = !canScrollUp;
-    this.buttons.right.disabled = !canScrollRight;
-    this.buttons.down.disabled = !canScrollDown;
-    this.buttons.left.disabled = !canScrollLeft;
+    // Update scroll area disabled states
+    if (this.scrollAreas) {
+      this.scrollAreas.top.classList.toggle('disabled', !canScrollUp);
+      this.scrollAreas.right.classList.toggle('disabled', !canScrollRight);
+      this.scrollAreas.bottom.classList.toggle('disabled', !canScrollDown);
+      this.scrollAreas.left.classList.toggle('disabled', !canScrollLeft);
+    }
   }
   
   /**
-   * Show or hide the arrow buttons
-   * @param {boolean} show - Whether to show the buttons
+   * Adjust phrase display width to match grid
+   */
+  adjustPhraseDisplayWidth() {
+    const gridElement = this.gridRenderer?.gridElement;
+    
+    if (!gridElement || !this.phraseDisplay) return;
+    
+    const gridRect = gridElement.getBoundingClientRect();
+    
+    // Set phrase display width to match grid width
+    this.phraseDisplay.style.width = `${gridRect.width}px`;
+    
+    // Adjust height based on content
+    this.adjustPhraseDisplayHeight();
+  }
+  
+  /**
+   * Adjust phrase display height based on content
+   */
+  adjustPhraseDisplayHeight() {
+    const phraseText = document.getElementById('phrase-text');
+    
+    if (!phraseText || !this.phraseDisplay) return;
+    
+    // Reset min-height to get accurate scrollHeight
+    this.phraseDisplay.style.minHeight = 'auto';
+    
+    // Get content height and add padding
+    const contentHeight = phraseText.scrollHeight;
+    const padding = 30; // Total top and bottom padding
+    
+    // Set min-height to fit content
+    this.phraseDisplay.style.minHeight = `${contentHeight + padding}px`;
+  }
+  
+  /**
+   * Show or hide the scroll areas
+   * @param {boolean} show - Whether to show the scroll areas
    */
   setVisibility(show) {
-    this.arrowButtonsWrapper.style.display = show ? 'block' : 'none';
+    if (this.scrollAreas) {
+      Object.values(this.scrollAreas).forEach(area => {
+        area.style.display = show ? 'flex' : 'none';
+      });
+    }
+  }
+}
+
+// Export for backward compatibility
+class ArrowButtons extends ScrollAreaHandler {
+  constructor(gridRenderer, options = {}) {
+    super(gridRenderer, options);
+    console.log('Using ScrollAreaHandler (formerly ArrowButtons)');
   }
 }
 
