@@ -152,41 +152,85 @@ class GameController {
     return phrase.replace(/[a-zA-Z0-9]/g, '_');
   }
   
-  /**
-   * Fill in the phrase template with selected letters
-   * @param {string} template - The underscore template
-   * @param {string} phrase - The complete phrase
-   * @param {Array} selectedLetters - Array of selected letter objects
-   * @return {string} Updated template with selected letters filled in
-   */
-  fillPhraseTemplate(template, phrase, selectedLetters) {
-    const templateArray = template.split('');
-    const phraseArray = phrase.toUpperCase().split('');
-    
-    // Create an array of just the letters in the order they appear in the phrase
-    const phraseLetters = phraseArray.filter(char => char !== ' ');
-    
-    // Get letters from selected cells as a simple array of characters
-    const selectedChars = selectedLetters.map(cell => cell.letter);
-    
-    // Keep track of which letters have been filled in
-    let filledCount = 0;
-    
-    // Go through the phrase character by character
-    for (let i = 0; i < phraseArray.length; i++) {
-      // Skip spaces in the phrase
-      if (phraseArray[i] === ' ') continue;
-      
-      // If we have selected this letter (based on position in the phrase)
-      if (filledCount < selectedChars.length) {
-        // Fill in this letter in the template
-        templateArray[i] = phraseArray[i];
-        filledCount++;
-      }
-    }
-    
-    return templateArray.join('');
+/**
+ * Fill in the phrase template with selected letters
+ * @param {string} template - The underscore template
+ * @param {string} phrase - The complete phrase
+ * @param {Array} selectedLetters - Array of selected letter objects
+ * @return {string} Updated template with selected letters filled in
+ */
+fillPhraseTemplate(template, phrase, selectedLetters) {
+  // Check if we have empty input
+  if (!template || !phrase || !selectedLetters) {
+    return template || '';
   }
+  
+  // Log for debugging
+  console.log('Filling phrase template:');
+  console.log('- Template:', template);
+  console.log('- Phrase:', phrase);
+  console.log('- Selected letters:', selectedLetters.map(l => l.letter).join(''));
+  
+  const templateArray = template.split('');
+  const phraseArray = phrase.toUpperCase().split('');
+  
+  // Start with no letters filled in
+  let filledCount = 0;
+  
+  // CRITICAL FIX: Only use the actual selected letters, not the starting cell
+  // The issue was the selectedLetters starts with the start cell, which might be empty
+  const validSelectedLetters = selectedLetters.filter(cell => cell.letter.trim() !== '');
+  
+  // Log the filtered letters
+  console.log('- Valid selected letters:', validSelectedLetters.map(l => l.letter).join(''));
+  
+  // Go through the phrase character by character
+  for (let i = 0; i < phraseArray.length; i++) {
+    // Skip spaces and non-letter characters in the phrase
+    if (phraseArray[i] === ' ' || template[i] !== '_') continue;
+    
+    // Check if we have this many selected letters
+    if (filledCount < validSelectedLetters.length) {
+      // Replace the underscore with the character from the phrase
+      templateArray[i] = phraseArray[i];
+      filledCount++;
+    }
+  }
+  
+  const result = templateArray.join('');
+  console.log('- Result:', result);
+  return result;
+}
+
+/**
+ * Update the phrase display based on selected cells
+ * @param {Array} selectedLetters - Array of letter objects
+ */
+updatePhraseFromSelections(selectedLetters) {
+  const displayElement = document.getElementById('phrase-text');
+  if (!displayElement || !this.currentPhrase) return;
+  
+  // Debug: log the selected letters
+  console.log('Updating phrase from selections:');
+  console.log('- Selected letters:', selectedLetters.map(l => `${l.letter || '[empty]'}`).join(', '));
+  
+  // If we have a phrase and template
+  if (this.phraseTemplate) {
+    // Fill in the template with selected letters
+    const updatedDisplay = this.fillPhraseTemplate(
+      this.phraseTemplate,
+      this.currentPhrase.phrase,
+      selectedLetters
+    );
+    
+    // Display the updated template
+    displayElement.textContent = updatedDisplay;
+  } else {
+    // Fallback if no template (shouldn't happen)
+    const selectedString = selectedLetters.map(cell => cell.letter).join('');
+    displayElement.textContent = selectedString || "Select letters to form a phrase";
+  }
+}
   
   /**
    * Update the phrase display based on selected cells
