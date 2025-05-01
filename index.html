@@ -12,26 +12,10 @@
 </head>
 <body>
     <div id="game-container" class="game-container">
-        <h1 class="game-title">Word Path Puzzle</h1>
-        
-        <div id="game-info" class="styled-box">
-            <div class="styled-box-title">Find the phrase</div>
-            <div class="styled-box-content">
-                <p>Move along the grid to discover the hidden phrase, one letter at a time.</p>
-                <p>Use arrow buttons or keyboard arrows to scroll the grid.</p>
-            </div>
-        </div>
-        
+        <!-- Grid container only - everything else will be created by JS -->
         <div id="grid-container" class="grid-container-wrapper"></div>
-        
-        <div id="phrase-display" class="styled-box">
-            <div class="styled-box-title">Current Phrase</div>
-            <div class="styled-box-content">
-                <p id="phrase-text">_ _ _ _ _   _ _ _ _ _   _ _ _ _   _ _   _ _ _ _ _</p>
-            </div>
-        </div>
     </div>
-
+    
     <!-- External Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     
