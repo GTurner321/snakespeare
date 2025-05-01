@@ -714,10 +714,10 @@ handleAutoScroll() {
   const lastCell = this.selectedCells[this.selectedCells.length - 1];
   
   // Buffer size - how many cells we want to maintain between edge and selected cell
-  const bufferSize = 3;
+  const bufferSize = 2;
   
   // Minimum distance before scrolling is triggered
-  const minDistance = 2;
+  const minDistance = 1;
   
   // Get current view dimensions
   const isMobile = window.innerWidth < 768;
