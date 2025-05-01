@@ -1,6 +1,7 @@
 /**
  * Grid Renderer for Grid Game
  * Renders the game grid with the path and random letters
+ * Updated to work with new scroll areas instead of arrow buttons
  */
 
 class GridRenderer {
@@ -129,6 +130,11 @@ class GridRenderer {
     void this.gridElement.offsetHeight;
     
     console.log('Grid element created:', this.gridElement);
+    
+    // Dispatch an event for grid creation (used by scroll areas)
+    document.dispatchEvent(new CustomEvent('gridCreated', { 
+      detail: { grid: this.gridElement, gridRenderer: this }
+    }));
   }
   
   /**
@@ -681,6 +687,11 @@ handleCellSelection(x, y, forceSelect = false) {
       totalWidth,
       totalHeight
     });
+    
+    // Dispatch an event when grid size changes
+    document.dispatchEvent(new CustomEvent('gridResized', { 
+      detail: { width: totalWidth, height: totalHeight, gridRenderer: this }
+    }));
   }
 
   /**
@@ -719,6 +730,11 @@ handleCellSelection(x, y, forceSelect = false) {
       }
       
       console.log(`Created ${cellCount} cells`);
+      
+      // Notify that grid was rebuilt
+      document.dispatchEvent(new CustomEvent('gridRebuilt', { 
+        detail: { gridElement: this.gridElement, gridRenderer: this }
+      }));
     }
     // Otherwise just update cell states
     else {
@@ -736,6 +752,20 @@ handleCellSelection(x, y, forceSelect = false) {
         this.updateCellElementClasses(cellElement, x, y);
       });
     }
+    
+    // Check if we need to update scroll limits
+    this.checkScrollLimits();
+  }
+  
+  /**
+   * Check scroll limits and update UI accordingly
+   * This is used by the ScrollAreaHandler to update scroll area states
+   */
+  checkScrollLimits() {
+    // Dispatch event for scroll limits check
+    document.dispatchEvent(new CustomEvent('scrollLimitsCheck', { 
+      detail: { gridRenderer: this }
+    }));
   }
   
   /**
@@ -897,6 +927,11 @@ handleCellSelection(x, y, forceSelect = false) {
     
     // Re-render grid
     this.renderVisibleGrid();
+    
+    // Notify that path has been set
+    document.dispatchEvent(new CustomEvent('pathSet', { 
+      detail: { path: path, gridRenderer: this }
+    }));
   }
   
   /**
@@ -922,6 +957,11 @@ handleCellSelection(x, y, forceSelect = false) {
     
     // Re-render the grid with the new offset
     this.renderVisibleGrid();
+    
+    // Dispatch event for grid centering
+    document.dispatchEvent(new CustomEvent('gridCentered', { 
+      detail: { offset: this.viewOffset, gridRenderer: this }
+    }));
   }
   
   /**
@@ -989,6 +1029,11 @@ handleCellSelection(x, y, forceSelect = false) {
     
     // Re-render grid
     this.renderVisibleGrid();
+    
+    // Dispatch event for scroll
+    document.dispatchEvent(new CustomEvent('gridScrolled', { 
+      detail: { direction, offset: this.viewOffset, gridRenderer: this }
+    }));
   }
   
   /**
@@ -1041,6 +1086,11 @@ handleCellSelection(x, y, forceSelect = false) {
     
     // Re-render grid
     this.renderVisibleGrid();
+    
+    // Dispatch event for selections cleared
+    document.dispatchEvent(new CustomEvent('selectionsCleared', { 
+      detail: { gridRenderer: this }
+    }));
   }
   
   /**
@@ -1057,6 +1107,11 @@ handleCellSelection(x, y, forceSelect = false) {
     
     // Center on the start cell after resizing
     this.centerGridOnStartCell();
+    
+    // Dispatch event for responsive change
+    document.dispatchEvent(new CustomEvent('gridResponsiveChange', { 
+      detail: { isMobile, gridRenderer: this }
+    }));
   }
   
   /**
