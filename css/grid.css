@@ -289,20 +289,31 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: rgba(240, 240, 240, 0.6);
+    /* Make background completely transparent by default */
+    background-color: transparent;
     cursor: pointer;
-    transition: background-color 0.2s ease;
+    transition: background-color 0.15s ease;
     z-index: 5;
 }
 
-/* Hover state for scroll areas */
+/* Remove hover state background */
 .scroll-area:hover:not(.disabled) {
-    background-color: rgba(220, 220, 220, 0.8);
+    background-color: transparent;
 }
 
-/* Active state for scroll areas */
+/* Active state for scroll areas - visible only during click */
 .scroll-area:active:not(.disabled) {
-    background-color: rgba(200, 200, 200, 0.9);
+    background-color: rgba(200, 200, 200, 0.5);
+}
+
+/* Remove lingering background after click using animation */
+.scroll-area.active {
+    animation: pulse-and-fade 0.15s ease forwards;
+}
+
+@keyframes pulse-and-fade {
+    0% { background-color: rgba(200, 200, 200, 0.5); }
+    100% { background-color: transparent; }
 }
 
 /* Disabled state for scroll areas */
@@ -312,11 +323,12 @@ body {
     pointer-events: none;
 }
 
-/* Vertical scroll areas (top & bottom) */
+/* Vertical scroll areas (top & bottom) - updated height and width */
 .scroll-area-top,
 .scroll-area-bottom {
     width: 100%;
-    height: 50px;
+    /* Double the height */
+    height: 100px;
     margin: 0 auto;
     border-radius: 8px;
 }
@@ -329,10 +341,10 @@ body {
     margin-top: 5px;
 }
 
-/* Horizontal scroll areas (left & right) */
+/* Horizontal scroll areas (left & right) - updated width to match top/bottom height */
 .scroll-area-left,
 .scroll-area-right {
-    width: 50px;
+    width: 100px;
     height: 100%;
     margin: 0 5px;
     border-radius: 8px;
@@ -340,7 +352,7 @@ body {
 
 /* Scroll arrows */
 .scroll-arrow {
-    font-size: 1.8rem;
+    font-size: 2rem;
     color: #555;
     text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8),
                  0px -1px 1px rgba(0, 0, 0, 0.2);
@@ -349,6 +361,7 @@ body {
     transition: transform 0.2s ease;
 }
 
+/* Keep arrow hover effect */
 .scroll-area:hover:not(.disabled) .scroll-arrow {
     transform: scale(1.1);
 }
@@ -365,12 +378,12 @@ body {
     
     .scroll-area-top,
     .scroll-area-bottom {
-        height: 40px;
+        height: 80px;
     }
     
     .scroll-area-left,
     .scroll-area-right {
-        width: 40px;
+        width: 80px;
     }
     
     .scroll-arrow {
@@ -386,12 +399,12 @@ body {
     
     .scroll-area-top,
     .scroll-area-bottom {
-        height: 35px;
+        height: 70px;
     }
     
     .scroll-area-left,
     .scroll-area-right {
-        width: 35px;
+        width: 70px;
     }
     
     .scroll-arrow {
