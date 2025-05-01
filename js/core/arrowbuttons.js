@@ -241,7 +241,7 @@ class ScrollAreaHandler {
   }
   
   /**
-   * Set up event listeners for scroll areas
+   * Set up event listeners for scroll areas - UPDATED with grid size matching
    */
   setupEventListeners() {
     // Scroll area click events
@@ -259,19 +259,7 @@ class ScrollAreaHandler {
         const direction = directions[position];
         
         element.addEventListener('click', () => {
-          // Add active class briefly
-          element.classList.add('active');
-          
-          // Scroll grid in the clicked direction
-          this.gridRenderer.scroll(direction);
-          
-          // Update scroll area states
-          this.updateScrollAreaStates();
-          
-          // Remove active class after animation
-          setTimeout(() => {
-            element.classList.remove('active');
-          }, 150);
+          this.handleScrollAreaClick(direction, element);
         });
       });
     }
@@ -325,17 +313,111 @@ class ScrollAreaHandler {
     window.addEventListener('resize', () => {
       this.adjustPhraseDisplayWidth();
       this.updateScrollAreaStates();
+      if (this.gridRenderer) {
+        this.adjustScrollAreasToGrid(this.gridRenderer);
+      }
     });
     
-    // Listen for grid being rerendered
+    // Add listener for grid creation to adjust scroll areas
+    document.addEventListener('gridCreated', (e) => {
+      this.adjustScrollAreasToGrid(e.detail.gridRenderer);
+    });
+    
+    // Add listener for grid resize to adjust scroll areas
     document.addEventListener('gridResized', (e) => {
       this.adjustPhraseDisplayWidth();
+      this.adjustScrollAreasToGrid(e.detail.gridRenderer);
+    });
+    
+    // Add listener for grid rebuild to adjust scroll areas
+    document.addEventListener('gridRebuilt', (e) => {
+      this.adjustScrollAreasToGrid(e.detail.gridRenderer);
     });
     
     // Adjust phrase display on initial load
     setTimeout(() => {
       this.adjustPhraseDisplayWidth();
+      this.adjustScrollAreasToGrid(this.gridRenderer);
     }, 100);
+  }
+  
+  /**
+   * Enhanced click handler for scroll areas with better animation cleanup
+   * @param {string} direction - The scroll direction
+   * @param {HTMLElement} scrollArea - The scroll area element
+   */
+  handleScrollAreaClick(direction, scrollArea) {
+    // Skip if disabled
+    if (scrollArea.classList.contains('disabled')) return;
+    
+    // Add active class
+    scrollArea.classList.add('active');
+    
+    // Scroll the grid
+    this.gridRenderer.scroll(direction);
+    
+    // Update scroll area states
+    this.updateScrollAreaStates();
+    
+    // Remove active class and clear background after animation
+    setTimeout(() => {
+      this.handleScrollAnimationComplete(scrollArea);
+    }, 150);
+  }
+  
+  /**
+   * Handle the completion of a scroll area animation
+   * Makes sure the background returns to transparent
+   * @param {HTMLElement} scrollArea - The scroll area element
+   */
+  handleScrollAnimationComplete(scrollArea) {
+    if (!scrollArea) return;
+    
+    // Remove active class
+    scrollArea.classList.remove('active');
+    
+    // Ensure background is transparent
+    scrollArea.style.backgroundColor = 'transparent';
+  }
+  
+  /**
+   * Adjust the scroll areas to perfectly match the grid dimensions
+   * @param {GridRenderer} gridRenderer - The grid renderer instance
+   */
+  adjustScrollAreasToGrid(gridRenderer) {
+    if (!gridRenderer || !gridRenderer.gridElement) return;
+    
+    const gridElement = gridRenderer.gridElement;
+    const gridRect = gridElement.getBoundingClientRect();
+    
+    // Get the grid width and height
+    const gridWidth = gridRect.width;
+    const gridHeight = gridRect.height;
+    
+    // Calculate the scroll area height (twice the cell height)
+    const scrollHeight = gridRenderer.options.cellSize * 2;
+    
+    // Set the top and bottom scroll area dimensions
+    if (this.scrollAreas.top && this.scrollAreas.bottom) {
+      this.scrollAreas.top.style.width = `${gridWidth}px`;
+      this.scrollAreas.top.style.height = `${scrollHeight}px`;
+      this.scrollAreas.bottom.style.width = `${gridWidth}px`;
+      this.scrollAreas.bottom.style.height = `${scrollHeight}px`;
+    }
+    
+    // Set the left and right scroll area dimensions
+    if (this.scrollAreas.left && this.scrollAreas.right) {
+      this.scrollAreas.left.style.width = `${scrollHeight}px`;
+      this.scrollAreas.left.style.height = `${gridHeight}px`;
+      this.scrollAreas.right.style.width = `${scrollHeight}px`;
+      this.scrollAreas.right.style.height = `${gridHeight}px`;
+    }
+    
+    console.log('Adjusted scroll areas to match grid dimensions:', {
+      gridWidth,
+      gridHeight,
+      scrollHeight
+    });
   }
   
   /**
