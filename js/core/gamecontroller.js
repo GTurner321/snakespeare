@@ -177,22 +177,12 @@ handleSelectionChange() {
   }
 }
   
-  /**
-   * Create a template for the phrase with underscores for letters and spaces preserved
-   * @param {string} phrase - The complete phrase
-   * @return {string} Template with underscores for letters and preserved spaces
-   */
   createPhraseTemplate(phrase) {
-    return phrase.replace(/[a-zA-Z0-9]/g, '_');
-  }
+  // Only replace alphanumeric characters with underscores
+  // Keep spaces, punctuation and other special characters as is
+  return phrase.replace(/[a-zA-Z0-9]/g, '_');
+}
   
-/**
- * Fill in the phrase template with selected letters
- * @param {string} template - The underscore template
- * @param {string} phrase - The complete phrase
- * @param {Array} selectedLetters - Array of selected letter objects
- * @return {string} Updated template with selected letters filled in
- */
 fillPhraseTemplate(template, phrase, selectedLetters) {
   // Check if we have empty input
   if (!template || !phrase || !selectedLetters) {
@@ -211,8 +201,7 @@ fillPhraseTemplate(template, phrase, selectedLetters) {
   // Start with no letters filled in
   let filledCount = 0;
   
-  // CRITICAL FIX: Only use the actual selected letters, not the starting cell
-  // The issue was the selectedLetters starts with the start cell, which might be empty
+  // Only use the actual selected letters, not the starting cell
   const validSelectedLetters = selectedLetters.filter(cell => cell.letter.trim() !== '');
   
   // Log the filtered letters
@@ -221,13 +210,17 @@ fillPhraseTemplate(template, phrase, selectedLetters) {
   // Go through the phrase character by character
   for (let i = 0; i < phraseArray.length; i++) {
     // Skip spaces and non-letter characters in the phrase
-    if (phraseArray[i] === ' ' || template[i] !== '_') continue;
+    // Modified to only skip spaces (since grammar now should be shown)
+    if (phraseArray[i] === ' ') continue;
     
-    // Check if we have this many selected letters
-    if (filledCount < validSelectedLetters.length) {
-      // Replace the underscore with the character from the phrase
-      templateArray[i] = phraseArray[i];
-      filledCount++;
+    // Check if this character is something that needs filling in (underscore)
+    if (template[i] === '_') {
+      // Check if we have this many selected letters
+      if (filledCount < validSelectedLetters.length) {
+        // Replace the underscore with the character from the phrase
+        templateArray[i] = phraseArray[i];
+        filledCount++;
+      }
     }
   }
   
@@ -235,11 +228,7 @@ fillPhraseTemplate(template, phrase, selectedLetters) {
   console.log('- Result:', result);
   return result;
 }
-
-/**
- * Update the phrase display based on selected cells
- * @param {Array} selectedLetters - Array of letter objects
- */
+  
 updatePhraseFromSelections(selectedLetters) {
   const displayElement = document.getElementById('phrase-text');
   if (!displayElement || !this.currentPhrase) return;
@@ -250,10 +239,10 @@ updatePhraseFromSelections(selectedLetters) {
   
   // If we have a phrase and template
   if (this.phraseTemplate) {
-    // Fill in the template with selected letters
+    // Fill in the template with selected letters using letterlist instead of phrase
     const updatedDisplay = this.fillPhraseTemplate(
       this.phraseTemplate,
-      this.currentPhrase.phrase,
+      this.currentPhrase.letterlist, // Changed from phrase to letterlist
       selectedLetters
     );
     
@@ -270,11 +259,7 @@ updatePhraseFromSelections(selectedLetters) {
     displayElement.textContent = selectedString || "Select letters to form a phrase";
   }
 }
-
-  /**
- * Check if the current phrase is completed (all letters selected)
- * @return {boolean} True if the phrase is completed
- */
+  
 checkPhraseCompleted() {
   if (!this.currentPhrase) return false;
   
@@ -284,11 +269,15 @@ checkPhraseCompleted() {
   // Skip the start cell if it doesn't have a letter
   const validSelectedLetters = selectedLetters.filter(cell => cell.letter.trim() !== '');
   
-  // Count non-space characters in the phrase
-  const phraseLetterCount = this.currentPhrase.phrase.replace(/\s+/g, '').length;
+  // Count non-space characters in the letterlist that would be part of the path
+  // This should match the pathGenerator's filtering logic
+  const letterCountInPath = this.currentPhrase.letterlist
+    .split('')
+    .filter(char => /[a-zA-Z0-9]/.test(char))
+    .length;
   
   // Check if we've selected exactly the right number of letters
-  return validSelectedLetters.length === phraseLetterCount;
+  return validSelectedLetters.length === letterCountInPath;
 }
   
 loadPhrase(phraseData) {
@@ -297,18 +286,18 @@ loadPhrase(phraseData) {
   // Reset any highlighting
   this.gridRenderer.options.highlightPath = false;
   
-  // NEW LINE: Reset the completion state
+  // Reset the completion state
   this.gridRenderer.setCompleted(false);
   
-  // Parse letter list from phrase data (now with spaces)
+  // Parse letter list from phrase data 
   const letterList = phraseData.letterlist;
   
-  console.log(`Loading phrase: "${phraseData.phrase}" with letterlist: "${letterList}"`);
+  console.log(`Loading phrase: "${letterList}" with letterlist: "${letterList}"`);
   
-  // Create the phrase template with underscores
-  this.phraseTemplate = this.createPhraseTemplate(phraseData.phrase);
+  // Create the phrase template with underscores using letterlist instead of phrase
+  this.phraseTemplate = this.createPhraseTemplate(letterList);
   
-  // Generate path using path generator (will filter out spaces)
+  // Generate path using path generator (will filter out non-alphanumerics)
   this.currentPath = this.pathGenerator.generatePath(letterList);
   
   // Apply path to grid renderer
@@ -340,7 +329,7 @@ loadPhrase(phraseData) {
   if (meaningEl) {
     meaningEl.remove();
   }
-}
+} 
   
   /**
    * Handle window resize events
