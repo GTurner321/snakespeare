@@ -5,6 +5,13 @@
  */
 
 /**
+ * Grid Renderer for Grid Game
+ * Renders the game grid with the path and random letters
+ * Updated to work with new scroll areas instead of arrow buttons
+ */
+
+class GridRenderer {
+  /**
    * Initialize the grid data structure and set up event listeners
    */
   constructor(containerId, options = {}) {
