@@ -1,5 +1,5 @@
 /**
- * Shakespeare Response Component
+ * Shakespeare Response Component - Improved Modal Version
  * Shows Shakespeare image and response in speech bubble when a phrase is completed
  */
 
@@ -7,7 +7,7 @@ class ShakespeareResponse {
   constructor(options = {}) {
     this.options = {
       containerId: options.containerId || 'game-container',
-      imagePath: options.imagePath || 'snakespeare/assets/shakespeare.png',
+      imagePath: options.imagePath || 'https://raw.githubusercontent.com/GTurner321/snakespeare/main/assets/shakespeare.png',
       displayDuration: options.displayDuration || 10000, // 10 seconds
       fadeDuration: options.fadeDuration || 1000, // 1 second
       ...options
@@ -19,10 +19,15 @@ class ShakespeareResponse {
       return;
     }
     
+    // Create modal overlay
+    this.modalOverlay = document.createElement('div');
+    this.modalOverlay.className = 'shakespeare-modal-overlay';
+    document.body.appendChild(this.modalOverlay);
+    
     // Create container for Shakespeare
     this.shakespeareContainer = document.createElement('div');
     this.shakespeareContainer.className = 'shakespeare-container';
-    this.container.appendChild(this.shakespeareContainer);
+    this.modalOverlay.appendChild(this.shakespeareContainer);
     
     // Create container for the response speech bubble
     this.bubbleContainer = document.createElement('div');
@@ -39,10 +44,18 @@ class ShakespeareResponse {
     this.shakespeareImage.className = 'shakespeare-image';
     this.shakespeareImage.src = this.options.imagePath;
     this.shakespeareImage.alt = 'Shakespeare';
+    // Add error handling for image loading
+    this.shakespeareImage.onerror = () => {
+      console.error(`Failed to load Shakespeare image from: ${this.options.imagePath}`);
+      this.shakespeareImage.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><text x="10" y="50" font-family="Arial" font-size="12">Image not found</text></svg>';
+    };
+    this.shakespeareImage.onload = () => {
+      console.log('Shakespeare image loaded successfully');
+    };
     this.shakespeareContainer.appendChild(this.shakespeareImage);
     
-    // Hide the Shakespeare container initially
-    this.shakespeareContainer.style.display = 'none';
+    // Hide the modal overlay initially
+    this.modalOverlay.style.display = 'none';
     
     // Add CSS styles
     this.addStyles();
@@ -55,7 +68,7 @@ class ShakespeareResponse {
       }
     });
     
-    console.log('ShakespeareResponse component initialized');
+    console.log('ShakespeareResponse component initialized with image path:', this.options.imagePath);
   }
   
   /**
@@ -64,46 +77,59 @@ class ShakespeareResponse {
   addStyles() {
     const styleElement = document.createElement('style');
     styleElement.textContent = `
-      .shakespeare-container {
+      .shakespeare-modal-overlay {
         position: fixed;
-        right: 20px;
-        top: 50%;
-        transform: translateY(-50%);
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
         display: flex;
-        flex-direction: column;
+        justify-content: center;
         align-items: center;
-        z-index: 1000;
+        z-index: 2000;
         opacity: 1;
         transition: opacity 1s ease;
       }
       
-      .shakespeare-container.fade-out {
+      .shakespeare-modal-overlay.fade-out {
         opacity: 0;
       }
       
+      .shakespeare-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        max-width: 90%;
+        margin: 0 auto;
+      }
+      
       .shakespeare-image {
-        width: 150px;
+        width: 200px;
         height: auto;
         filter: drop-shadow(3px 3px 5px rgba(0, 0, 0, 0.3));
+        margin-top: 20px;
       }
       
       .speech-bubble {
         position: relative;
         background: #fff;
-        border-radius: 15px;
-        padding: 15px;
-        margin-bottom: 20px;
+        border-radius: 20px;
+        padding: 25px;
+        margin-bottom: 30px;
         box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        max-width: 250px;
+        max-width: 500px;
+        width: 100%;
         text-align: center;
       }
       
       .speech-bubble:after {
         content: '';
         position: absolute;
-        bottom: -15px;
-        right: 30px;
-        border-width: 15px 15px 0;
+        bottom: -20px;
+        left: 50%;
+        transform: translateX(-50%);
+        border-width: 20px 20px 0;
         border-style: solid;
         border-color: #fff transparent;
         display: block;
@@ -113,48 +139,40 @@ class ShakespeareResponse {
       .response-text {
         margin: 0;
         font-family: 'Georgia', serif;
-        font-size: 16px;
-        line-height: 1.4;
+        font-size: 24px;
+        line-height: 1.5;
         color: #333;
       }
       
       /* Mobile responsive adjustments */
       @media (max-width: 768px) {
-        .shakespeare-container {
-          right: 10px;
-        }
-        
         .shakespeare-image {
-          width: 100px;
+          width: 150px;
         }
         
         .speech-bubble {
-          padding: 10px;
-          max-width: 200px;
+          padding: 20px;
+          max-width: 400px;
         }
         
         .response-text {
-          font-size: 14px;
+          font-size: 20px;
         }
       }
       
       /* Small screens */
       @media (max-width: 480px) {
-        .shakespeare-container {
-          right: 5px;
-        }
-        
         .shakespeare-image {
-          width: 80px;
+          width: 120px;
         }
         
         .speech-bubble {
-          padding: 8px;
-          max-width: 150px;
+          padding: 15px;
+          max-width: 300px;
         }
         
         .response-text {
-          font-size: 12px;
+          font-size: 18px;
         }
       }
     `;
@@ -170,21 +188,24 @@ class ShakespeareResponse {
     // Set the response text
     this.responseText.textContent = response;
     
-    // Show the container
-    this.shakespeareContainer.style.display = 'flex';
-    this.shakespeareContainer.classList.remove('fade-out');
+    // Show the modal overlay
+    this.modalOverlay.style.display = 'flex';
+    this.modalOverlay.classList.remove('fade-out');
     
     // Set a timeout to hide after the specified duration
     clearTimeout(this.hideTimeout);
     this.hideTimeout = setTimeout(() => {
       // Add fade-out class
-      this.shakespeareContainer.classList.add('fade-out');
+      this.modalOverlay.classList.add('fade-out');
       
       // Hide completely after fade animation completes
       setTimeout(() => {
-        this.shakespeareContainer.style.display = 'none';
+        this.modalOverlay.style.display = 'none';
       }, this.options.fadeDuration);
     }, this.options.displayDuration);
+    
+    // Log that we're showing the response
+    console.log('Showing Shakespeare response:', response);
   }
   
   /**
