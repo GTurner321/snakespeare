@@ -294,20 +294,20 @@ checkPhraseCompleted() {
   return isCompleted;
 }
 
-// New method to initialize ShakespeareResponse component
+// New method to initialize ShakespeareResponse component with correct GitHub URL
 initShakespeareComponent() {
   // Import the ShakespeareResponse module
   import('./shakespeareresponse.js')
     .then(module => {
       const ShakespeareResponse = module.default;
       
-      // Create instance
+      // Create instance with the correct GitHub URL
       this.shakespeareComponent = new ShakespeareResponse({
         containerId: this.options.gameContainerId,
-        imagePath: 'snakespeare/assets/shakespeare.png'
+        imagePath: 'https://raw.githubusercontent.com/GTurner321/snakespeare/main/assets/shakespeare.png'
       });
       
-      console.log('Shakespeare component initialized');
+      console.log('Shakespeare component initialized with GitHub image URL');
       
       // Make game controller accessible to the Shakespeare component
       window.gameController = this;
