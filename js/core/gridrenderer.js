@@ -1310,26 +1310,22 @@ scroll(direction, slowMotion = false) {
     }));
   }
 
-/**
- * Set the completion state of the grid
- * @param {boolean} completed - Whether the grid is completed
- */
 setCompleted(completed) {
   this.isCompleted = completed;
   
   if (completed) {
     // Convert all selected cells to completed state
     this.selectedCells.forEach(pos => {
-      const cell = this.grid[pos.y][pos.x];
-      cell.isCompleted = true;
+      this.grid[pos.y][pos.x].isCompleted = true;
+      // IMPORTANT: Keep the isSelected property true as well
+      this.grid[pos.y][pos.x].isSelected = true;
     });
     
     // Also mark the start cell as completed if it has a letter
     const centerX = 25;
     const centerY = 25;
-    const startCell = this.grid[centerY][centerX];
-    if (startCell.letter) {
-      startCell.isCompleted = true;
+    if (this.grid[centerY][centerX].letter) {
+      this.grid[centerY][centerX].isCompleted = true;
     }
   } else {
     // Reset completion state
