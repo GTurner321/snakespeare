@@ -365,7 +365,18 @@ body {
 
 /* Auto-scroll improvements */
 .grid-container {
-    transition: transform 0.15s ease-out;
+    transition-property: transform;
+    transition-timing-function: ease-out;
+}
+
+/* Fast scroll for manual button clicks */
+.grid-container.fast-scroll {
+    transition-duration: 200ms;
+}
+
+/* Slow scroll for automatic scrolling (twice as slow) */
+.grid-container.slow-scroll {
+    transition-duration: 400ms;
 }
 
 /* Make selected cells more visible during auto-scroll */
