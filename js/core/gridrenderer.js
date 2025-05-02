@@ -246,6 +246,11 @@
  * @param {TouchEvent} e - Touch event
  */
 handleTouchStart(e) {
+  // If the grid is completed, ignore touch events
+  if (this.isCompleted) {
+    e.preventDefault();
+    return;
+  }
   // Only handle single touches
   if (e.touches.length !== 1) return;
   
@@ -577,6 +582,12 @@ isLastSelectedCell(x, y) {
  * Deselect the last cell in the selection
  */
 deselectLastCell() {
+  // If the grid is completed, prevent deselection
+  if (this.isCompleted) {
+    console.log('Game is completed. No further deselection allowed.');
+    return;
+  }
+
   if (this.selectedCells.length === 0) return;
   
   const lastSelected = this.selectedCells[this.selectedCells.length - 1];
@@ -622,13 +633,18 @@ isCellSelected(x, y) {
 }
 
 /**
- * Unified cell selection handler for both click and touch - Updated with auto-scroll
+ * Unified cell selection handler for both click and touch - Updated with completion check
  * @param {number} x - X coordinate
  * @param {number} y - Y coordinate
  * @param {boolean} forceSelect - Force selection without adjacency check
  * @return {boolean} True if selection was successful
  */
 handleCellSelection(x, y, forceSelect = false) {
+  // If the grid is completed, prevent any further selection
+  if (this.isCompleted) {
+    console.log('Game is completed. No further selection allowed.');
+    return false;
+  }
   // Check if coordinates are within grid bounds
   if (y >= 0 && y < this.grid.length && x >= 0 && x < this.grid[0].length) {
     const cell = this.grid[y][x];
