@@ -371,12 +371,12 @@ body {
 
 /* Fast scroll for manual button clicks */
 .grid-container.fast-scroll {
-    transition-duration: 200ms;
+    transition-duration: 400ms;
 }
 
 /* Slow scroll for automatic scrolling (twice as slow) */
 .grid-container.slow-scroll {
-    transition-duration: 400ms;
+    transition-duration: 1200ms;
 }
 
 /* Make selected cells more visible during auto-scroll */
