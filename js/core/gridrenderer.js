@@ -1275,7 +1275,46 @@ scroll(direction, slowMotion = false) {
       detail: { gridRenderer: this }
     }));
   }
+
+/**
+ * Set the completion state of the grid
+ * @param {boolean} completed - Whether the grid is completed
+ */
+setCompleted(completed) {
+  this.isCompleted = completed;
   
+  if (completed) {
+    // Convert all selected cells to completed state
+    this.selectedCells.forEach(pos => {
+      const cell = this.grid[pos.y][pos.x];
+      cell.isCompleted = true;
+    });
+    
+    // Also mark the start cell as completed if it has a letter
+    const centerX = 25;
+    const centerY = 25;
+    const startCell = this.grid[centerY][centerX];
+    if (startCell.letter) {
+      startCell.isCompleted = true;
+    }
+  } else {
+    // Reset completion state
+    for (let y = 0; y < this.grid.length; y++) {
+      for (let x = 0; x < this.grid[0].length; x++) {
+        this.grid[y][x].isCompleted = false;
+      }
+    }
+  }
+  
+  // Re-render to show the updated state
+  this.renderVisibleGrid();
+  
+  // Dispatch event for completion state change
+  document.dispatchEvent(new CustomEvent('gridCompletionChanged', { 
+    detail: { completed: this.isCompleted, gridRenderer: this }
+  }));
+}
+
   /**
    * Handle responsive layout changes
    */
