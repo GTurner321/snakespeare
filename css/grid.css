@@ -163,6 +163,24 @@ body {
     border: 2px solid #0D47A1; /* Darker blue border */
 }
 
+/* Completed state styling */
+.grid-cell.completed-cell {
+  background-color: #4CAF50; /* Green for completed cells */
+  color: white;
+  text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.4);
+  border: 1px solid #2E7D32; /* Darker green border */
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
+  z-index: 2; /* Ensure completed is on top of path */
+}
+
+/* Override for hover state */
+@media (hover: hover) and (pointer: fine) {
+  .grid-cell.completed-cell:hover {
+    background-color: #4CAF50; /* Keep green for completed when hovering */
+    cursor: default; /* Change cursor to default for completed cells */
+  }
+}
+
 /* Only show the purple path when highlighting is enabled */
 .grid-cell.path-cell.highlight-enabled:not(.selected-cell):not(.start-cell) {
     background-color: #9C27B0; /* Purple for revealed path (when highlight enabled) */
