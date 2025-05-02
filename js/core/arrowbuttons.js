@@ -415,28 +415,28 @@ class ScrollAreaHandler {
   }
   
   /**
-   * Enhanced click handler for scroll areas with better animation cleanup
-   * @param {string} direction - The scroll direction
-   * @param {HTMLElement} scrollArea - The scroll area element
-   */
-  handleScrollAreaClick(direction, scrollArea) {
-    // Skip if disabled
-    if (scrollArea.classList.contains('disabled')) return;
-    
-    // Add active class
-    scrollArea.classList.add('active');
-    
-    // Scroll the grid
-    this.gridRenderer.scroll(direction);
-    
-    // Update scroll area states
-    this.updateScrollAreaStates();
-    
-    // Remove active class and clear background after animation
-    setTimeout(() => {
-      this.handleScrollAnimationComplete(scrollArea);
-    }, 150);
-  }
+ * Enhanced click handler for scroll areas with animation speed control
+ * @param {string} direction - The scroll direction
+ * @param {HTMLElement} scrollArea - The scroll area element
+ */
+handleScrollAreaClick(direction, scrollArea) {
+  // Skip if disabled
+  if (scrollArea.classList.contains('disabled')) return;
+  
+  // Add active class
+  scrollArea.classList.add('active');
+  
+  // Scroll the grid with fast scroll (false = fast motion)
+  this.gridRenderer.scroll(direction, false);
+  
+  // Update scroll area states
+  this.updateScrollAreaStates();
+  
+  // Remove active class after animation
+  setTimeout(() => {
+    this.handleScrollAnimationComplete(scrollArea);
+  }, 200); // Match the fast scroll duration
+}
   
   /**
    * Handle the completion of a scroll area animation
