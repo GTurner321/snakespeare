@@ -1006,12 +1006,6 @@ handleAutoScroll() {
     return cellElement;
   }
   
-  /**
- * Update cell element classes based on current cell state
- * @param {HTMLElement} cellElement - The cell DOM element
- * @param {number} x - X coordinate
- * @param {number} y - Y coordinate
- */
 updateCellElementClasses(cellElement, x, y) {
   // Clear existing state classes
   cellElement.classList.remove('start-cell', 'selected-cell', 'path-cell', 'highlight-enabled', 'completed-cell');
@@ -1020,22 +1014,17 @@ updateCellElementClasses(cellElement, x, y) {
   if (y >= 0 && y < this.grid.length && x >= 0 && x < this.grid[0].length) {
     const cell = this.grid[y][x];
     
-    // Apply styling for different cell states
-    if (cell.isStart) {
-      cellElement.classList.add('start-cell');
-      
-      // If completed and has a letter, show as completed instead of start
-      if (cell.isCompleted && cell.letter) {
-        cellElement.classList.remove('start-cell');
-        cellElement.classList.add('completed-cell');
-      }
-    } 
-    
-    // If cell is completed, override other states
+    // IMPORTANT: Check for completed state FIRST, before other states
     if (cell.isCompleted) {
       cellElement.classList.add('completed-cell');
+      // No need to check other states when completed
+      return;
+    }
+    
+    // Apply styling for different cell states (only if not completed)
+    if (cell.isStart) {
+      cellElement.classList.add('start-cell');
     } 
-    // Otherwise use normal states
     else if (cell.isSelected) {
       cellElement.classList.add('selected-cell');
     } 
