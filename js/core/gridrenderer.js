@@ -984,39 +984,50 @@ handleAutoScroll() {
   }
   
   /**
-   * Update cell element classes based on current cell state
-   * @param {HTMLElement} cellElement - The cell DOM element
-   * @param {number} x - X coordinate
-   * @param {number} y - Y coordinate
-   */
-  updateCellElementClasses(cellElement, x, y) {
-    // Clear existing state classes
-    cellElement.classList.remove('start-cell', 'selected-cell', 'path-cell', 'highlight-enabled');
+ * Update cell element classes based on current cell state
+ * @param {HTMLElement} cellElement - The cell DOM element
+ * @param {number} x - X coordinate
+ * @param {number} y - Y coordinate
+ */
+updateCellElementClasses(cellElement, x, y) {
+  // Clear existing state classes
+  cellElement.classList.remove('start-cell', 'selected-cell', 'path-cell', 'highlight-enabled', 'completed-cell');
+  
+  // If cell is within grid bounds
+  if (y >= 0 && y < this.grid.length && x >= 0 && x < this.grid[0].length) {
+    const cell = this.grid[y][x];
     
-    // If cell is within grid bounds
-    if (y >= 0 && y < this.grid.length && x >= 0 && x < this.grid[0].length) {
-      const cell = this.grid[y][x];
+    // Apply styling for different cell states
+    if (cell.isStart) {
+      cellElement.classList.add('start-cell');
       
-      // Apply styling for different cell states
-      if (cell.isStart) {
-        cellElement.classList.add('start-cell');
-      } 
+      // If completed and has a letter, show as completed instead of start
+      if (cell.isCompleted && cell.letter) {
+        cellElement.classList.remove('start-cell');
+        cellElement.classList.add('completed-cell');
+      }
+    } 
+    
+    // If cell is completed, override other states
+    if (cell.isCompleted) {
+      cellElement.classList.add('completed-cell');
+    } 
+    // Otherwise use normal states
+    else if (cell.isSelected) {
+      cellElement.classList.add('selected-cell');
+    } 
+    
+    // Path cells are now always marked, but only highlighted in purple if option is enabled
+    if (cell.isPath) {
+      cellElement.classList.add('path-cell');
       
-      if (cell.isSelected) {
-        cellElement.classList.add('selected-cell');
-      } 
-      
-      // Path cells are now always marked, but only highlighted in purple if option is enabled
-      if (cell.isPath) {
-        cellElement.classList.add('path-cell');
-        
-        // Add highlight-enabled class only if path highlighting is turned on
-        if (this.options.highlightPath) {
-          cellElement.classList.add('highlight-enabled');
-        }
+      // Add highlight-enabled class only if path highlighting is turned on
+      if (this.options.highlightPath) {
+        cellElement.classList.add('highlight-enabled');
       }
     }
   }
+}
   
   /**
    * Check if two cells are adjacent
