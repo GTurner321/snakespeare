@@ -1068,60 +1068,61 @@ updateCellElementClasses(cellElement, x, y) {
     this.handleCellSelection(x, y, false);
   }
   
-  /**
-   * Set a path on the grid
-   * @param {Array} path - Array of {x, y, letter} objects
-   */
   setPath(path) {
-    this.path = path;
-    this.selectedCells = [];
-    this.lastSelectedCell = null; // Reset last selected cell
-    
-    // Reset all cells
-    for (let y = 0; y < this.grid.length; y++) {
-      for (let x = 0; x < this.grid[0].length; x++) {
-        this.grid[y][x].isPath = false;
-        this.grid[y][x].isSelected = false;
-        this.grid[y][x].pathIndex = -1;
-        this.grid[y][x].letter = ''; // Clear all letters initially
-      }
+  this.path = path;
+  this.selectedCells = [];
+  this.lastSelectedCell = null; // Reset last selected cell
+  
+  // Reset the completed state
+  this.isCompleted = false;
+  
+  // Reset all cells
+  for (let y = 0; y < this.grid.length; y++) {
+    for (let x = 0; x < this.grid[0].length; x++) {
+      this.grid[y][x].isPath = false;
+      this.grid[y][x].isSelected = false;
+      this.grid[y][x].pathIndex = -1;
+      this.grid[y][x].letter = ''; // Clear all letters initially
+      // NEW LINE: Reset the completed state for each cell
+      this.grid[y][x].isCompleted = false;
     }
-    
-    // Set start cell
-    const centerX = 25;
-    const centerY = 25;
-    this.grid[centerY][centerX].isPath = true;
-    this.grid[centerY][centerX].isStart = true;
-    this.grid[centerY][centerX].pathIndex = 0;
-    
-    // Update cells with path data
-    path.forEach((point, index) => {
-      // Convert from coordinate system to grid indices
-      const gridX = centerX + point.x;
-      const gridY = centerY + point.y;
-      
-      // Check if within grid bounds
-      if (gridY >= 0 && gridY < this.grid.length && gridX >= 0 && gridX < this.grid[0].length) {
-        this.grid[gridY][gridX].letter = point.letter;
-        this.grid[gridY][gridX].isPath = true;
-        this.grid[gridY][gridX].pathIndex = index;
-      }
-    });
-    
-    // Fill random letters based on percentage
-    this.fillRandomLetters();
-    
-    // Force a full rebuild of the grid
-    this._lastRenderOffset = null;
-    
-    // Re-render grid
-    this.renderVisibleGrid();
-    
-    // Notify that path has been set
-    document.dispatchEvent(new CustomEvent('pathSet', { 
-      detail: { path: path, gridRenderer: this }
-    }));
   }
+  
+  // Set start cell
+  const centerX = 25;
+  const centerY = 25;
+  this.grid[centerY][centerX].isPath = true;
+  this.grid[centerY][centerX].isStart = true;
+  this.grid[centerY][centerX].pathIndex = 0;
+  
+  // Update cells with path data
+  path.forEach((point, index) => {
+    // Convert from coordinate system to grid indices
+    const gridX = centerX + point.x;
+    const gridY = centerY + point.y;
+    
+    // Check if within grid bounds
+    if (gridY >= 0 && gridY < this.grid.length && gridX >= 0 && gridX < this.grid[0].length) {
+      this.grid[gridY][gridX].letter = point.letter;
+      this.grid[gridY][gridX].isPath = true;
+      this.grid[gridY][gridX].pathIndex = index;
+    }
+  });
+  
+  // Fill random letters based on percentage
+  this.fillRandomLetters();
+  
+  // Force a full rebuild of the grid
+  this._lastRenderOffset = null;
+  
+  // Re-render grid
+  this.renderVisibleGrid();
+  
+  // Notify that path has been set
+  document.dispatchEvent(new CustomEvent('pathSet', { 
+    detail: { path: path, gridRenderer: this }
+  }));
+}
   
   /**
    * Reset view position to center the grid on the start cell
