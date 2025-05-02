@@ -57,7 +57,7 @@ class PathGenerator {
     return this.path;
   }
   
-  /**
+/**
  * Parse letter list to ensure it's an array of characters, skipping spaces and punctuation
  * @param {Array|String} letterList - Input letter list
  * @return {Array} Array of letters without spaces or punctuation
@@ -66,15 +66,9 @@ parseLetterList(letterList) {
   // Define a regex pattern for characters to include (letters and numbers only)
   const includePattern = /[a-zA-Z0-9]/;
   
-  // If it's a comma-separated string
-  if (typeof letterList === 'string' && letterList.includes(',')) {
-    return letterList.split(',')
-      .map(letter => letter.trim())
-      .filter(letter => includePattern.test(letter));
-  }
-  // If it's a single string without separators
-  else if (typeof letterList === 'string') {
-    // Filter out spaces and punctuation when splitting the string
+  // Always treat it as a single string - don't split on commas
+  if (typeof letterList === 'string') {
+    // Filter out non-alphanumeric characters when splitting the string
     return letterList.split('')
       .filter(char => includePattern.test(char));
   }
