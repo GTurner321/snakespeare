@@ -1262,33 +1262,37 @@ scroll(direction, slowMotion = false) {
    * @return {Array} Array of letter objects with position and letter
    */
   getSelectedLetters() {
-    const letters = [];
-    
-    // Start with the start cell (if it has a letter)
-    const centerX = 25;
-    const centerY = 25;
-    const startCell = this.grid[centerY][centerX];
-    
-    if (startCell.letter) {
-      letters.push({
-        x: centerX,
-        y: centerY,
-        letter: startCell.letter
-      });
-    }
-    
-    // Add all selected cells
-    this.selectedCells.forEach(pos => {
-      const cell = this.grid[pos.y][pos.x];
+  const letters = [];
+  
+  // Start with the start cell (if it has a letter)
+  const centerX = 25;
+  const centerY = 25;
+  const startCell = this.grid[centerY][centerX];
+  
+  // Only include the start cell if it has a non-empty letter
+  if (startCell.letter && startCell.letter.trim() !== '') {
+    letters.push({
+      x: centerX,
+      y: centerY,
+      letter: startCell.letter
+    });
+  }
+  
+  // Add all selected cells
+  this.selectedCells.forEach(pos => {
+    const cell = this.grid[pos.y][pos.x];
+    // Only include if the cell has a letter
+    if (cell.letter && cell.letter.trim() !== '') {
       letters.push({
         x: pos.x,
         y: pos.y,
         letter: cell.letter
       });
-    });
-    
-    return letters;
-  }
+    }
+  });
+  
+  return letters;
+}
   
   /**
    * Clear all selected cells
@@ -1315,24 +1319,28 @@ scroll(direction, slowMotion = false) {
   }
 
 setCompleted(completed) {
+  // Set the completion state first
   this.isCompleted = completed;
   
   if (completed) {
     // Convert all selected cells to completed state
-    this.selectedCells.forEach(pos => {
-      this.grid[pos.y][pos.x].isCompleted = true;
-      // IMPORTANT: Keep the isSelected property true as well
-      this.grid[pos.y][pos.x].isSelected = true;
-    });
-    
-    // Also mark the start cell as completed if it has a letter
+    // Important: Include the start cell only if it has a letter
     const centerX = 25;
     const centerY = 25;
-    if (this.grid[centerY][centerX].letter) {
+    
+    // Mark the start cell as completed if it has a letter
+    if (this.grid[centerY][centerX].letter && this.grid[centerY][centerX].letter.trim() !== '') {
       this.grid[centerY][centerX].isCompleted = true;
     }
+    
+    // Mark all selected cells as completed
+    this.selectedCells.forEach(pos => {
+      this.grid[pos.y][pos.x].isCompleted = true;
+      // Keep the isSelected property true as well for visual consistency
+      this.grid[pos.y][pos.x].isSelected = true;
+    });
   } else {
-    // Reset completion state
+    // Reset completion state for all cells
     for (let y = 0; y < this.grid.length; y++) {
       for (let x = 0; x < this.grid[0].length; x++) {
         this.grid[y][x].isCompleted = false;
@@ -1348,7 +1356,7 @@ setCompleted(completed) {
     detail: { completed: this.isCompleted, gridRenderer: this }
   }));
 }
-
+  
   /**
    * Handle responsive layout changes
    */
