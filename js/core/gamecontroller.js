@@ -294,14 +294,41 @@ loadPhrase(phraseData) {
   
   console.log(`Loading phrase: "${letterList}" with letterlist: "${letterList}"`);
   
-  // Create the phrase template with underscores using letterlist instead of phrase
+  // Create the phrase template with underscores using letterlist
   this.phraseTemplate = this.createPhraseTemplate(letterList);
   
-  // Generate path using path generator (will filter out non-alphanumerics)
-  this.currentPath = this.pathGenerator.generatePath(letterList);
+  // Track generation attempts
+  let generationSuccessful = false;
+  let attempts = 0;
+  const MAX_ATTEMPTS = 5; // Maximum number of generation attempts
   
-  // Apply path to grid renderer
-  this.gridRenderer.setPath(this.currentPath);
+  // Try generating the path up to MAX_ATTEMPTS times
+  while (!generationSuccessful && attempts < MAX_ATTEMPTS) {
+    attempts++;
+    console.log(`Path generation attempt #${attempts}`);
+    
+    // Generate path using path generator (will filter out non-alphanumerics)
+    this.currentPath = this.pathGenerator.generatePath(letterList);
+    
+    // Apply path to grid renderer and check if successful
+    generationSuccessful = this.gridRenderer.setPath(this.currentPath);
+    
+    if (!generationSuccessful) {
+      console.warn(`Path generation attempt #${attempts} failed - retrying...`);
+      // Wait a tiny bit before retrying to avoid tight loop
+      // and allow for different random paths
+      if (attempts < MAX_ATTEMPTS) {
+        // Force seed randomization between attempts
+        this.pathGenerator.shuffleArray([1, 2, 3, 4, 5]);
+      }
+    }
+  }
+  
+  if (!generationSuccessful) {
+    console.error(`Failed to generate valid path after ${MAX_ATTEMPTS} attempts. Phrase may be too long.`);
+    // Optionally: Show an error message to the user or choose a different phrase
+    // For now, we'll continue with the partial path
+  }
   
   // Center the grid on the start cell
   this.gridRenderer.centerGridOnStartCell();
@@ -329,7 +356,13 @@ loadPhrase(phraseData) {
   if (meaningEl) {
     meaningEl.remove();
   }
-} 
+  
+  // If generation failed after all attempts, maybe load a different phrase
+  if (!generationSuccessful) {
+    // Optional: Uncomment to automatically try a different phrase
+    // setTimeout(() => this.loadRandomPhrase(), 500);
+  }
+}
   
   /**
    * Handle window resize events
