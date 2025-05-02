@@ -57,28 +57,34 @@ class PathGenerator {
     return this.path;
   }
   
-  /**
-   * Parse letter list to ensure it's an array of characters, skipping spaces and punctuation
-   * @param {Array|String} letterList - Input letter list
-   * @return {Array} Array of letters without spaces or punctuation
-   */
-  parseLetterList(letterList) {
-    // Define a regex pattern for characters to include (letters and numbers only)
-    const includePattern = /[a-zA-Z0-9]/;
+/**
+ * Parse letter list to ensure it's an array of characters, skipping spaces and punctuation
+ * @param {Array|String} letterList - Input letter list
+ * @return {Array} Array of letters without spaces or punctuation
+ */
+parseLetterList(letterList) {
+  // Define a regex pattern for characters to include (letters and numbers only)
+  const includePattern = /[a-zA-Z0-9]/;
+  
+  // Log the input for debugging
+  console.log('Parsing letter list:', letterList);
+  
+  // Always treat it as a single string
+  if (typeof letterList === 'string') {
+    // Filter out non-alphanumeric characters when splitting the string
+    const filtered = letterList.split('')
+      .filter(char => includePattern.test(char));
     
-    // Always treat it as a single string - don't split on commas
-    if (typeof letterList === 'string') {
-      // Filter out non-alphanumeric characters when splitting the string
-      return letterList.split('')
-        .filter(char => includePattern.test(char));
-    }
-    // If it's already an array
-    else if (Array.isArray(letterList)) {
-      return letterList.filter(char => includePattern.test(char));
-    }
-    // Default fallback
-    return "TESTPHRASE".split('');
+    console.log('Filtered letter list:', filtered);
+    return filtered;
   }
+  // If it's already an array
+  else if (Array.isArray(letterList)) {
+    return letterList.filter(char => includePattern.test(char));
+  }
+  // Default fallback
+  return "TESTPHRASE".split('');
+}
   
   /**
    * Add a position to the path
