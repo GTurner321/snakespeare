@@ -99,12 +99,15 @@ class GameController {
     window.addEventListener('resize', () => {
       this.handleResize();
     });
-    
-    // Dispatch custom event for initialization complete
-    document.dispatchEvent(new CustomEvent('gameInitialized', { 
-      detail: { controller: this }
-    }));
-  }
+
+// Dispatch custom event for initialization complete
+document.dispatchEvent(new CustomEvent('gameInitialized', { 
+  detail: { controller: this }
+}));
+
+// Initialize Shakespeare component
+this.initShakespeareComponent();
+}
   
   /**
    * Set up menu button handlers
