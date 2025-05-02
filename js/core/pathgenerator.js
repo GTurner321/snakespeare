@@ -57,28 +57,28 @@ class PathGenerator {
     return this.path;
   }
   
-/**
- * Parse letter list to ensure it's an array of characters, skipping spaces and punctuation
- * @param {Array|String} letterList - Input letter list
- * @return {Array} Array of letters without spaces or punctuation
- */
-parseLetterList(letterList) {
-  // Define a regex pattern for characters to include (letters and numbers only)
-  const includePattern = /[a-zA-Z0-9]/;
-  
-  // Always treat it as a single string - don't split on commas
-  if (typeof letterList === 'string') {
-    // Filter out non-alphanumeric characters when splitting the string
-    return letterList.split('')
-      .filter(char => includePattern.test(char));
+  /**
+   * Parse letter list to ensure it's an array of characters, skipping spaces and punctuation
+   * @param {Array|String} letterList - Input letter list
+   * @return {Array} Array of letters without spaces or punctuation
+   */
+  parseLetterList(letterList) {
+    // Define a regex pattern for characters to include (letters and numbers only)
+    const includePattern = /[a-zA-Z0-9]/;
+    
+    // Always treat it as a single string - don't split on commas
+    if (typeof letterList === 'string') {
+      // Filter out non-alphanumeric characters when splitting the string
+      return letterList.split('')
+        .filter(char => includePattern.test(char));
+    }
+    // If it's already an array
+    else if (Array.isArray(letterList)) {
+      return letterList.filter(char => includePattern.test(char));
+    }
+    // Default fallback
+    return "TESTPHRASE".split('');
   }
-  // If it's already an array
-  else if (Array.isArray(letterList)) {
-    return letterList.filter(char => includePattern.test(char));
-  }
-  // Default fallback
-  return "TESTPHRASE".split('');
-}
   
   /**
    * Add a position to the path
@@ -141,14 +141,46 @@ parseLetterList(letterList) {
   }
   
   /**
-   * Find next valid position (not visited and adjacent to only current cell)
+   * Find next valid position with improved path planning
    * @param {number} x - Current X coordinate
    * @param {number} y - Current Y coordinate
    * @return {Object|null} Next position {x, y} or null if no valid position
    */
   findNextPosition(x, y) {
-    // Shuffle directions for randomness
-    const shuffledDirs = this.shuffleArray([...this.directions]);
+    // Get current path length
+    const pathLength = this.path.length;
+    
+    // For longer paths, prioritize directions that lead away from the center
+    // to avoid the path folding back on itself too early
+    let shuffledDirs;
+    
+    if (pathLength > 5) {
+      // Calculate distance from center (0,0)
+      const distFromCenter = Math.sqrt(x*x + y*y);
+      
+      // If we're still close to the center, prioritize moving outward
+      if (distFromCenter < 5) {
+        // Find directions that lead away from center
+        const outwardDirs = this.directions.filter(([dx, dy]) => {
+          const newX = x + dx;
+          const newY = y + dy;
+          const newDist = Math.sqrt(newX*newX + newY*newY);
+          return newDist > distFromCenter;
+        });
+        
+        // Use outward directions first, then any other valid directions
+        shuffledDirs = [
+          ...this.shuffleArray([...outwardDirs]),
+          ...this.shuffleArray(this.directions.filter(d => !outwardDirs.includes(d)))
+        ];
+      } else {
+        // Otherwise shuffle normally
+        shuffledDirs = this.shuffleArray([...this.directions]);
+      }
+    } else {
+      // For short paths, just shuffle normally
+      shuffledDirs = this.shuffleArray([...this.directions]);
+    }
     
     // Try each direction
     for (const [dx, dy] of shuffledDirs) {
