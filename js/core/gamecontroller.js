@@ -201,19 +201,25 @@ fillPhraseTemplate(template, phrase, selectedLetters) {
   const templateArray = template.split('');
   const phraseArray = phrase.toUpperCase().split('');
   
-  // Start with no letters filled in
-  let filledCount = 0;
-  
-  // Only use the actual selected letters, not the starting cell
+  // Only use the actual selected letters, not the empty start cell
   const validSelectedLetters = selectedLetters.filter(cell => cell.letter.trim() !== '');
   
   // Log the filtered letters
   console.log('- Valid selected letters:', validSelectedLetters.map(l => l.letter).join(''));
   
+  // THIS IS IMPORTANT: Count how many underscores we need to fill in
+  const underscoreCount = template.split('').filter(char => char === '_').length;
+  
+  // Assert the counts match - critical debug info
+  console.log('Underscore count:', underscoreCount);
+  console.log('Valid letters count:', validSelectedLetters.length);
+  
+  // Start with no letters filled in
+  let filledCount = 0;
+  
   // Go through the phrase character by character
   for (let i = 0; i < phraseArray.length; i++) {
-    // Skip spaces and non-letter characters in the phrase
-    // Modified to only skip spaces (since grammar now should be shown)
+    // Skip spaces in the phrase
     if (phraseArray[i] === ' ') continue;
     
     // Check if this character is something that needs filling in (underscore)
@@ -263,11 +269,11 @@ updatePhraseFromSelections(selectedLetters) {
   }
 }
   
-// Modified checkPhraseCompleted method to signal completion
+// Fixed checkPhraseCompleted method in GameController.js
 checkPhraseCompleted() {
   if (!this.currentPhrase) return false;
   
-  // Get selected letters
+  // Get selected letters - including the start cell
   const selectedLetters = this.gridRenderer.getSelectedLetters();
   
   // Skip the start cell if it doesn't have a letter
@@ -275,12 +281,18 @@ checkPhraseCompleted() {
   
   // Count non-space characters in the letterlist that would be part of the path
   // This should match the pathGenerator's filtering logic
-  const letterCountInPath = this.currentPhrase.letterlist
-    .split('')
+  const letterListArray = this.currentPhrase.letterlist.split('');
+  const letterCountInPath = letterListArray
     .filter(char => /[a-zA-Z0-9]/.test(char))
     .length;
   
+  console.log('Letter count check:', {
+    validSelectedCount: validSelectedLetters.length,
+    letterCountInPath: letterCountInPath
+  });
+  
   // Check if we've selected exactly the right number of letters
+  // IMPORTANT: Make sure we're comparing the correct counts
   const isCompleted = validSelectedLetters.length === letterCountInPath;
   
   // If newly completed, dispatch an event
@@ -293,7 +305,7 @@ checkPhraseCompleted() {
   
   return isCompleted;
 }
-
+  
 // New method to initialize ShakespeareResponse component with correct GitHub URL
 initShakespeareComponent() {
   // Import the ShakespeareResponse module
