@@ -58,27 +58,33 @@ class PathGenerator {
   }
   
   /**
-   * Parse letter list to ensure it's an array of characters, skipping spaces
-   * @param {Array|String} letterList - Input letter list
-   * @return {Array} Array of letters without spaces
-   */
-  parseLetterList(letterList) {
-    // If it's a comma-separated string
-    if (typeof letterList === 'string' && letterList.includes(',')) {
-      return letterList.split(',').map(letter => letter.trim());
-    }
-    // If it's a single string without separators
-    else if (typeof letterList === 'string') {
-      // Filter out spaces when splitting the string
-      return letterList.split('').filter(char => char !== ' ');
-    }
-    // If it's already an array
-    else if (Array.isArray(letterList)) {
-      return letterList.filter(char => char !== ' ');
-    }
-    // Default fallback - Use a placeholder for testing
-    return "TESTPHRASE".split('');
+ * Parse letter list to ensure it's an array of characters, skipping spaces and punctuation
+ * @param {Array|String} letterList - Input letter list
+ * @return {Array} Array of letters without spaces or punctuation
+ */
+parseLetterList(letterList) {
+  // Define a regex pattern for characters to include (letters and numbers only)
+  const includePattern = /[a-zA-Z0-9]/;
+  
+  // If it's a comma-separated string
+  if (typeof letterList === 'string' && letterList.includes(',')) {
+    return letterList.split(',')
+      .map(letter => letter.trim())
+      .filter(letter => includePattern.test(letter));
   }
+  // If it's a single string without separators
+  else if (typeof letterList === 'string') {
+    // Filter out spaces and punctuation when splitting the string
+    return letterList.split('')
+      .filter(char => includePattern.test(char));
+  }
+  // If it's already an array
+  else if (Array.isArray(letterList)) {
+    return letterList.filter(char => includePattern.test(char));
+  }
+  // Default fallback
+  return "TESTPHRASE".split('');
+}
   
   /**
    * Add a position to the path
