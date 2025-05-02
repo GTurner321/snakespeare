@@ -1068,7 +1068,7 @@ updateCellElementClasses(cellElement, x, y) {
     this.handleCellSelection(x, y, false);
   }
   
-  setPath(path) {
+setPath(path) {
   this.path = path;
   this.selectedCells = [];
   this.lastSelectedCell = null; // Reset last selected cell
@@ -1083,7 +1083,7 @@ updateCellElementClasses(cellElement, x, y) {
       this.grid[y][x].isSelected = false;
       this.grid[y][x].pathIndex = -1;
       this.grid[y][x].letter = ''; // Clear all letters initially
-      // NEW LINE: Reset the completed state for each cell
+      // Reset the completed state for each cell
       this.grid[y][x].isCompleted = false;
     }
   }
@@ -1094,6 +1094,9 @@ updateCellElementClasses(cellElement, x, y) {
   this.grid[centerY][centerX].isPath = true;
   this.grid[centerY][centerX].isStart = true;
   this.grid[centerY][centerX].pathIndex = 0;
+  
+  // Track if all path cells were successfully placed
+  let allCellsPlaced = true;
   
   // Update cells with path data
   path.forEach((point, index) => {
@@ -1106,6 +1109,10 @@ updateCellElementClasses(cellElement, x, y) {
       this.grid[gridY][gridX].letter = point.letter;
       this.grid[gridY][gridX].isPath = true;
       this.grid[gridY][gridX].pathIndex = index;
+    } else {
+      // Path point is outside grid bounds
+      allCellsPlaced = false;
+      console.warn(`Path cell at (${point.x}, ${point.y}) is outside grid bounds`);
     }
   });
   
@@ -1120,8 +1127,15 @@ updateCellElementClasses(cellElement, x, y) {
   
   // Notify that path has been set
   document.dispatchEvent(new CustomEvent('pathSet', { 
-    detail: { path: path, gridRenderer: this }
+    detail: { 
+      path: path, 
+      gridRenderer: this,
+      success: allCellsPlaced // Add success flag to the event
+    }
   }));
+  
+  // Return success flag so caller knows if generation succeeded
+  return allCellsPlaced;
 }
   
   /**
