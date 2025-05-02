@@ -291,57 +291,56 @@ checkPhraseCompleted() {
   return validSelectedLetters.length === phraseLetterCount;
 }
   
-  /**
-   * Load a phrase from the phrase data
-   * @param {Object} phraseData - Data for the phrase to load
-   */
-  loadPhrase(phraseData) {
-    this.currentPhrase = phraseData;
+loadPhrase(phraseData) {
+  this.currentPhrase = phraseData;
+  
+  // Reset any highlighting
+  this.gridRenderer.options.highlightPath = false;
+  
+  // NEW LINE: Reset the completion state
+  this.gridRenderer.setCompleted(false);
+  
+  // Parse letter list from phrase data (now with spaces)
+  const letterList = phraseData.letterlist;
+  
+  console.log(`Loading phrase: "${phraseData.phrase}" with letterlist: "${letterList}"`);
+  
+  // Create the phrase template with underscores
+  this.phraseTemplate = this.createPhraseTemplate(phraseData.phrase);
+  
+  // Generate path using path generator (will filter out spaces)
+  this.currentPath = this.pathGenerator.generatePath(letterList);
+  
+  // Apply path to grid renderer
+  this.gridRenderer.setPath(this.currentPath);
+  
+  // Center the grid on the start cell
+  this.gridRenderer.centerGridOnStartCell();
+  
+  // Update scroll area states
+  if (this.scrollHandler && this.scrollHandler.updateScrollAreaStates) {
+    this.scrollHandler.updateScrollAreaStates();
+  }
+  
+  // Display the initial template
+  const displayElement = document.getElementById('phrase-text');
+  if (displayElement) {
+    displayElement.textContent = this.phraseTemplate;
     
-    // Reset any highlighting
-    this.gridRenderer.options.highlightPath = false;
-    
-    // Parse letter list from phrase data (now with spaces)
-    const letterList = phraseData.letterlist;
-    
-    console.log(`Loading phrase: "${phraseData.phrase}" with letterlist: "${letterList}"`);
-    
-    // Create the phrase template with underscores
-    this.phraseTemplate = this.createPhraseTemplate(phraseData.phrase);
-    
-    // Generate path using path generator (will filter out spaces)
-    this.currentPath = this.pathGenerator.generatePath(letterList);
-    
-    // Apply path to grid renderer
-    this.gridRenderer.setPath(this.currentPath);
-    
-    // Center the grid on the start cell
-    this.gridRenderer.centerGridOnStartCell();
-    
-    // Update scroll area states
-    if (this.scrollHandler && this.scrollHandler.updateScrollAreaStates) {
-      this.scrollHandler.updateScrollAreaStates();
-    }
-    
-    // Display the initial template
-    const displayElement = document.getElementById('phrase-text');
-    if (displayElement) {
-      displayElement.textContent = this.phraseTemplate;
-      
-      // Adjust phrase display height after loading new content
-      if (this.scrollHandler && this.scrollHandler.adjustPhraseDisplayHeight) {
-        setTimeout(() => {
-          this.scrollHandler.adjustPhraseDisplayHeight();
-        }, 50);
-      }
-    }
-    
-    // Clear any additional elements
-    const meaningEl = document.querySelector('.phrase-meaning');
-    if (meaningEl) {
-      meaningEl.remove();
+    // Adjust phrase display height after loading new content
+    if (this.scrollHandler && this.scrollHandler.adjustPhraseDisplayHeight) {
+      setTimeout(() => {
+        this.scrollHandler.adjustPhraseDisplayHeight();
+      }, 50);
     }
   }
+  
+  // Clear any additional elements
+  const meaningEl = document.querySelector('.phrase-meaning');
+  if (meaningEl) {
+    meaningEl.remove();
+  }
+}
   
   /**
    * Handle window resize events
