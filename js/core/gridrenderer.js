@@ -4,7 +4,9 @@
  * Updated to work with new scroll areas instead of arrow buttons
  */
 
-class GridRenderer {
+/**
+   * Initialize the grid data structure and set up event listeners
+   */
   constructor(containerId, options = {}) {
     // Container element
     this.container = document.getElementById(containerId);
@@ -39,6 +41,7 @@ class GridRenderer {
     
     // New: Track last selected cell for adjacency check
     this.lastSelectedCell = null;
+    
     // New: Track touch state for swiping
     this.touchState = {
       active: false,
@@ -47,11 +50,15 @@ class GridRenderer {
       isDragging: false,       // Track if we're in a swiping/dragging operation
       startCellSelected: false // Track if the start cell has been selected
     };
+    
     // New: Flag to prevent double event handling (touch and click)
     this.recentlyHandledTouch = false;
     
     // Track the last render offset to avoid unnecessary rebuilds
     this._lastRenderOffset = null;
+    
+    // New: Add completed state
+    this.isCompleted = false;  // Track if the phrase is completed
     
     // Initialize the grid
     this.initializeGrid();
@@ -59,9 +66,16 @@ class GridRenderer {
     // Create DOM elements
     this.createGridElements();
     
-    // Responsive handling
+    // Set up responsive handling
     this.handleResponsive();
-    window.addEventListener('resize', () => this.handleResponsive());
+    
+    // Add resize listener with proper binding to maintain 'this' context
+    window.addEventListener('resize', this.handleResponsive.bind(this));
+    
+    // Dispatch event that initialization is complete
+    document.dispatchEvent(new CustomEvent('gridRendererInitialized', { 
+      detail: { gridRenderer: this }
+    }));
   }
   
   /**
