@@ -146,27 +146,36 @@ class GameController {
   }
   
   /**
-   * Handle changes to the selected cells
-   */
-  handleSelectionChange() {
-    // Get selected letters
-    const selectedLetters = this.gridRenderer.getSelectedLetters();
-    
-    // Update phrase display with currently selected letters
-    this.updatePhraseFromSelections(selectedLetters);
-    
-    // Update scroll area states
-    if (this.scrollHandler.updateScrollAreaStates) {
-      this.scrollHandler.updateScrollAreaStates();
-    }
-    
-    // Adjust phrase display height after content change
-    if (this.scrollHandler.adjustPhraseDisplayHeight) {
-      setTimeout(() => {
-        this.scrollHandler.adjustPhraseDisplayHeight();
-      }, 50);
-    }
+ * Handle changes to the selected cells
+ */
+handleSelectionChange() {
+  // Get selected letters
+  const selectedLetters = this.gridRenderer.getSelectedLetters();
+  
+  // Update phrase display with currently selected letters
+  this.updatePhraseFromSelections(selectedLetters);
+  
+  // Update scroll area states
+  if (this.scrollHandler.updateScrollAreaStates) {
+    this.scrollHandler.updateScrollAreaStates();
   }
+  
+  // Adjust phrase display height after content change
+  if (this.scrollHandler.adjustPhraseDisplayHeight) {
+    setTimeout(() => {
+      this.scrollHandler.adjustPhraseDisplayHeight();
+    }, 50);
+  }
+  
+  // Check if the phrase is completed
+  if (!this.gridRenderer.isCompleted && this.checkPhraseCompleted()) {
+    console.log('Phrase completed!');
+    this.gridRenderer.setCompleted(true);
+    
+    // Optional: Add a visual or audio indicator of completion
+    // For example, flash the phrase display or show a congratulations message
+  }
+}
   
   /**
    * Create a template for the phrase with underscores for letters and spaces preserved
