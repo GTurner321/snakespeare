@@ -261,6 +261,26 @@ updatePhraseFromSelections(selectedLetters) {
     displayElement.textContent = selectedString || "Select letters to form a phrase";
   }
 }
+
+  /**
+ * Check if the current phrase is completed (all letters selected)
+ * @return {boolean} True if the phrase is completed
+ */
+checkPhraseCompleted() {
+  if (!this.currentPhrase) return false;
+  
+  // Get selected letters
+  const selectedLetters = this.gridRenderer.getSelectedLetters();
+  
+  // Skip the start cell if it doesn't have a letter
+  const validSelectedLetters = selectedLetters.filter(cell => cell.letter.trim() !== '');
+  
+  // Count non-space characters in the phrase
+  const phraseLetterCount = this.currentPhrase.phrase.replace(/\s+/g, '').length;
+  
+  // Check if we've selected exactly the right number of letters
+  return validSelectedLetters.length === phraseLetterCount;
+}
   
   /**
    * Load a phrase from the phrase data
