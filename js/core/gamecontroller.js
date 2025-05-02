@@ -260,6 +260,7 @@ updatePhraseFromSelections(selectedLetters) {
   }
 }
   
+// Modified checkPhraseCompleted method to signal completion
 checkPhraseCompleted() {
   if (!this.currentPhrase) return false;
   
@@ -277,11 +278,48 @@ checkPhraseCompleted() {
     .length;
   
   // Check if we've selected exactly the right number of letters
-  return validSelectedLetters.length === letterCountInPath;
+  const isCompleted = validSelectedLetters.length === letterCountInPath;
+  
+  // If newly completed, dispatch an event
+  if (isCompleted && !this.gridRenderer.isCompleted) {
+    console.log('Phrase completed!');
+    
+    // Event is dispatched by the GridRenderer when setCompleted is called
+    this.gridRenderer.setCompleted(true);
+  }
+  
+  return isCompleted;
+}
+
+// New method to initialize ShakespeareResponse component
+initShakespeareComponent() {
+  // Import the ShakespeareResponse module
+  import('./shakespeareresponse.js')
+    .then(module => {
+      const ShakespeareResponse = module.default;
+      
+      // Create instance
+      this.shakespeareComponent = new ShakespeareResponse({
+        containerId: this.options.gameContainerId,
+        imagePath: 'snakespeare/assets/shakespeare.png'
+      });
+      
+      console.log('Shakespeare component initialized');
+      
+      // Make game controller accessible to the Shakespeare component
+      window.gameController = this;
+    })
+    .catch(error => {
+      console.error('Failed to load Shakespeare component:', error);
+    });
 }
   
+// Modified loadPhrase method to ensure response handling
 loadPhrase(phraseData) {
   this.currentPhrase = phraseData;
+  
+  // Log response for debugging
+  console.log(`Phrase response: "${phraseData.response}"`);
   
   // Reset any highlighting
   this.gridRenderer.options.highlightPath = false;
@@ -408,56 +446,63 @@ loadPhrase(phraseData) {
     this.loadPhrase(samplePhrase);
   }
   
-  /**
-   * Load phrases from CSV data
-   * @param {string} csvUrl - URL to the CSV file containing phrases
-   * @return {Promise<Array>} Promise resolving to array of phrase objects
-   */
-  async loadPhraseData(csvUrl) {
-    try {
-      // Fetch CSV file
-      const response = await fetch(csvUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch CSV: ${response.status} ${response.statusText}`);
-      }
-      
-      const csvData = await response.text();
-      
-      // Check if we have data
-      if (!csvData || csvData.trim() === '') {
-        throw new Error('CSV file is empty');
-      }
-      
-      // Parse CSV using PapaParse (imported via CDN in index.html)
-      const phrases = this.parseCSV(csvData);
-      
-      console.log(`Loaded ${phrases.length} phrases from CSV`);
-      
-      // Store phrase data
-      this.phrases = phrases;
-      
-      // Load a random phrase instead of the first one
-      if (phrases.length > 0) {
-        // Pick a random phrase index
-        const randomIndex = Math.floor(Math.random() * phrases.length);
-        const randomPhrase = phrases[randomIndex];
-        
-        // Load the random phrase
-        this.loadPhrase(randomPhrase);
-        console.log('Loaded random phrase:', randomPhrase.phrase);
-      } else {
-        console.warn('No phrases found in CSV');
-        this.loadSampleData();
-      }
-      
-      return phrases;
-    } catch (error) {
-      console.error('Error loading phrase data:', error);
-      // Load sample data as fallback
-      this.loadSampleData();
-      return [];
+async loadPhraseData(csvUrl) {
+  try {
+    // Fetch CSV file
+    const response = await fetch(csvUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch CSV: ${response.status} ${response.statusText}`);
     }
+    
+    const csvData = await response.text();
+    
+    // Check if we have data
+    if (!csvData || csvData.trim() === '') {
+      throw new Error('CSV file is empty');
+    }
+    
+    // Parse CSV using PapaParse (imported via CDN in index.html)
+    const allPhrases = this.parseCSV(csvData);
+    
+    // Filter phrases to only those with IDs between 3001-3050
+    const shakespearePhrases = allPhrases.filter(phrase => {
+      const id = parseInt(phrase.id, 10);
+      return id >= 3001 && id <= 3050;
+    });
+    
+    console.log(`Loaded ${shakespearePhrases.length} Shakespeare phrases from CSV`);
+    
+    // If no phrases in range, fall back to all phrases
+    if (shakespearePhrases.length === 0) {
+      console.warn('No phrases found in ID range 3001-3050, using all phrases');
+      this.phrases = allPhrases;
+    } else {
+      // Store filtered phrase data
+      this.phrases = shakespearePhrases;
+    }
+    
+    // Load a random phrase
+    if (this.phrases.length > 0) {
+      // Pick a random phrase index
+      const randomIndex = Math.floor(Math.random() * this.phrases.length);
+      const randomPhrase = this.phrases[randomIndex];
+      
+      // Load the random phrase
+      this.loadPhrase(randomPhrase);
+      console.log('Loaded random Shakespeare phrase:', randomPhrase.phrase);
+    } else {
+      console.warn('No phrases found in CSV');
+      this.loadSampleData();
+    }
+    
+    return this.phrases;
+  } catch (error) {
+    console.error('Error loading phrase data:', error);
+    // Load sample data as fallback
+    this.loadSampleData();
+    return [];
   }
+}
   
   /**
    * Parse CSV data into an array of phrase objects using PapaParse
