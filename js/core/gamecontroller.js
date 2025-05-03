@@ -186,7 +186,6 @@ handleSelectionChange() {
   return phrase.replace(/[a-zA-Z0-9]/g, '_');
 }
   
-// Fix for fillPhraseTemplate method in GameController.js
 fillPhraseTemplate(template, phrase, selectedLetters) {
   // Check if we have empty input
   if (!template || !phrase || !selectedLetters) {
@@ -202,32 +201,34 @@ fillPhraseTemplate(template, phrase, selectedLetters) {
   const templateArray = template.split('');
   const phraseArray = phrase.toUpperCase().split('');
   
-  // CRITICAL FIX: Only use letters that actually have content
+  // Only use letters that actually have content
   const validSelectedLetters = selectedLetters.filter(cell => 
     cell.letter && cell.letter.trim() !== '');
   
   // Log the filtered letters
   console.log('- Valid selected letters:', validSelectedLetters.map(l => l.letter).join(''));
   
-  // THIS IS IMPORTANT: Count how many underscores we need to fill in
-  const underscoreCount = template.split('').filter(char => char === '_').length;
+  // Get the alphanumeric characters from the phrase (matching the path filtering)
+  const alphanumericFromPhrase = phrase.split('')
+    .filter(char => /[a-zA-Z0-9]/.test(char));
   
-  // Assert the counts match - critical debug info
-  console.log('Underscore count:', underscoreCount);
-  console.log('Valid letters count:', validSelectedLetters.length);
+  console.log('- Alphanumeric chars in phrase:', alphanumericFromPhrase.join(''));
+  console.log('- Selected letter count:', validSelectedLetters.length);
   
-  // Track how many letters we've used from validSelectedLetters
-  let letterIndex = 0;
+  // Create a mapping of underscore positions to selected letters
+  let filledLetterIndex = 0;
   
-  // Go through the template character by character
-  for (let i = 0; i < template.length; i++) {
-    // Check if this character is something that needs filling in (underscore)
-    if (template[i] === '_') {
-      // Check if we have more letters to place
-      if (letterIndex < validSelectedLetters.length) {
-        // Replace the underscore with the corresponding letter from the phrase
+  // Go through each character in the phrase
+  for (let i = 0; i < phrase.length; i++) {
+    const phraseChar = phrase.charAt(i);
+    
+    // If this character is alphanumeric (and thus has an underscore in the template)
+    if (/[a-zA-Z0-9]/.test(phraseChar)) {
+      // Check if we have a selected letter for this position
+      if (filledLetterIndex < validSelectedLetters.length) {
+        // Fill the underscore with the actual letter from the phrase
         templateArray[i] = phraseArray[i];
-        letterIndex++;
+        filledLetterIndex++;
       }
     }
   }
