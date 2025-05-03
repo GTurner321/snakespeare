@@ -186,6 +186,7 @@ handleSelectionChange() {
   return phrase.replace(/[a-zA-Z0-9]/g, '_');
 }
   
+// Fix for fillPhraseTemplate method in GameController.js
 fillPhraseTemplate(template, phrase, selectedLetters) {
   // Check if we have empty input
   if (!template || !phrase || !selectedLetters) {
@@ -201,8 +202,9 @@ fillPhraseTemplate(template, phrase, selectedLetters) {
   const templateArray = template.split('');
   const phraseArray = phrase.toUpperCase().split('');
   
-  // Only use the actual selected letters, not the empty start cell
-  const validSelectedLetters = selectedLetters.filter(cell => cell.letter.trim() !== '');
+  // CRITICAL FIX: Only use letters that actually have content
+  const validSelectedLetters = selectedLetters.filter(cell => 
+    cell.letter && cell.letter.trim() !== '');
   
   // Log the filtered letters
   console.log('- Valid selected letters:', validSelectedLetters.map(l => l.letter).join(''));
@@ -214,21 +216,18 @@ fillPhraseTemplate(template, phrase, selectedLetters) {
   console.log('Underscore count:', underscoreCount);
   console.log('Valid letters count:', validSelectedLetters.length);
   
-  // Start with no letters filled in
-  let filledCount = 0;
+  // Track how many letters we've used from validSelectedLetters
+  let letterIndex = 0;
   
-  // Go through the phrase character by character
-  for (let i = 0; i < phraseArray.length; i++) {
-    // Skip spaces in the phrase
-    if (phraseArray[i] === ' ') continue;
-    
+  // Go through the template character by character
+  for (let i = 0; i < template.length; i++) {
     // Check if this character is something that needs filling in (underscore)
     if (template[i] === '_') {
-      // Check if we have this many selected letters
-      if (filledCount < validSelectedLetters.length) {
-        // Replace the underscore with the character from the phrase
+      // Check if we have more letters to place
+      if (letterIndex < validSelectedLetters.length) {
+        // Replace the underscore with the corresponding letter from the phrase
         templateArray[i] = phraseArray[i];
-        filledCount++;
+        letterIndex++;
       }
     }
   }
