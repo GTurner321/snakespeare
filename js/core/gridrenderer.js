@@ -1257,11 +1257,7 @@ scroll(direction, slowMotion = false) {
   }));
 }
   
-  /**
-   * Get letters from selected cells in order of selection
-   * @return {Array} Array of letter objects with position and letter
-   */
-  getSelectedLetters() {
+getSelectedLetters() {
   const letters = [];
   
   // Start with the start cell (if it has a letter)
@@ -1269,8 +1265,15 @@ scroll(direction, slowMotion = false) {
   const centerY = 25;
   const startCell = this.grid[centerY][centerX];
   
-  // Only include the start cell if it has a non-empty letter
-  if (startCell.letter && startCell.letter.trim() !== '') {
+  // If the start cell is already selected, don't add it twice
+  const isStartCellSelected = this.selectedCells.some(
+    cell => cell.x === centerX && cell.y === centerY
+  );
+  
+  // Add start cell only if:
+  // 1. It has a letter
+  // 2. It's not already in selectedCells (to avoid duplication)
+  if (!isStartCellSelected && startCell.letter && startCell.letter.trim() !== '') {
     letters.push({
       x: centerX,
       y: centerY,
@@ -1289,6 +1292,12 @@ scroll(direction, slowMotion = false) {
         letter: cell.letter
       });
     }
+  });
+  
+  // Debug logging
+  console.log('getSelectedLetters:', {
+    totalLetters: letters.length,
+    letters: letters.map(l => l.letter).join('')
   });
   
   return letters;
