@@ -475,35 +475,48 @@ async loadPhraseData(csvUrl) {
       throw new Error('CSV file is empty');
     }
     
-    // Parse CSV using PapaParse (imported via CDN in index.html)
+    // Parse CSV using PapaParse
     const allPhrases = this.parseCSV(csvData);
+    
+    // Debug: Log first few phrases to check structure
+    console.log('First 3 phrases:', allPhrases.slice(0, 3));
+    
+    // Debug: Check column names
+    if (allPhrases.length > 0) {
+      console.log('Available columns:', Object.keys(allPhrases[0]));
+    }
     
     // Filter phrases to only those with IDs between 3001-3050
     const shakespearePhrases = allPhrases.filter(phrase => {
       const id = parseInt(phrase.id, 10);
+      // Debug: Log each ID check
+      console.log(`Checking phrase ID: ${phrase.id}, parsed as: ${id}, matches range: ${id >= 3001 && id <= 3050}`);
       return id >= 3001 && id <= 3050;
     });
     
     console.log(`Loaded ${shakespearePhrases.length} Shakespeare phrases from CSV`);
     
+    // Debug: Show which phrases were selected
+    shakespearePhrases.forEach(phrase => {
+      console.log(`Selected Shakespeare phrase ID ${phrase.id}: "${phrase.phrase}"`);
+    });
+    
+    // Rest of the code remains the same...
     // If no phrases in range, fall back to all phrases
     if (shakespearePhrases.length === 0) {
       console.warn('No phrases found in ID range 3001-3050, using all phrases');
       this.phrases = allPhrases;
     } else {
-      // Store filtered phrase data
       this.phrases = shakespearePhrases;
     }
     
     // Load a random phrase
     if (this.phrases.length > 0) {
-      // Pick a random phrase index
       const randomIndex = Math.floor(Math.random() * this.phrases.length);
       const randomPhrase = this.phrases[randomIndex];
       
-      // Load the random phrase
+      console.log('Loading random Shakespeare phrase ID:', randomPhrase.id);
       this.loadPhrase(randomPhrase);
-      console.log('Loaded random Shakespeare phrase:', randomPhrase.phrase);
     } else {
       console.warn('No phrases found in CSV');
       this.loadSampleData();
@@ -512,7 +525,6 @@ async loadPhraseData(csvUrl) {
     return this.phrases;
   } catch (error) {
     console.error('Error loading phrase data:', error);
-    // Load sample data as fallback
     this.loadSampleData();
     return [];
   }
