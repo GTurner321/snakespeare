@@ -345,7 +345,7 @@ body {
 .scroll-area-bottom {
     width: 100%;
     /* Double the height */
-    height: 100px;
+    height: 160px;
     margin: 0 auto;
     border-radius: 8px;
 }
@@ -358,7 +358,7 @@ body {
 /* Horizontal scroll areas (left & right) - updated width to match top/bottom height */
 .scroll-area-left,
 .scroll-area-right {
-    width: 100px;
+    width: 160px;
     height: 100%;
     margin: 0 5px;
     border-radius: 8px;
