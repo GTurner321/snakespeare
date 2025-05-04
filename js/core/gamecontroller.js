@@ -2,6 +2,7 @@
  * Game Controller for Grid Game
  * Coordinates pathGenerator, gridRenderer, and scroll areas
  * Handles CSV data loading and game state management
+ * Updated to use adjacent-cell random letter filling
  */
 
 import PathGenerator from './pathgenerator.js';
@@ -21,8 +22,9 @@ class GameController {
         desktop: { width: 13, height: 9 }
       },
       cellSize: options.cellSize || 50,
-      randomFillPercentage: options.randomFillPercentage || 0,
-      // fill percentage of random cells is being passed through here
+      randomFillPercentage: options.randomFillPercentage !== undefined ? options.randomFillPercentage : 0,
+      // Random fill percentage is now used for the adjacent-cell filling algorithm
+      // A value of 0 means no random filling at all
     };
     
     // Override default gridSize if provided with correct structure
@@ -68,7 +70,7 @@ class GameController {
     this.currentPhrase = null;
     this.currentPath = null;
     this.phrases = [];
-    this.phraseTemplate = null; // New: Store the underscores template
+    this.phraseTemplate = null; // Store the underscores template
     
     // Initialize components
     this.pathGenerator = new PathGenerator();
@@ -100,14 +102,14 @@ class GameController {
       this.handleResize();
     });
 
-// Dispatch custom event for initialization complete
-document.dispatchEvent(new CustomEvent('gameInitialized', { 
-  detail: { controller: this }
-}));
+    // Dispatch custom event for initialization complete
+    document.dispatchEvent(new CustomEvent('gameInitialized', { 
+      detail: { controller: this }
+    }));
 
-// Initialize Shakespeare component
-this.initShakespeareComponent();
-}
+    // Initialize Shakespeare component
+    this.initShakespeareComponent();
+  }
   
   /**
    * Set up menu button handlers
@@ -149,273 +151,280 @@ this.initShakespeareComponent();
   }
   
   /**
- * Handle changes to the selected cells
- */
-handleSelectionChange() {
-  // Get selected letters
-  const selectedLetters = this.gridRenderer.getSelectedLetters();
-  
-  // Update phrase display with currently selected letters
-  this.updatePhraseFromSelections(selectedLetters);
-  
-  // Update scroll area states
-  if (this.scrollHandler.updateScrollAreaStates) {
-    this.scrollHandler.updateScrollAreaStates();
-  }
-  
-  // Adjust phrase display height after content change
-  if (this.scrollHandler.adjustPhraseDisplayHeight) {
-    setTimeout(() => {
-      this.scrollHandler.adjustPhraseDisplayHeight();
-    }, 50);
-  }
-  
-  // Check if the phrase is completed
-  if (!this.gridRenderer.isCompleted && this.checkPhraseCompleted()) {
-    console.log('Phrase completed!');
-    this.gridRenderer.setCompleted(true);
+   * Handle changes to the selected cells
+   */
+  handleSelectionChange() {
+    // Get selected letters
+    const selectedLetters = this.gridRenderer.getSelectedLetters();
     
-    // Optional: Add a visual or audio indicator of completion
-    // For example, flash the phrase display or show a congratulations message
-  }
-}
-  
-  createPhraseTemplate(phrase) {
-  // Only replace alphanumeric characters with underscores
-  // Keep spaces, punctuation and other special characters as is
-  return phrase.replace(/[a-zA-Z0-9]/g, '_');
-}
-  
-fillPhraseTemplate(template, phrase, selectedLetters) {
-  // Check if we have empty input
-  if (!template || !phrase || !selectedLetters) {
-    return template || '';
-  }
-  
-  // Log for debugging
-  console.log('Filling phrase template:');
-  console.log('- Template:', template);
-  console.log('- Phrase:', phrase);
-  console.log('- Selected letters:', selectedLetters.map(l => l.letter).join(''));
-  
-  const templateArray = template.split('');
-  const phraseArray = phrase.toUpperCase().split('');
-  
-  // Only use letters that actually have content
-  const validSelectedLetters = selectedLetters.filter(cell => 
-    cell.letter && cell.letter.trim() !== '');
-  
-  // Log the filtered letters
-  console.log('- Valid selected letters:', validSelectedLetters.map(l => l.letter).join(''));
-  
-  // Get the alphanumeric characters from the phrase (matching the path filtering)
-  const alphanumericFromPhrase = phrase.split('')
-    .filter(char => /[a-zA-Z0-9]/.test(char));
-  
-  console.log('- Alphanumeric chars in phrase:', alphanumericFromPhrase.join(''));
-  console.log('- Selected letter count:', validSelectedLetters.length);
-  
-  // Create a mapping of underscore positions to selected letters
-  let filledLetterIndex = 0;
-  
-  // Go through each character in the phrase
-  for (let i = 0; i < phrase.length; i++) {
-    const phraseChar = phrase.charAt(i);
+    // Update phrase display with currently selected letters
+    this.updatePhraseFromSelections(selectedLetters);
     
-    // If this character is alphanumeric (and thus has an underscore in the template)
-    if (/[a-zA-Z0-9]/.test(phraseChar)) {
-      // Check if we have a selected letter for this position
-      if (filledLetterIndex < validSelectedLetters.length) {
-        // Fill the underscore with the actual letter from the phrase
-        templateArray[i] = phraseArray[i];
-        filledLetterIndex++;
-      }
+    // Update scroll area states
+    if (this.scrollHandler.updateScrollAreaStates) {
+      this.scrollHandler.updateScrollAreaStates();
     }
-  }
-  
-  const result = templateArray.join('');
-  console.log('- Result:', result);
-  return result;
-}
-  
-updatePhraseFromSelections(selectedLetters) {
-  const displayElement = document.getElementById('phrase-text');
-  if (!displayElement || !this.currentPhrase) return;
-  
-  // Debug: log the selected letters
-  console.log('Updating phrase from selections:');
-  console.log('- Selected letters:', selectedLetters.map(l => `${l.letter || '[empty]'}`).join(', '));
-  
-  // If we have a phrase and template
-  if (this.phraseTemplate) {
-    // Fill in the template with selected letters using letterlist instead of phrase
-    const updatedDisplay = this.fillPhraseTemplate(
-      this.phraseTemplate,
-      this.currentPhrase.letterlist, // Changed from phrase to letterlist
-      selectedLetters
-    );
     
-    // Display the updated template
-    displayElement.textContent = updatedDisplay;
-    
-    // Adjust phrase display height
-    if (this.scrollHandler && this.scrollHandler.adjustPhraseDisplayHeight) {
-      this.scrollHandler.adjustPhraseDisplayHeight();
-    }
-  } else {
-    // Fallback if no template (shouldn't happen)
-    const selectedString = selectedLetters.map(cell => cell.letter).join('');
-    displayElement.textContent = selectedString || "Select letters to form a phrase";
-  }
-}
-  
-// Fixed checkPhraseCompleted method in GameController.js
-checkPhraseCompleted() {
-  if (!this.currentPhrase) return false;
-  
-  // Get selected letters - including the start cell
-  const selectedLetters = this.gridRenderer.getSelectedLetters();
-  
-  // Skip the start cell if it doesn't have a letter
-  const validSelectedLetters = selectedLetters.filter(cell => cell.letter.trim() !== '');
-  
-  // Count non-space characters in the letterlist that would be part of the path
-  // This should match the pathGenerator's filtering logic
-  const letterListArray = this.currentPhrase.letterlist.split('');
-  const letterCountInPath = letterListArray
-    .filter(char => /[a-zA-Z0-9]/.test(char))
-    .length;
-  
-  console.log('Letter count check:', {
-    validSelectedCount: validSelectedLetters.length,
-    letterCountInPath: letterCountInPath
-  });
-  
-  // Check if we've selected exactly the right number of letters
-  // IMPORTANT: Make sure we're comparing the correct counts
-  const isCompleted = validSelectedLetters.length === letterCountInPath;
-  
-  // If newly completed, dispatch an event
-  if (isCompleted && !this.gridRenderer.isCompleted) {
-    console.log('Phrase completed!');
-    
-    // Event is dispatched by the GridRenderer when setCompleted is called
-    this.gridRenderer.setCompleted(true);
-  }
-  
-  return isCompleted;
-}
-  
-// New method to initialize ShakespeareResponse component with correct GitHub URL
-initShakespeareComponent() {
-  // Import the ShakespeareResponse module
-  import('./shakespeareresponse.js')
-    .then(module => {
-      const ShakespeareResponse = module.default;
-      
-      // Create instance with the correct GitHub URL
-      this.shakespeareComponent = new ShakespeareResponse({
-        containerId: this.options.gameContainerId,
-        imagePath: 'https://raw.githubusercontent.com/GTurner321/snakespeare/main/assets/shakespeare.png'
-      });
-      
-      console.log('Shakespeare component initialized with GitHub image URL');
-      
-      // Make game controller accessible to the Shakespeare component
-      window.gameController = this;
-    })
-    .catch(error => {
-      console.error('Failed to load Shakespeare component:', error);
-    });
-}
-  
-// Modified loadPhrase method to ensure response handling
-loadPhrase(phraseData) {
-  this.currentPhrase = phraseData;
-  
-  // Log response for debugging
-  console.log(`Phrase response: "${phraseData.response}"`);
-  
-  // Reset any highlighting
-  this.gridRenderer.options.highlightPath = false;
-  
-  // Reset the completion state
-  this.gridRenderer.setCompleted(false);
-  
-  // Parse letter list from phrase data 
-  const letterList = phraseData.letterlist;
-  
-  console.log(`Loading phrase: "${letterList}" with letterlist: "${letterList}"`);
-  
-  // Create the phrase template with underscores using letterlist
-  this.phraseTemplate = this.createPhraseTemplate(letterList);
-  
-  // Track generation attempts
-  let generationSuccessful = false;
-  let attempts = 0;
-  const MAX_ATTEMPTS = 5; // Maximum number of generation attempts
-  
-  // Try generating the path up to MAX_ATTEMPTS times
-  while (!generationSuccessful && attempts < MAX_ATTEMPTS) {
-    attempts++;
-    console.log(`Path generation attempt #${attempts}`);
-    
-    // Generate path using path generator (will filter out non-alphanumerics)
-    this.currentPath = this.pathGenerator.generatePath(letterList);
-    
-    // Apply path to grid renderer and check if successful
-    generationSuccessful = this.gridRenderer.setPath(this.currentPath);
-    
-    if (!generationSuccessful) {
-      console.warn(`Path generation attempt #${attempts} failed - retrying...`);
-      // Wait a tiny bit before retrying to avoid tight loop
-      // and allow for different random paths
-      if (attempts < MAX_ATTEMPTS) {
-        // Force seed randomization between attempts
-        this.pathGenerator.shuffleArray([1, 2, 3, 4, 5]);
-      }
-    }
-  }
-  
-  if (!generationSuccessful) {
-    console.error(`Failed to generate valid path after ${MAX_ATTEMPTS} attempts. Phrase may be too long.`);
-    // Optionally: Show an error message to the user or choose a different phrase
-    // For now, we'll continue with the partial path
-  }
-  
-  // Center the grid on the start cell
-  this.gridRenderer.centerGridOnStartCell();
-  
-  // Update scroll area states
-  if (this.scrollHandler && this.scrollHandler.updateScrollAreaStates) {
-    this.scrollHandler.updateScrollAreaStates();
-  }
-  
-  // Display the initial template
-  const displayElement = document.getElementById('phrase-text');
-  if (displayElement) {
-    displayElement.textContent = this.phraseTemplate;
-    
-    // Adjust phrase display height after loading new content
-    if (this.scrollHandler && this.scrollHandler.adjustPhraseDisplayHeight) {
+    // Adjust phrase display height after content change
+    if (this.scrollHandler.adjustPhraseDisplayHeight) {
       setTimeout(() => {
         this.scrollHandler.adjustPhraseDisplayHeight();
       }, 50);
     }
+    
+    // Check if the phrase is completed
+    if (!this.gridRenderer.isCompleted && this.checkPhraseCompleted()) {
+      console.log('Phrase completed!');
+      this.gridRenderer.setCompleted(true);
+      
+      // Optional: Add a visual or audio indicator of completion
+      // For example, flash the phrase display or show a congratulations message
+    }
   }
   
-  // Clear any additional elements
-  const meaningEl = document.querySelector('.phrase-meaning');
-  if (meaningEl) {
-    meaningEl.remove();
+  createPhraseTemplate(phrase) {
+    // Only replace alphanumeric characters with underscores
+    // Keep spaces, punctuation and other special characters as is
+    return phrase.replace(/[a-zA-Z0-9]/g, '_');
   }
   
-  // If generation failed after all attempts, maybe load a different phrase
-  if (!generationSuccessful) {
-    // Optional: Uncomment to automatically try a different phrase
-    // setTimeout(() => this.loadRandomPhrase(), 500);
+  fillPhraseTemplate(template, phrase, selectedLetters) {
+    // Check if we have empty input
+    if (!template || !phrase || !selectedLetters) {
+      return template || '';
+    }
+    
+    // Log for debugging
+    console.log('Filling phrase template:');
+    console.log('- Template:', template);
+    console.log('- Phrase:', phrase);
+    console.log('- Selected letters:', selectedLetters.map(l => l.letter).join(''));
+    
+    const templateArray = template.split('');
+    const phraseArray = phrase.toUpperCase().split('');
+    
+    // Only use letters that actually have content
+    const validSelectedLetters = selectedLetters.filter(cell => 
+      cell.letter && cell.letter.trim() !== '');
+    
+    // Log the filtered letters
+    console.log('- Valid selected letters:', validSelectedLetters.map(l => l.letter).join(''));
+    
+    // Get the alphanumeric characters from the phrase (matching the path filtering)
+    const alphanumericFromPhrase = phrase.split('')
+      .filter(char => /[a-zA-Z0-9]/.test(char));
+    
+    console.log('- Alphanumeric chars in phrase:', alphanumericFromPhrase.join(''));
+    console.log('- Selected letter count:', validSelectedLetters.length);
+    
+    // Create a mapping of underscore positions to selected letters
+    let filledLetterIndex = 0;
+    
+    // Go through each character in the phrase
+    for (let i = 0; i < phrase.length; i++) {
+      const phraseChar = phrase.charAt(i);
+      
+      // If this character is alphanumeric (and thus has an underscore in the template)
+      if (/[a-zA-Z0-9]/.test(phraseChar)) {
+        // Check if we have a selected letter for this position
+        if (filledLetterIndex < validSelectedLetters.length) {
+          // Fill the underscore with the actual letter from the phrase
+          templateArray[i] = phraseArray[i];
+          filledLetterIndex++;
+        }
+      }
+    }
+    
+    const result = templateArray.join('');
+    console.log('- Result:', result);
+    return result;
   }
-}
+  
+  updatePhraseFromSelections(selectedLetters) {
+    const displayElement = document.getElementById('phrase-text');
+    if (!displayElement || !this.currentPhrase) return;
+    
+    // Debug: log the selected letters
+    console.log('Updating phrase from selections:');
+    console.log('- Selected letters:', selectedLetters.map(l => `${l.letter || '[empty]'}`).join(', '));
+    
+    // If we have a phrase and template
+    if (this.phraseTemplate) {
+// Fill in the template with selected letters using letterlist instead of phrase
+      const updatedDisplay = this.fillPhraseTemplate(
+        this.phraseTemplate,
+        this.currentPhrase.letterlist, // Changed from phrase to letterlist
+        selectedLetters
+      );
+      
+      // Display the updated template
+      displayElement.textContent = updatedDisplay;
+      
+      // Adjust phrase display height
+      if (this.scrollHandler && this.scrollHandler.adjustPhraseDisplayHeight) {
+        this.scrollHandler.adjustPhraseDisplayHeight();
+      }
+    } else {
+      // Fallback if no template (shouldn't happen)
+      const selectedString = selectedLetters.map(cell => cell.letter).join('');
+      displayElement.textContent = selectedString || "Select letters to form a phrase";
+    }
+  }
+  
+  // Fixed checkPhraseCompleted method in GameController.js
+  checkPhraseCompleted() {
+    if (!this.currentPhrase) return false;
+    
+    // Get selected letters - including the start cell
+    const selectedLetters = this.gridRenderer.getSelectedLetters();
+    
+    // Skip the start cell if it doesn't have a letter
+    const validSelectedLetters = selectedLetters.filter(cell => cell.letter.trim() !== '');
+    
+    // Count non-space characters in the letterlist that would be part of the path
+    // This should match the pathGenerator's filtering logic
+    const letterListArray = this.currentPhrase.letterlist.split('');
+    const letterCountInPath = letterListArray
+      .filter(char => /[a-zA-Z0-9]/.test(char))
+      .length;
+    
+    console.log('Letter count check:', {
+      validSelectedCount: validSelectedLetters.length,
+      letterCountInPath: letterCountInPath
+    });
+    
+    // Check if we've selected exactly the right number of letters
+    // IMPORTANT: Make sure we're comparing the correct counts
+    const isCompleted = validSelectedLetters.length === letterCountInPath;
+    
+    // If newly completed, dispatch an event
+    if (isCompleted && !this.gridRenderer.isCompleted) {
+      console.log('Phrase completed!');
+      
+      // Event is dispatched by the GridRenderer when setCompleted is called
+      this.gridRenderer.setCompleted(true);
+    }
+    
+    return isCompleted;
+  }
+  
+  // New method to initialize ShakespeareResponse component with correct GitHub URL
+  initShakespeareComponent() {
+    // Import the ShakespeareResponse module
+    import('./shakespeareresponse.js')
+      .then(module => {
+        const ShakespeareResponse = module.default;
+        
+        // Create instance with the correct GitHub URL
+        this.shakespeareComponent = new ShakespeareResponse({
+          containerId: this.options.gameContainerId,
+          imagePath: 'https://raw.githubusercontent.com/GTurner321/snakespeare/main/assets/shakespeare.png'
+        });
+        
+        console.log('Shakespeare component initialized with GitHub image URL');
+        
+        // Make game controller accessible to the Shakespeare component
+        window.gameController = this;
+      })
+      .catch(error => {
+        console.error('Failed to load Shakespeare component:', error);
+      });
+  }
+  
+  // Modified loadPhrase method to use adjacent random letters
+  loadPhrase(phraseData) {
+    this.currentPhrase = phraseData;
+    
+    // Log response for debugging
+    console.log(`Phrase response: "${phraseData.response}"`);
+    
+    // Reset any highlighting
+    this.gridRenderer.options.highlightPath = false;
+    
+    // Reset the completion state
+    this.gridRenderer.setCompleted(false);
+    
+    // Parse letter list from phrase data 
+    const letterList = phraseData.letterlist;
+    
+    console.log(`Loading phrase: "${letterList}" with letterlist: "${letterList}"`);
+    
+    // Create the phrase template with underscores using letterlist
+    this.phraseTemplate = this.createPhraseTemplate(letterList);
+    
+    // Track generation attempts
+    let generationSuccessful = false;
+    let attempts = 0;
+    const MAX_ATTEMPTS = 5; // Maximum number of generation attempts
+    
+    // Try generating the path up to MAX_ATTEMPTS times
+    while (!generationSuccessful && attempts < MAX_ATTEMPTS) {
+      attempts++;
+      console.log(`Path generation attempt #${attempts}`);
+      
+      // Generate path using path generator (will filter out non-alphanumerics)
+      this.currentPath = this.pathGenerator.generatePath(letterList);
+      
+      // Apply path to grid renderer and check if successful
+      generationSuccessful = this.gridRenderer.setPath(this.currentPath);
+      
+      if (!generationSuccessful) {
+        console.warn(`Path generation attempt #${attempts} failed - retrying...`);
+        // Wait a tiny bit before retrying to avoid tight loop
+        // and allow for different random paths
+        if (attempts < MAX_ATTEMPTS) {
+          // Force seed randomization between attempts
+          this.pathGenerator.shuffleArray([1, 2, 3, 4, 5]);
+        }
+      }
+    }
+    
+    if (!generationSuccessful) {
+      console.error(`Failed to generate valid path after ${MAX_ATTEMPTS} attempts. Phrase may be too long.`);
+      // Optionally: Show an error message to the user or choose a different phrase
+      // For now, we'll continue with the partial path
+    }
+    
+    // NEW: Generate and apply adjacent random letters
+    if (generationSuccessful && this.options.randomFillPercentage > 0) {
+      const randomLetters = this.pathGenerator.generateAdjacentRandomLetters();
+      this.gridRenderer.applyAdjacentRandomLetters(randomLetters);
+      console.log(`Applied ${randomLetters.length} adjacent random letters based on path`);
+    }
+    
+    // Center the grid on the start cell
+    this.gridRenderer.centerGridOnStartCell();
+    
+    // Update scroll area states
+    if (this.scrollHandler && this.scrollHandler.updateScrollAreaStates) {
+      this.scrollHandler.updateScrollAreaStates();
+    }
+    
+    // Display the initial template
+    const displayElement = document.getElementById('phrase-text');
+    if (displayElement) {
+      displayElement.textContent = this.phraseTemplate;
+      
+      // Adjust phrase display height after loading new content
+      if (this.scrollHandler && this.scrollHandler.adjustPhraseDisplayHeight) {
+        setTimeout(() => {
+          this.scrollHandler.adjustPhraseDisplayHeight();
+        }, 50);
+      }
+    }
+    
+    // Clear any additional elements
+    const meaningEl = document.querySelector('.phrase-meaning');
+    if (meaningEl) {
+      meaningEl.remove();
+    }
+    
+    // If generation failed after all attempts, maybe load a different phrase
+    if (!generationSuccessful) {
+      // Optional: Uncomment to automatically try a different phrase
+      // setTimeout(() => this.loadRandomPhrase(), 500);
+    }
+  }
   
   /**
    * Handle window resize events
@@ -461,108 +470,108 @@ loadPhrase(phraseData) {
     this.loadPhrase(samplePhrase);
   }
   
-async loadPhraseData(csvUrl) {
-  try {
-    // Fetch CSV file
-    const response = await fetch(csvUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch CSV: ${response.status} ${response.statusText}`);
-    }
-    
-    const csvData = await response.text();
-    
-    // Check if we have data
-    if (!csvData || csvData.trim() === '') {
-      throw new Error('CSV file is empty');
-    }
-    
-    // Parse CSV using PapaParse
-    const allPhrases = this.parseCSV(csvData);
-    
-// In loadPhraseData(), after parsing CSV:
-console.log('First few phrases and their IDs:');
-allPhrases.slice(0, 10).forEach(phrase => {
-  console.log(`Phrase: "${phrase.phrase}", ID: ${phrase.id}, Type: ${typeof phrase.id}`);
-});
-    
-// In gamecontroller.js, update the filtering logic in loadPhraseData:
-// Filter phrases to only those with IDs between 3001-3050
-const shakespearePhrases = allPhrases.filter(phrase => {
-  // Parse the id as an integer
-  const id = parseInt(phrase.id, 10);
-  
-  // Debug: Log each ID check
-  console.log(`Checking phrase ID: ${phrase.id}, parsed as: ${id}, valid ID: ${!isNaN(id)}, in range: ${id >= 3001 && id <= 3050}`);
-  
-  // Make sure id is a valid number and within range
-  return !isNaN(id) && id >= 3001 && id <= 3050;
-});
-    
-    console.log(`Loaded ${shakespearePhrases.length} Shakespeare phrases from CSV`);
-    
-    // Debug: Show which phrases were selected
-    shakespearePhrases.forEach(phrase => {
-      console.log(`Selected Shakespeare phrase ID ${phrase.id}: "${phrase.phrase}"`);
-    });
-    
-    // Rest of the code remains the same...
-    // If no phrases in range, fall back to all phrases
-    if (shakespearePhrases.length === 0) {
-      console.warn('No phrases found in ID range 3001-3050, using all phrases');
-      this.phrases = allPhrases;
-    } else {
-      this.phrases = shakespearePhrases;
-    }
-    
-    // Load a random phrase
-    if (this.phrases.length > 0) {
-      const randomIndex = Math.floor(Math.random() * this.phrases.length);
-      const randomPhrase = this.phrases[randomIndex];
+  async loadPhraseData(csvUrl) {
+    try {
+      // Fetch CSV file
+      const response = await fetch(csvUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch CSV: ${response.status} ${response.statusText}`);
+      }
       
-      console.log('Loading random Shakespeare phrase ID:', randomPhrase.id);
-      this.loadPhrase(randomPhrase);
-    } else {
-      console.warn('No phrases found in CSV');
+      const csvData = await response.text();
+      
+      // Check if we have data
+      if (!csvData || csvData.trim() === '') {
+        throw new Error('CSV file is empty');
+      }
+      
+      // Parse CSV using PapaParse
+      const allPhrases = this.parseCSV(csvData);
+      
+      // In loadPhraseData(), after parsing CSV:
+      console.log('First few phrases and their IDs:');
+      allPhrases.slice(0, 10).forEach(phrase => {
+        console.log(`Phrase: "${phrase.phrase}", ID: ${phrase.id}, Type: ${typeof phrase.id}`);
+      });
+      
+      // In gamecontroller.js, update the filtering logic in loadPhraseData:
+      // Filter phrases to only those with IDs between 3001-3050
+      const shakespearePhrases = allPhrases.filter(phrase => {
+        // Parse the id as an integer
+        const id = parseInt(phrase.id, 10);
+        
+        // Debug: Log each ID check
+        console.log(`Checking phrase ID: ${phrase.id}, parsed as: ${id}, valid ID: ${!isNaN(id)}, in range: ${id >= 3001 && id <= 3050}`);
+        
+        // Make sure id is a valid number and within range
+        return !isNaN(id) && id >= 3001 && id <= 3050;
+      });
+      
+      console.log(`Loaded ${shakespearePhrases.length} Shakespeare phrases from CSV`);
+      
+      // Debug: Show which phrases were selected
+      shakespearePhrases.forEach(phrase => {
+        console.log(`Selected Shakespeare phrase ID ${phrase.id}: "${phrase.phrase}"`);
+      });
+      
+      // Rest of the code remains the same...
+      // If no phrases in range, fall back to all phrases
+      if (shakespearePhrases.length === 0) {
+        console.warn('No phrases found in ID range 3001-3050, using all phrases');
+        this.phrases = allPhrases;
+      } else {
+        this.phrases = shakespearePhrases;
+      }
+      
+      // Load a random phrase
+      if (this.phrases.length > 0) {
+        const randomIndex = Math.floor(Math.random() * this.phrases.length);
+        const randomPhrase = this.phrases[randomIndex];
+        
+        console.log('Loading random Shakespeare phrase ID:', randomPhrase.id);
+        this.loadPhrase(randomPhrase);
+      } else {
+        console.warn('No phrases found in CSV');
+        this.loadSampleData();
+      }
+      
+      return this.phrases;
+    } catch (error) {
+      console.error('Error loading phrase data:', error);
       this.loadSampleData();
+      return [];
     }
-    
-    return this.phrases;
-  } catch (error) {
-    console.error('Error loading phrase data:', error);
-    this.loadSampleData();
-    return [];
   }
-}
   
   /**
    * Parse CSV data into an array of phrase objects using PapaParse
    * @param {string} csvData - CSV data string
    * @return {Array} Array of phrase objects
    */
-parseCSV(csvData) {
-  try {
-    const result = Papa.parse(csvData, {
-      header: true,
-      skipEmptyLines: true,
-      dynamicTyping: true,
-      transform: (value, field) => {
-        return typeof value === 'string' ? value.trim() : value;
+  parseCSV(csvData) {
+    try {
+      const result = Papa.parse(csvData, {
+        header: true,
+        skipEmptyLines: true,
+        dynamicTyping: true,
+        transform: (value, field) => {
+          return typeof value === 'string' ? value.trim() : value;
+        }
+      });
+      
+      // Debug: Check headers
+      console.log('CSV headers:', result.meta.fields);
+      
+      if (result.errors && result.errors.length > 0) {
+        console.warn('CSV parsing had errors:', result.errors);
       }
-    });
-    
-    // Debug: Check headers
-    console.log('CSV headers:', result.meta.fields);
-    
-    if (result.errors && result.errors.length > 0) {
-      console.warn('CSV parsing had errors:', result.errors);
+      
+      return result.data || [];
+    } catch (error) {
+      console.error('Error parsing CSV:', error);
+      return [];
     }
-    
-    return result.data || [];
-  } catch (error) {
-    console.error('Error parsing CSV:', error);
-    return [];
   }
-}
   
   /**
    * Load a random phrase from the loaded phrases
