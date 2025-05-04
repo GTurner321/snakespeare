@@ -1092,9 +1092,77 @@ class GridRenderer {
     this.handleCellSelection(x, y, false);
   }
   
-  /**
-   * Set the path for the grid (already implemented above)
-   */
+/**
+ * Set the path for the grid
+ * @param {Array} path - Array of {x, y, letter} objects
+ * @return {boolean} True if all path cells were successfully placed
+ */
+setPath(path) {
+  this.path = path;
+  this.selectedCells = [];
+  this.lastSelectedCell = null; // Reset last selected cell
+  
+  // Reset the completed state
+  this.isCompleted = false;
+  
+  // Reset all cells
+  for (let y = 0; y < this.grid.length; y++) {
+    for (let x = 0; x < this.grid[0].length; x++) {
+      this.grid[y][x].isPath = false;
+      this.grid[y][x].isSelected = false;
+      this.grid[y][x].pathIndex = -1;
+      this.grid[y][x].letter = ''; // Clear all letters initially
+      // Reset the completed state for each cell
+      this.grid[y][x].isCompleted = false;
+    }
+  }
+  
+  // Set start cell
+  const centerX = 25;
+  const centerY = 25;
+  this.grid[centerY][centerX].isPath = true;
+  this.grid[centerY][centerX].isStart = true;
+  this.grid[centerY][centerX].pathIndex = 0;
+  
+  // Track if all path cells were successfully placed
+  let allCellsPlaced = true;
+  
+  // Update cells with path data
+  path.forEach((point, index) => {
+    // Convert from coordinate system to grid indices
+    const gridX = centerX + point.x;
+    const gridY = centerY + point.y;
+    
+    // Check if within grid bounds
+    if (gridY >= 0 && gridY < this.grid.length && gridX >= 0 && gridX < this.grid[0].length) {
+      this.grid[gridY][gridX].letter = point.letter;
+      this.grid[gridY][gridX].isPath = true;
+      this.grid[gridY][gridX].pathIndex = index;
+    } else {
+      // Path point is outside grid bounds
+      allCellsPlaced = false;
+      console.warn(`Path cell at (${point.x}, ${point.y}) is outside grid bounds`);
+    }
+  });
+  
+  // Force a full rebuild of the grid
+  this._lastRenderOffset = null;
+  
+  // Re-render grid
+  this.renderVisibleGrid();
+  
+  // Notify that path has been set
+  document.dispatchEvent(new CustomEvent('pathSet', { 
+    detail: { 
+      path: path, 
+      gridRenderer: this,
+      success: allCellsPlaced // Add success flag to the event
+    }
+  }));
+  
+  // Return success flag so caller knows if generation succeeded
+  return allCellsPlaced;
+}
   
   /**
    * Reset view position to center the grid on the start cell
