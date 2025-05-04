@@ -338,8 +338,8 @@ generateAdjacentRandomLetters() {
   const adjacentCellList = this.findAdjacentCells();
   console.log(`Found ${adjacentCellList.length} valid cells adjacent to the path (excluding congested areas)`);
   
-  // Step 2: Randomly select 30% of these cells
-  const selectedCount = Math.max(1, Math.ceil(adjacentCellList.length * 0.3));
+  // Step 2: Randomly select 40% of these cells
+  const selectedCount = Math.max(1, Math.ceil(adjacentCellList.length * 0.4));
   const shuffledAdjacentCells = this.shuffleArray([...adjacentCellList]);
   const primarySelectedCells = shuffledAdjacentCells.slice(0, selectedCount);
   
