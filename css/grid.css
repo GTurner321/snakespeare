@@ -522,8 +522,8 @@ body {
 
 #menu-button-container {
     position: absolute;
-    top: 18px;  /* Position it vertically centered with top scroll area */
-    right: 20%;  /* Position it to the right, but not at the very edge */
+    top: 10px;
+    right: 20px;
     z-index: 100;
 }
 
