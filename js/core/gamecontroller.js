@@ -479,21 +479,24 @@ async loadPhraseData(csvUrl) {
     // Parse CSV using PapaParse
     const allPhrases = this.parseCSV(csvData);
     
-    // Debug: Log first few phrases to check structure
-    console.log('First 3 phrases:', allPhrases.slice(0, 3));
+// In loadPhraseData(), after parsing CSV:
+console.log('First few phrases and their IDs:');
+allPhrases.slice(0, 10).forEach(phrase => {
+  console.log(`Phrase: "${phrase.phrase}", ID: ${phrase.id}, Type: ${typeof phrase.id}`);
+});
     
-    // Debug: Check column names
-    if (allPhrases.length > 0) {
-      console.log('Available columns:', Object.keys(allPhrases[0]));
-    }
-    
-    // Filter phrases to only those with IDs between 3001-3050
-    const shakespearePhrases = allPhrases.filter(phrase => {
-      const id = parseInt(phrase.id, 10);
-      // Debug: Log each ID check
-      console.log(`Checking phrase ID: ${phrase.id}, parsed as: ${id}, matches range: ${id >= 3001 && id <= 3050}`);
-      return id >= 3001 && id <= 3050;
-    });
+// In gamecontroller.js, update the filtering logic in loadPhraseData:
+// Filter phrases to only those with IDs between 3001-3050
+const shakespearePhrases = allPhrases.filter(phrase => {
+  // Parse the id as an integer
+  const id = parseInt(phrase.id, 10);
+  
+  // Debug: Log each ID check
+  console.log(`Checking phrase ID: ${phrase.id}, parsed as: ${id}, valid ID: ${!isNaN(id)}, in range: ${id >= 3001 && id <= 3050}`);
+  
+  // Make sure id is a valid number and within range
+  return !isNaN(id) && id >= 3001 && id <= 3050;
+});
     
     console.log(`Loaded ${shakespearePhrases.length} Shakespeare phrases from CSV`);
     
@@ -536,29 +539,30 @@ async loadPhraseData(csvUrl) {
    * @param {string} csvData - CSV data string
    * @return {Array} Array of phrase objects
    */
-  parseCSV(csvData) {
-    try {
-      // Use PapaParse for more robust CSV parsing
-      const result = Papa.parse(csvData, {
-        header: true,
-        skipEmptyLines: true,
-        dynamicTyping: true, // Convert numeric values automatically
-        transform: (value, field) => {
-          // Trim whitespace from all string values
-          return typeof value === 'string' ? value.trim() : value;
-        }
-      });
-      
-      if (result.errors && result.errors.length > 0) {
-        console.warn('CSV parsing had errors:', result.errors);
+parseCSV(csvData) {
+  try {
+    const result = Papa.parse(csvData, {
+      header: true,
+      skipEmptyLines: true,
+      dynamicTyping: true,
+      transform: (value, field) => {
+        return typeof value === 'string' ? value.trim() : value;
       }
-      
-      return result.data || [];
-    } catch (error) {
-      console.error('Error parsing CSV:', error);
-      return [];
+    });
+    
+    // Debug: Check headers
+    console.log('CSV headers:', result.meta.fields);
+    
+    if (result.errors && result.errors.length > 0) {
+      console.warn('CSV parsing had errors:', result.errors);
     }
+    
+    return result.data || [];
+  } catch (error) {
+    console.error('Error parsing CSV:', error);
+    return [];
   }
+}
   
   /**
    * Load a random phrase from the loaded phrases
