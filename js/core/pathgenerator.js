@@ -293,8 +293,8 @@ class PathGenerator {
     const adjacentCellList = this.findAdjacentCells();
     console.log(`Found ${adjacentCellList.length} cells adjacent to the path`);
     
-    // Step 2: Randomly select 20% of these cells
-    const selectedCount = Math.max(1, Math.ceil(adjacentCellList.length * 0.2));
+    // Step 2: Randomly select X% of these cells
+    const selectedCount = Math.max(1, Math.ceil(adjacentCellList.length * 0.25));
     const shuffledAdjacentCells = this.shuffleArray([...adjacentCellList]);
     const adjacentCellList20Percent = shuffledAdjacentCells.slice(0, selectedCount);
     
@@ -334,8 +334,8 @@ class PathGenerator {
       }
     }
     
-    // Step 4: Randomly select 50% of the cells adjacent to the 20% selected
-    const secondarySelectedCount = Math.ceil(adjacentToSelected.length * 0.5);
+    // Step 4: Randomly select Y% of the cells adjacent to the X% selected
+    const secondarySelectedCount = Math.ceil(adjacentToSelected.length * 0.6);
     const shuffledSecondary = this.shuffleArray([...adjacentToSelected]);
     const adjacentCellListSecondary = shuffledSecondary.slice(0, secondarySelectedCount);
     
