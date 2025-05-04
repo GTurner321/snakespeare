@@ -100,14 +100,14 @@ body {
 
 /* Default grid template for desktop */
 .grid-container[data-grid-size="desktop"] {
-    grid-template-columns: repeat(15, 50px);
-    grid-template-rows: repeat(11, 50px);
+    grid-template-columns: repeat(15, 45px);
+    grid-template-rows: repeat(11, 45px);
 }
 
 /* Grid template for mobile */
 .grid-container[data-grid-size="mobile"] {
-    grid-template-columns: repeat(9, 50px);
-    grid-template-rows: repeat(9, 50px);
+    grid-template-columns: repeat(9, 45px);
+    grid-template-rows: repeat(9, 45px);
 }
 
 .grid-cell {
