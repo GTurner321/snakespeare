@@ -100,8 +100,8 @@ body {
 
 /* Default grid template for desktop */
 .grid-container[data-grid-size="desktop"] {
-    grid-template-columns: repeat(13, 50px);
-    grid-template-rows: repeat(9, 50px);
+    grid-template-columns: repeat(15, 50px);
+    grid-template-rows: repeat(11, 50px);
 }
 
 /* Grid template for mobile */
