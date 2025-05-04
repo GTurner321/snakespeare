@@ -244,7 +244,29 @@ class PathGenerator {
     }
     return array;
   }
+
+/**
+ * Check if a cell would create congestion (is between path cells on opposite sides)
+ * @param {number} x - X coordinate to check
+ * @param {number} y - Y coordinate to check
+ * @param {Map} pathCellMap - Map of path cells for lookup
+ * @return {boolean} True if the cell would create congestion
+ */
+isCellCongested(x, y, pathCellMap) {
+  // Check if this cell is between two path cells horizontally
+  const hasHorizontalCongestion = 
+    pathCellMap.has(`${x-1},${y}`) && 
+    pathCellMap.has(`${x+1},${y}`);
   
+  // Check if this cell is between two path cells vertically
+  const hasVerticalCongestion = 
+    pathCellMap.has(`${x},${y-1}`) && 
+    pathCellMap.has(`${x},${y+1}`);
+  
+  // Return true if either type of congestion is detected
+  return hasHorizontalCongestion || hasVerticalCongestion;
+}
+
 /**
  * Find cells adjacent to the path, excluding congested areas
  * @return {Array} Array of {x, y} objects representing cells adjacent to the path
@@ -261,15 +283,6 @@ findAdjacentCells() {
   
   // Iterate through each cell in the path
   for (const pathCell of this.path) {
-    // Check for congestion patterns - two path cells on opposite sides
-    const hasHorizontalCongestion = 
-      pathCellMap.has(`${pathCell.x - 1},${pathCell.y}`) && 
-      pathCellMap.has(`${pathCell.x + 1},${pathCell.y}`);
-    
-    const hasVerticalCongestion = 
-      pathCellMap.has(`${pathCell.x},${pathCell.y - 1}`) && 
-      pathCellMap.has(`${pathCell.x},${pathCell.y + 1}`);
-    
     // For each path cell, check all four adjacent directions
     for (const [dx, dy] of this.directions) {
       const newX = pathCell.x + dx;
@@ -287,7 +300,7 @@ findAdjacentCells() {
       }
       
       // Check if this adjacent cell would create congestion
-      if ((dx === 0 && hasVerticalCongestion) || (dy === 0 && hasHorizontalCongestion)) {
+      if (this.isCellCongested(newX, newY, pathCellMap)) {
         // This cell is between two path cells - exclude it
         excludedCells.add(key);
         continue;
@@ -315,6 +328,12 @@ findAdjacentCells() {
  * @return {Array} Array of {x, y, letter} objects with random letters
  */
 generateAdjacentRandomLetters() {
+  // First, build a map of all path cells for quick lookup (used throughout)
+  const pathCellMap = new Map();
+  for (const pathCell of this.path) {
+    pathCellMap.set(`${pathCell.x},${pathCell.y}`, pathCell);
+  }
+  
   // Step 1: Find all cells adjacent to the path (excluding congested areas)
   const adjacentCellList = this.findAdjacentCells();
   console.log(`Found ${adjacentCellList.length} valid cells adjacent to the path (excluding congested areas)`);
@@ -340,6 +359,11 @@ generateAdjacentRandomLetters() {
       continue;
     }
     
+    // Skip if this cell would create congestion - IMPORTANT NEW CHECK
+    if (this.isCellCongested(cell.x, cell.y, pathCellMap)) {
+      continue;
+    }
+    
     // Check if this cell is adjacent to any of the 30% selected cells
     let isAdjacentToSelected = false;
     for (const selectedCell of primarySelectedCells) {
@@ -359,6 +383,151 @@ generateAdjacentRandomLetters() {
       adjacentToSelected.push(cell);
     }
   }
+  
+  // Log how many cells were found to be adjacent to the selected cells
+  console.log(`Found ${adjacentToSelected.length} cells adjacent to the primary selection (after congestion check)`);
+  
+  // Step 4: Randomly select 60% of the cells adjacent to the 30% selected
+  const secondarySelectedCount = Math.ceil(adjacentToSelected.length * 0.6);
+  const shuffledSecondary = this.shuffleArray([...adjacentToSelected]);
+  const secondarySelectedCells = shuffledSecondary.slice(0, secondarySelectedCount);
+  
+  // Step 5: Combine both lists and assign random letters
+  const allSelectedCells = [
+    ...primarySelectedCells,
+    ...secondarySelectedCells
+  ];
+  
+  // Step 6: Assign random letters based on letter distribution
+  const cellsWithLetters = allSelectedCells.map(cell => ({
+    x: cell.x,
+    y: cell.y,
+    letter: this.getWeightedRandomLetter()
+  }));
+  
+  console.log(`Generated ${cellsWithLetters.length} random letters adjacent to path (${primarySelectedCells.length} primary + ${secondarySelectedCells.length} secondary)`);
+  return cellsWithLetters;
+}
+  
+/**
+ * Find cells adjacent to the path, excluding congested areas
+ * @return {Array} Array of {x, y} objects representing cells adjacent to the path
+ */
+findAdjacentCells() {
+  const adjacentCells = new Set();
+  const excludedCells = new Set();
+  
+  // First, build a map of all path cells for quick lookup
+  const pathCellMap = new Map();
+  for (const pathCell of this.path) {
+    pathCellMap.set(`${pathCell.x},${pathCell.y}`, pathCell);
+  }
+  
+  // Iterate through each cell in the path
+  for (const pathCell of this.path) {
+    // For each path cell, check all four adjacent directions
+    for (const [dx, dy] of this.directions) {
+      const newX = pathCell.x + dx;
+      const newY = pathCell.y + dy;
+      const key = `${newX},${newY}`;
+      
+      // Skip if the cell is already in the path
+      if (this.visited.has(key)) {
+        continue;
+      }
+      
+      // Skip if outside bounds
+      if (Math.abs(newX) > this.maxDistance || Math.abs(newY) > this.maxDistance) {
+        continue;
+      }
+      
+      // Check if this adjacent cell would create congestion
+      if (this.isCellCongested(newX, newY, pathCellMap)) {
+        // This cell is between two path cells - exclude it
+        excludedCells.add(key);
+        continue;
+      }
+      
+      // Otherwise, it's a valid adjacent cell
+      adjacentCells.add(key);
+    }
+  }
+  
+  // Remove any excluded cells from the adjacentCells set
+  for (const key of excludedCells) {
+    adjacentCells.delete(key);
+  }
+  
+  // Convert adjacentCells Set to array of {x, y} objects
+  return Array.from(adjacentCells).map(key => {
+    const [x, y] = key.split(',').map(Number);
+    return { x, y };
+  });
+}
+  
+/**
+ * Generate random letters for cells adjacent to the path
+ * @return {Array} Array of {x, y, letter} objects with random letters
+ */
+generateAdjacentRandomLetters() {
+  // First, build a map of all path cells for quick lookup (used throughout)
+  const pathCellMap = new Map();
+  for (const pathCell of this.path) {
+    pathCellMap.set(`${pathCell.x},${pathCell.y}`, pathCell);
+  }
+  
+  // Step 1: Find all cells adjacent to the path (excluding congested areas)
+  const adjacentCellList = this.findAdjacentCells();
+  console.log(`Found ${adjacentCellList.length} valid cells adjacent to the path (excluding congested areas)`);
+  
+  // Step 2: Randomly select 30% of these cells
+  const selectedCount = Math.max(1, Math.ceil(adjacentCellList.length * 0.3));
+  const shuffledAdjacentCells = this.shuffleArray([...adjacentCellList]);
+  const primarySelectedCells = shuffledAdjacentCells.slice(0, selectedCount);
+  
+  // Create a set for fast lookups of selected cells
+  const selectedCellsSet = new Set(
+    primarySelectedCells.map(cell => `${cell.x},${cell.y}`)
+  );
+  
+  // Step 3: Find cells adjacent to the 30% selected cells but still adjacent to the path
+  const adjacentToSelected = [];
+  
+  for (const cell of adjacentCellList) {
+    const cellKey = `${cell.x},${cell.y}`;
+    
+    // Skip if this cell is already in the 30% selected
+    if (selectedCellsSet.has(cellKey)) {
+      continue;
+    }
+    
+    // Skip if this cell would create congestion - IMPORTANT NEW CHECK
+    if (this.isCellCongested(cell.x, cell.y, pathCellMap)) {
+      continue;
+    }
+    
+    // Check if this cell is adjacent to any of the 30% selected cells
+    let isAdjacentToSelected = false;
+    for (const selectedCell of primarySelectedCells) {
+      const isAdjacent = (
+        (Math.abs(cell.x - selectedCell.x) === 1 && cell.y === selectedCell.y) ||
+        (Math.abs(cell.y - selectedCell.y) === 1 && cell.x === selectedCell.x)
+      );
+      
+      if (isAdjacent) {
+        isAdjacentToSelected = true;
+        break;
+      }
+    }
+    
+    // If it's adjacent to one of the 30% selected cells, add it to our list
+    if (isAdjacentToSelected) {
+      adjacentToSelected.push(cell);
+    }
+  }
+  
+  // Log how many cells were found to be adjacent to the selected cells
+  console.log(`Found ${adjacentToSelected.length} cells adjacent to the primary selection (after congestion check)`);
   
   // Step 4: Randomly select 60% of the cells adjacent to the 30% selected
   const secondarySelectedCount = Math.ceil(adjacentToSelected.length * 0.6);
