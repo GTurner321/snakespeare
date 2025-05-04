@@ -348,13 +348,13 @@ generateAdjacentRandomLetters() {
     primarySelectedCells.map(cell => `${cell.x},${cell.y}`)
   );
   
-  // Step 3: Find cells adjacent to the 30% selected cells but still adjacent to the path
+  // Step 3: Find cells adjacent to the 40% selected cells but still adjacent to the path
   const adjacentToSelected = [];
   
   for (const cell of adjacentCellList) {
     const cellKey = `${cell.x},${cell.y}`;
     
-    // Skip if this cell is already in the 30% selected
+    // Skip if this cell is already in the 40% selected
     if (selectedCellsSet.has(cellKey)) {
       continue;
     }
@@ -378,7 +378,7 @@ generateAdjacentRandomLetters() {
       }
     }
     
-    // If it's adjacent to one of the 30% selected cells, add it to our list
+    // If it's adjacent to one of the 40% selected cells, add it to our list
     if (isAdjacentToSelected) {
       adjacentToSelected.push(cell);
     }
@@ -387,8 +387,8 @@ generateAdjacentRandomLetters() {
   // Log how many cells were found to be adjacent to the selected cells
   console.log(`Found ${adjacentToSelected.length} cells adjacent to the primary selection (after congestion check)`);
   
-  // Step 4: Randomly select 60% of the cells adjacent to the 30% selected
-  const secondarySelectedCount = Math.ceil(adjacentToSelected.length * 0.6);
+  // Step 4: Randomly select 70% of the cells adjacent to the 40% selected
+  const secondarySelectedCount = Math.ceil(adjacentToSelected.length * 0.7);
   const shuffledSecondary = this.shuffleArray([...adjacentToSelected]);
   const secondarySelectedCells = shuffledSecondary.slice(0, secondarySelectedCount);
   
