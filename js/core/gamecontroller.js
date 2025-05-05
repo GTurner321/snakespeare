@@ -96,7 +96,12 @@ class GameController {
   
   // Set up menu handlers
   this.setupMenuHandlers();
-  
+
+  const levelDisplay = document.getElementById('hint-level-display');
+  if (levelDisplay) {
+    levelDisplay.textContent = this.gridRenderer.hintLevel;
+  }
+    
   // NEW: Add event listener for revealed letters
   document.addEventListener('revealedLettersUpdated', (e) => {
     this.updatePhraseWithHints();
@@ -116,9 +121,6 @@ class GameController {
   this.initShakespeareComponent();
 }
   
-/**
- * Set up menu button handlers
- */
 setupMenuHandlers() {
   // New phrase button
   const newPhraseButton = document.getElementById('new-phrase-button');
@@ -140,7 +142,7 @@ setupMenuHandlers() {
     });
   }
   
-  // NEW: Hint level button
+  // Hint level button
   // First, create the button if it doesn't exist
   let hintLevelButton = document.getElementById('hint-level-button');
   if (!hintLevelButton) {
@@ -743,6 +745,8 @@ setHintLevel(level) {
     
     // Update phrase display with revealed letters
     this.updatePhraseWithHints();
+    
+    console.log(`Hint level set to ${level} (${this.gridRenderer.hintLevelPercentages[level] * 100}%)`);
   }
 }
   
