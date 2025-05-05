@@ -127,7 +127,8 @@ setupMenuHandlers() {
   const menuDropdown = document.getElementById('menu-dropdown');
   
   if (menuToggle && menuDropdown) {
-    menuToggle.addEventListener('click', () => {
+    menuToggle.addEventListener('click', (e) => {
+      e.stopPropagation(); // Prevent document click from immediately closing
       menuToggle.classList.toggle('active');
       menuDropdown.classList.toggle('active');
     });
@@ -162,11 +163,17 @@ setupMenuHandlers() {
   }
   
   // Create hint level buttons with descriptive labels
-  // First, clear any existing hint level buttons
+  // First, ensure the menu dropdown exists
+  if (!menuDropdown) {
+    console.error('Menu dropdown not found. Cannot add hint level buttons.');
+    return;
+  }
+  
+  // Remove any existing hint level buttons
   const existingHintButtons = menuDropdown.querySelectorAll('[id^="hint-level-"]');
   existingHintButtons.forEach(button => button.remove());
   
-  // Create hint level options
+  // Create hint level options with clear labels
   const hintLevels = [
     { level: 0, label: "No Hints" },
     { level: 1, label: "Reveal 1 (15%)" },
@@ -182,7 +189,7 @@ setupMenuHandlers() {
     hintButton.textContent = hint.label;
     
     // Highlight the current active hint level
-    if (this.gridRenderer.hintLevel === hint.level) {
+    if (this.gridRenderer && this.gridRenderer.hintLevel === hint.level) {
       hintButton.classList.add('active-hint');
     }
     
@@ -203,6 +210,8 @@ setupMenuHandlers() {
     
     menuDropdown.appendChild(hintButton);
   });
+  
+  console.log('Menu handlers and hint buttons set up successfully');
 }
   
   /**
