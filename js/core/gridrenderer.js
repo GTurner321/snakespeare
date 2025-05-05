@@ -5,79 +5,81 @@
  */
 
 class GridRenderer {
-  /**
-   * Initialize the grid data structure and set up event listeners
-   */
-  constructor(containerId, options = {}) {
-    // Container element
-    this.container = document.getElementById(containerId);
-    if (!this.container) {
-      throw new Error(`Container element with id '${containerId}' not found`);
-    }
-    
-    // Default options - FIXED to ensure values are set
-    this.options = {
-      gridWidth: 13,              // Default for large screens
-      gridHeight: 9,              // Default height
-      gridWidthSmall: 9,          // Default for small screens
-      gridHeightSmall: 9,         // Default for small screens
-      cellSize: 50,               // Cell size in pixels
-      randomFillPercentage: 0,    // Percentage used differently now - controls adjacent filling
-      highlightPath: false,       // Whether to highlight the path initially
-      onCellClick: null,          // Cell click callback
-      onSelectionChange: null,
-      ...options                  // Override with provided options
-    };
-    
-    // Debug log to check options
-    console.log('GridRenderer options:', this.options);
-    
-    // Grid state
-    this.fullGridSize = 51;              // 51x51 grid
-    this.grid = [];                      // 2D array of cell data
-    this.viewOffset = { x: 19, y: 21 };  // Initial view position
-    this.path = [];                      // Current path data
-    this.selectedCells = [];             // Array of selected cell coordinates {x, y}
-    this.randomLetters = [];             // Store generated random letters
-    
-    // New: Track last selected cell for adjacency check
-    this.lastSelectedCell = null;
-    
-    // New: Track touch state for swiping
-    this.touchState = {
-      active: false,
-      lastCellX: -1,
-      lastCellY: -1,
-      isDragging: false,       // Track if we're in a swiping/dragging operation
-      startCellSelected: false // Track if the start cell has been selected
-    };
-    
-    // New: Flag to prevent double event handling (touch and click)
-    this.recentlyHandledTouch = false;
-    
-    // Track the last render offset to avoid unnecessary rebuilds
-    this._lastRenderOffset = null;
-    
-    // New: Add completed state
-    this.isCompleted = false;  // Track if the phrase is completed
-    
-    // Initialize the grid
-    this.initializeGrid();
-    
-    // Create DOM elements
-    this.createGridElements();
-    
-    // Set up responsive handling
-    this.handleResponsive();
-    
-    // Add resize listener with proper binding to maintain 'this' context
-    window.addEventListener('resize', this.handleResponsive.bind(this));
-    
-    // Dispatch event that initialization is complete
-    document.dispatchEvent(new CustomEvent('gridRendererInitialized', { 
-      detail: { gridRenderer: this }
-    }));
+constructor(containerId, options = {}) {
+  // Container element
+  this.container = document.getElementById(containerId);
+  if (!this.container) {
+    throw new Error(`Container element with id '${containerId}' not found`);
   }
+  
+  // Default options - FIXED to ensure values are set
+  this.options = {
+    gridWidth: 13,              // Default for large screens
+    gridHeight: 9,              // Default height
+    gridWidthSmall: 9,          // Default for small screens
+    gridHeightSmall: 9,         // Default for small screens
+    cellSize: 50,               // Cell size in pixels
+    randomFillPercentage: 0,    // Percentage used differently now - controls adjacent filling
+    highlightPath: false,       // Whether to highlight the path initially
+    onCellClick: null,          // Cell click callback
+    onSelectionChange: null,
+    ...options                  // Override with provided options
+  };
+  
+  // Debug log to check options
+  console.log('GridRenderer options:', this.options);
+  
+  // Grid state
+  this.fullGridSize = 51;              // 51x51 grid
+  this.grid = [];                      // 2D array of cell data
+  this.viewOffset = { x: 19, y: 21 };  // Initial view position
+  this.path = [];                      // Current path data
+  this.selectedCells = [];             // Array of selected cell coordinates {x, y}
+  this.randomLetters = [];             // Store generated random letters
+  
+  // New: Track last selected cell for adjacency check
+  this.lastSelectedCell = null;
+  
+  // New: Track touch state for swiping
+  this.touchState = {
+    active: false,
+    lastCellX: -1,
+    lastCellY: -1,
+    isDragging: false,       // Track if we're in a swiping/dragging operation
+    startCellSelected: false // Track if the start cell has been selected
+  };
+  
+  // New: Flag to prevent double event handling (touch and click)
+  this.recentlyHandledTouch = false;
+  
+  // Track the last render offset to avoid unnecessary rebuilds
+  this._lastRenderOffset = null;
+  
+  // New: Add completed state
+  this.isCompleted = false;  // Track if the phrase is completed
+  
+  // NEW: Add hint system properties
+  this.hintLevel = 1;                             // Default hint level (0-3)
+  this.revealedCells = [];                        // Array to track revealed cell coordinates
+  this.hintLevelPercentages = [0, 0.2, 0.35, 0.5]; // Percentages for each level
+  
+  // Initialize the grid
+  this.initializeGrid();
+  
+  // Create DOM elements
+  this.createGridElements();
+  
+  // Set up responsive handling
+  this.handleResponsive();
+  
+  // Add resize listener with proper binding to maintain 'this' context
+  window.addEventListener('resize', this.handleResponsive.bind(this));
+  
+  // Dispatch event that initialization is complete
+  document.dispatchEvent(new CustomEvent('gridRendererInitialized', { 
+    detail: { gridRenderer: this }
+  }));
+}
   
   /**
    * Initialize the grid data structure
@@ -980,6 +982,174 @@ class GridRenderer {
       detail: { gridRenderer: this }
     }));
   }
+
+/**
+ * Reveal pathway letters based on the current hint level
+ * This should be called after setPath() is complete
+ */
+revealPathLetters() {
+  // Clear any previously revealed cells
+  this.revealedCells = [];
+  
+  // If hint level is 0, no letters are revealed
+  if (this.hintLevel === 0) {
+    return;
+  }
+  
+  // Get percentage based on hint level
+  const percentage = this.hintLevelPercentages[this.hintLevel];
+  
+  // Calculate number of cells to reveal (round to nearest whole number)
+  const totalPathCells = this.path.length;
+  const cellsToReveal = Math.round(totalPathCells * percentage);
+  
+  console.log(`Revealing ${cellsToReveal} cells (${percentage * 100}%) at hint level ${this.hintLevel}`);
+  
+  // Create array of path indices (skip start cell at index 0)
+  const indices = Array.from({ length: totalPathCells - 1 }, (_, i) => i + 1);
+  
+  // Shuffle the indices
+  this.shuffleArray(indices);
+  
+  // For level 1, ensure revealed cells are not adjacent in the path
+  if (this.hintLevel === 1) {
+    const selectedIndices = [];
+    const usedIndices = new Set();
+    
+    // Add indices that don't have adjacent neighbors already selected
+    for (let i = 0; i < indices.length && selectedIndices.length < cellsToReveal; i++) {
+      const index = indices[i];
+      
+      // Skip if this index is adjacent to an already selected index
+      if (usedIndices.has(index - 1) || usedIndices.has(index + 1)) {
+        continue;
+      }
+      
+      selectedIndices.push(index);
+      usedIndices.add(index);
+    }
+    
+    // If we couldn't find enough non-adjacent cells, add more until we reach the target
+    let remainingIdx = 0;
+    while (selectedIndices.length < cellsToReveal && remainingIdx < indices.length) {
+      const index = indices[remainingIdx];
+      if (!usedIndices.has(index)) {
+        selectedIndices.push(index);
+        usedIndices.add(index);
+      }
+      remainingIdx++;
+    }
+    
+    // Sort indices to maintain path order
+    selectedIndices.sort((a, b) => a - b);
+    
+    // Mark cells as revealed
+    for (const index of selectedIndices) {
+      const pathCell = this.path[index];
+      const gridX = 25 + pathCell.x; // Convert from path coords to grid coords
+      const gridY = 25 + pathCell.y;
+      
+      this.revealedCells.push({ x: gridX, y: gridY, pathIndex: index });
+      this.grid[gridY][gridX].isRevealed = true;
+    }
+  } 
+  // For levels 2 and 3, just take the top N cells from the shuffled list
+  else {
+    // Take the first cellsToReveal indices
+    const selectedIndices = indices.slice(0, cellsToReveal);
+    
+    // Sort indices to maintain path order
+    selectedIndices.sort((a, b) => a - b);
+    
+    // Mark cells as revealed
+    for (const index of selectedIndices) {
+      const pathCell = this.path[index];
+      const gridX = 25 + pathCell.x; // Convert from path coords to grid coords
+      const gridY = 25 + pathCell.y;
+      
+      this.revealedCells.push({ x: gridX, y: gridY, pathIndex: index });
+      this.grid[gridY][gridX].isRevealed = true;
+    }
+  }
+  
+  console.log('Revealed cells:', this.revealedCells);
+  
+  // Re-render grid to show revealed cells
+  this.renderVisibleGrid();
+  
+  // Update the phrase display with revealed letters
+  this.updatePhraseWithRevealedLetters();
+}
+
+/**
+ * Helper method to shuffle an array using Fisher-Yates algorithm
+ * If PathGenerator already has this method, you can skip adding it here
+ * @param {Array} array - Array to shuffle
+ * @return {Array} Shuffled array
+ */
+shuffleArray(array) {
+  const newArray = [...array]; // Create a copy to avoid modifying the original
+  for (let i = newArray.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+  }
+  return newArray;
+}
+
+/**
+ * Sets the hint level (0-3) and updates revealed cells
+ * @param {number} level - Hint level (0-3)
+ */
+setHintLevel(level) {
+  // Validate level
+  if (level < 0 || level > 3) {
+    console.error('Invalid hint level. Must be between 0 and 3.');
+    return;
+  }
+  
+  this.hintLevel = level;
+  console.log(`Hint level set to ${level}`);
+  
+  // Reveal letters for the new hint level
+  this.revealPathLetters();
+}
+
+/**
+ * Get the letters from revealed cells for updating the phrase template
+ * @return {Array} Array of {x, y, letter, pathIndex} objects for revealed cells
+ */
+getRevealedLetters() {
+  const letters = [];
+  
+  // Add all revealed cells
+  this.revealedCells.forEach(pos => {
+    const cell = this.grid[pos.y][pos.x];
+    if (cell.letter && cell.letter.trim() !== '') {
+      letters.push({
+        x: pos.x,
+        y: pos.y,
+        letter: cell.letter,
+        pathIndex: pos.pathIndex
+      });
+    }
+  });
+  
+  return letters;
+}
+
+/**
+ * Update the phrase with revealed letters
+ * This will be called from setPath and revealPathLetters
+ */
+updatePhraseWithRevealedLetters() {
+  // Dispatch event with revealed letters
+  document.dispatchEvent(new CustomEvent('revealedLettersUpdated', { 
+    detail: { 
+      revealedLetters: this.getRevealedLetters(),
+      gridRenderer: this
+    }
+  }));
+}  
   
   /**
    * Create a cell element with proper attributes and event handlers
@@ -1030,40 +1200,46 @@ class GridRenderer {
     return cellElement;
   }
   
-  updateCellElementClasses(cellElement, x, y) {
-    // Clear existing state classes
-    cellElement.classList.remove('start-cell', 'selected-cell', 'path-cell', 'highlight-enabled', 'completed-cell');
+updateCellElementClasses(cellElement, x, y) {
+  // Clear existing state classes
+  cellElement.classList.remove('start-cell', 'selected-cell', 'path-cell', 'highlight-enabled', 'completed-cell');
+  // NEW: Add this line to remove revealed-cell class
+  cellElement.classList.remove('revealed-cell');
+  
+  // If cell is within grid bounds
+  if (y >= 0 && y < this.grid.length && x >= 0 && x < this.grid[0].length) {
+    const cell = this.grid[y][x];
     
-    // If cell is within grid bounds
-    if (y >= 0 && y < this.grid.length && x >= 0 && x < this.grid[0].length) {
-      const cell = this.grid[y][x];
+    // IMPORTANT: Check for completed state FIRST, before other states
+    if (cell.isCompleted) {
+      cellElement.classList.add('completed-cell');
+      // No need to check other states when completed
+      return;
+    }
+    
+    // Apply styling for different cell states (only if not completed)
+    if (cell.isStart) {
+      cellElement.classList.add('start-cell');
+    } 
+    else if (cell.isSelected) {
+      cellElement.classList.add('selected-cell');
+    } 
+    // NEW: Add this block to handle revealed cells
+    else if (cell.isRevealed) {
+      cellElement.classList.add('revealed-cell');
+    }
+    
+    // Path cells are now always marked, but only highlighted in purple if option is enabled
+    if (cell.isPath) {
+      cellElement.classList.add('path-cell');
       
-      // IMPORTANT: Check for completed state FIRST, before other states
-      if (cell.isCompleted) {
-        cellElement.classList.add('completed-cell');
-        // No need to check other states when completed
-        return;
-      }
-      
-      // Apply styling for different cell states (only if not completed)
-      if (cell.isStart) {
-        cellElement.classList.add('start-cell');
-      } 
-      else if (cell.isSelected) {
-        cellElement.classList.add('selected-cell');
-      } 
-      
-      // Path cells are now always marked, but only highlighted in purple if option is enabled
-      if (cell.isPath) {
-        cellElement.classList.add('path-cell');
-        
-        // Add highlight-enabled class only if path highlighting is turned on
-        if (this.options.highlightPath) {
-          cellElement.classList.add('highlight-enabled');
-        }
+      // Add highlight-enabled class only if path highlighting is turned on
+      if (this.options.highlightPath) {
+        cellElement.classList.add('highlight-enabled');
       }
     }
   }
+}
   
   /**
    * Check if two cells are adjacent
@@ -1114,6 +1290,8 @@ setPath(path) {
       this.grid[y][x].letter = ''; // Clear all letters initially
       // Reset the completed state for each cell
       this.grid[y][x].isCompleted = false;
+      // NEW: Reset the revealed state
+      this.grid[y][x].isRevealed = false;
     }
   }
   
@@ -1159,6 +1337,15 @@ setPath(path) {
       success: allCellsPlaced // Add success flag to the event
     }
   }));
+  
+  // After the path is set and random letters are applied, call revealPathLetters
+  // Add this right before returning from the method:
+  if (allCellsPlaced) {
+    // Clear any previous revealed cells
+    this.revealedCells = [];
+    // Set new revealed cells based on hint level
+    this.revealPathLetters();
+  }
   
   // Return success flag so caller knows if generation succeeded
   return allCellsPlaced;
