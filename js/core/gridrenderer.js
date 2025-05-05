@@ -1200,36 +1200,23 @@ updatePhraseWithRevealedLetters() {
     return cellElement;
   }
   
+/**
+ * Update cell element classes with proper precedence
+ * @param {HTMLElement} cellElement - DOM element for the cell
+ * @param {number} x - X coordinate
+ * @param {number} y - Y coordinate
+ */
 updateCellElementClasses(cellElement, x, y) {
   // Clear existing state classes
-  cellElement.classList.remove('start-cell', 'selected-cell', 'path-cell', 'highlight-enabled', 'completed-cell');
-  // NEW: Add this line to remove revealed-cell class
-  cellElement.classList.remove('revealed-cell');
+  cellElement.classList.remove('start-cell', 'selected-cell', 'path-cell', 'highlight-enabled', 'completed-cell', 'revealed-cell');
   
   // If cell is within grid bounds
   if (y >= 0 && y < this.grid.length && x >= 0 && x < this.grid[0].length) {
     const cell = this.grid[y][x];
     
-    // IMPORTANT: Check for completed state FIRST, before other states
-    if (cell.isCompleted) {
-      cellElement.classList.add('completed-cell');
-      // No need to check other states when completed
-      return;
-    }
+    // Class application with proper precedence:
     
-    // Apply styling for different cell states (only if not completed)
-    if (cell.isStart) {
-      cellElement.classList.add('start-cell');
-    } 
-    else if (cell.isSelected) {
-      cellElement.classList.add('selected-cell');
-    } 
-    // NEW: Add this block to handle revealed cells
-    else if (cell.isRevealed) {
-      cellElement.classList.add('revealed-cell');
-    }
-    
-    // Path cells are now always marked, but only highlighted in purple if option is enabled
+    // 1. Path cell class is applied first as a base state
     if (cell.isPath) {
       cellElement.classList.add('path-cell');
       
@@ -1237,6 +1224,24 @@ updateCellElementClasses(cellElement, x, y) {
       if (this.options.highlightPath) {
         cellElement.classList.add('highlight-enabled');
       }
+    }
+    
+    // 2. Revealed state - applied after path but before selection/completion
+    if (cell.isRevealed) {
+      cellElement.classList.add('revealed-cell');
+    }
+    
+    // 3. Start cell, selected, and completed states have highest precedence
+    if (cell.isCompleted) {
+      cellElement.classList.add('completed-cell');
+      return; // No need to check other states when completed
+    }
+    
+    if (cell.isStart) {
+      cellElement.classList.add('start-cell');
+    } 
+    else if (cell.isSelected) {
+      cellElement.classList.add('selected-cell');
     }
   }
 }
