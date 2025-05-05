@@ -358,9 +358,9 @@ body {
 /* Horizontal scroll areas (left & right) - updated width to match top/bottom height */
 .scroll-area-left,
 .scroll-area-right {
-    width: 180px;
+    width: 240px;
     height: 100%;
-    margin: 0 5px;
+    margin: 0;
     border-radius: 8px;
 }
 /* Scroll arrows */
