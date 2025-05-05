@@ -61,7 +61,7 @@ constructor(containerId, options = {}) {
   // NEW: Add hint system properties
   this.hintLevel = 1;                             // Default hint level (0-3)
   this.revealedCells = [];                        // Array to track revealed cell coordinates
-  this.hintLevelPercentages = [0, 0.2, 0.35, 0.5]; // Percentages for each level
+  this.hintLevelPercentages = [0, 0.15, 0.25, 0.35]; // Percentages for each level
   
   // Initialize the grid
   this.initializeGrid();
@@ -1000,13 +1000,14 @@ revealPathLetters() {
   const percentage = this.hintLevelPercentages[this.hintLevel];
   
   // Calculate number of cells to reveal (round to nearest whole number)
-  const totalPathCells = this.path.length;
+  // IMPORTANT: Skip the start cell at index 0 when calculating
+  const totalPathCells = this.path.length - 1; // Subtract 1 to exclude start cell
   const cellsToReveal = Math.round(totalPathCells * percentage);
   
   console.log(`Revealing ${cellsToReveal} cells (${percentage * 100}%) at hint level ${this.hintLevel}`);
   
   // Create array of path indices (skip start cell at index 0)
-  const indices = Array.from({ length: totalPathCells - 1 }, (_, i) => i + 1);
+  const indices = Array.from({ length: totalPathCells }, (_, i) => i + 1);
   
   // Shuffle the indices
   const shuffledIndices = this.shuffleArray([...indices]);
