@@ -347,7 +347,7 @@ body {
 
 .scroll-area-left,
 .scroll-area-right {
-    width: 240px;
+    width: 180px;
     height: 100%;
     border-radius: 8px;
 }
