@@ -333,23 +333,33 @@ updatePhraseWithHints() {
 }
 
 /**
- * Fill phrase template with hints
- * @param {string} template - Phrase template with underscores
- * @param {string} phrase - Original phrase
- * @param {Array} revealedLetters - Array of revealed letter objects
- * @return {string} Updated template with revealed letters
+ * Enhanced version of fillPhraseTemplateWithHints method for GameController.js
+ * This adds detailed debugging to help identify why the first letter might be showing
+ * as revealed or why consecutive letters are being revealed in level 1
  */
+
 fillPhraseTemplateWithHints(template, phrase, revealedLetters) {
   // Check if we have empty input
   if (!template || !phrase || !revealedLetters || revealedLetters.length === 0) {
     return template || '';
   }
   
+  // Log inputs for debugging
+  console.log('--------- fillPhraseTemplateWithHints ---------');
+  console.log('Template:', template);
+  console.log('Phrase:', phrase);
+  console.log('Revealed letters count:', revealedLetters.length);
+  console.log('First few revealed letters:', revealedLetters.slice(0, 3).map(l => 
+    `{pathIndex: ${l.pathIndex}, x: ${l.x}, y: ${l.y}, letter: ${l.letter}}`
+  ));
+  
   const templateArray = template.split('');
   const phraseArray = phrase.toUpperCase().split('');
   
   // Get the alphanumeric characters from the phrase
   const alphanumericChars = phrase.split('').filter(char => /[a-zA-Z0-9]/.test(char));
+  console.log('Alphanumeric characters in phrase:', alphanumericChars.join(''));
+  console.log('Total alphanumeric chars:', alphanumericChars.length);
   
   // Create a mapping of path indices to phrase positions
   let alphaIndex = 0;
@@ -358,21 +368,56 @@ fillPhraseTemplateWithHints(template, phrase, revealedLetters) {
   for (let i = 0; i < phrase.length; i++) {
     if (/[a-zA-Z0-9]/.test(phrase[i])) {
       pathIndexToCharPos.set(alphaIndex, i);
+      console.log(`Path index ${alphaIndex} maps to phrase position ${i} (char: ${phrase[i]})`);
       alphaIndex++;
     }
   }
   
   // Fill in revealed letters in the template
   for (const revealedCell of revealedLetters) {
+    // Check if this is the start cell - should never be revealed
+    if (revealedCell.pathIndex === 0) {
+      console.warn('WARNING: Start cell (index 0) is in revealed letters! This should not happen.');
+      continue; // Skip the start cell
+    }
+    
     // Get the phrase position for this path index
     const phrasePos = pathIndexToCharPos.get(revealedCell.pathIndex);
     
     if (phrasePos !== undefined) {
+      console.log(`Revealing letter at path index ${revealedCell.pathIndex}, phrase pos ${phrasePos}: ${phraseArray[phrasePos]}`);
       templateArray[phrasePos] = phraseArray[phrasePos];
+    } else {
+      console.warn(`No phrase position found for path index ${revealedCell.pathIndex}`);
     }
   }
   
-  return templateArray.join('');
+  // Check adjacency in level 1 (if applicable)
+  if (this.gridRenderer && this.gridRenderer.hintLevel === 1) {
+    console.log('Checking adjacency in revealed letters (Level 1)...');
+    
+    // Get revealed indices
+    const revealedIndices = revealedLetters.map(cell => cell.pathIndex).sort((a, b) => a - b);
+    console.log('Revealed indices (sorted):', revealedIndices);
+    
+    // Check for adjacent indices
+    let hasAdjacent = false;
+    for (let i = 0; i < revealedIndices.length - 1; i++) {
+      if (revealedIndices[i] + 1 === revealedIndices[i + 1]) {
+        console.warn(`WARNING: Adjacent indices found in Level 1: ${revealedIndices[i]} and ${revealedIndices[i + 1]}`);
+        hasAdjacent = true;
+      }
+    }
+    
+    if (!hasAdjacent) {
+      console.log('No adjacent indices found - Level 1 adjacency constraint is satisfied');
+    }
+  }
+  
+  const result = templateArray.join('');
+  console.log('Final template after applying hints:', result);
+  console.log('----------------------------------------');
+  return result;
 }
   
   updatePhraseFromSelections(selectedLetters) {
