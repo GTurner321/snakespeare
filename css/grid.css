@@ -394,7 +394,7 @@ body {
 
 /* Slow scroll for automatic scrolling (twice as slow) */
 .grid-container.slow-scroll {
-    transition-duration: 1200ms;
+    transition-duration: 3000ms;
 }
 
 /* Make selected cells more visible during auto-scroll */
