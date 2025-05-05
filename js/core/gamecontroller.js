@@ -13,128 +13,171 @@ import ArrowButtons from './arrowbuttons.js';
 
 class GameController {
   constructor(options = {}) {
-    // Default options with proper structure for gridSize
-    this.options = {
-      gameContainerId: options.gameContainerId || 'game-container',
-      gridContainerId: options.gridContainerId || 'grid-container',
-      gridSize: { 
-        mobile: { width: 9, height: 9 },
-        desktop: { width: 13, height: 9 }
-      },
-      cellSize: options.cellSize || 50,
-      randomFillPercentage: options.randomFillPercentage !== undefined ? options.randomFillPercentage : 0,
-      // Random fill percentage is now used for the adjacent-cell filling algorithm
-      // A value of 0 means no random filling at all
-    };
-    
-    // Override default gridSize if provided with correct structure
-    if (options.gridSize) {
-      // Make sure we have proper objects with width/height properties
-      if (options.gridSize.mobile) {
-        // If it's already an object with width/height, use it
-        if (typeof options.gridSize.mobile.width === 'number' && 
-            typeof options.gridSize.mobile.height === 'number') {
-          this.options.gridSize.mobile = options.gridSize.mobile;
-        } 
-        // If it's just a number, convert to object (backwards compatibility)
-        else if (typeof options.gridSize.mobile === 'number') {
-          console.warn('Deprecated: gridSize.mobile should be an object with width/height properties');
-          this.options.gridSize.mobile = { 
-            width: options.gridSize.mobile, 
-            height: options.gridSize.mobile 
-          };
-        }
-      }
-      
-      if (options.gridSize.desktop) {
-        // If it's already an object with width/height, use it
-        if (typeof options.gridSize.desktop.width === 'number' && 
-            typeof options.gridSize.desktop.height === 'number') {
-          this.options.gridSize.desktop = options.gridSize.desktop;
-        } 
-        // If it's just a number, convert to object (backwards compatibility)
-        else if (typeof options.gridSize.desktop === 'number') {
-          console.warn('Deprecated: gridSize.desktop should be an object with width/height properties');
-          this.options.gridSize.desktop = { 
-            width: options.gridSize.desktop, 
-            height: 9 // Default height
-          };
-        }
+  // Default options with proper structure for gridSize
+  this.options = {
+    gameContainerId: options.gameContainerId || 'game-container',
+    gridContainerId: options.gridContainerId || 'grid-container',
+    gridSize: { 
+      mobile: { width: 9, height: 9 },
+      desktop: { width: 13, height: 9 }
+    },
+    cellSize: options.cellSize || 50,
+    randomFillPercentage: options.randomFillPercentage !== undefined ? options.randomFillPercentage : 0,
+    // Random fill percentage is now used for the adjacent-cell filling algorithm
+    // A value of 0 means no random filling at all
+  };
+  
+  // Override default gridSize if provided with correct structure
+  if (options.gridSize) {
+    // Make sure we have proper objects with width/height properties
+    if (options.gridSize.mobile) {
+      // If it's already an object with width/height, use it
+      if (typeof options.gridSize.mobile.width === 'number' && 
+          typeof options.gridSize.mobile.height === 'number') {
+        this.options.gridSize.mobile = options.gridSize.mobile;
+      } 
+      // If it's just a number, convert to object (backwards compatibility)
+      else if (typeof options.gridSize.mobile === 'number') {
+        console.warn('Deprecated: gridSize.mobile should be an object with width/height properties');
+        this.options.gridSize.mobile = { 
+          width: options.gridSize.mobile, 
+          height: options.gridSize.mobile 
+        };
       }
     }
     
-    // Log the final configuration to help with debugging
-    console.log('GameController initialized with options:', this.options);
-    
-    // Game state
-    this.currentPhrase = null;
-    this.currentPath = null;
-    this.phrases = [];
-    this.phraseTemplate = null; // Store the underscores template
-    
-    // Initialize components
-    this.pathGenerator = new PathGenerator();
-    
-    // Pass gridSize correctly to GridRenderer
-    this.gridRenderer = new GridRenderer(this.options.gridContainerId, {
-      gridWidth: this.options.gridSize.desktop.width,
-      gridHeight: this.options.gridSize.desktop.height,
-      gridWidthSmall: this.options.gridSize.mobile.width,
-      gridHeightSmall: this.options.gridSize.mobile.height,
-      cellSize: this.options.cellSize,
-      randomFillPercentage: this.options.randomFillPercentage,
-      highlightPath: false,
-      onCellClick: (x, y, cell) => this.handleCellClick(x, y, cell),
-      onSelectionChange: () => this.handleSelectionChange()
-    });
-    
-    // Initialize scroll areas AFTER grid renderer is fully created
-    // This ensures the grid element exists for proper positioning
-    this.scrollHandler = new ArrowButtons(this.gridRenderer, {
-      gameContainerId: this.options.gameContainerId
-    });
-    
-    // Set up menu handlers
-    this.setupMenuHandlers();
-    
-    // Add window resize handler
-    window.addEventListener('resize', () => {
-      this.handleResize();
-    });
-
-    // Dispatch custom event for initialization complete
-    document.dispatchEvent(new CustomEvent('gameInitialized', { 
-      detail: { controller: this }
-    }));
-
-    // Initialize Shakespeare component
-    this.initShakespeareComponent();
+    if (options.gridSize.desktop) {
+      // If it's already an object with width/height, use it
+      if (typeof options.gridSize.desktop.width === 'number' && 
+          typeof options.gridSize.desktop.height === 'number') {
+        this.options.gridSize.desktop = options.gridSize.desktop;
+      } 
+      // If it's just a number, convert to object (backwards compatibility)
+      else if (typeof options.gridSize.desktop === 'number') {
+        console.warn('Deprecated: gridSize.desktop should be an object with width/height properties');
+        this.options.gridSize.desktop = { 
+          width: options.gridSize.desktop, 
+          height: 9 // Default height
+        };
+      }
+    }
   }
   
-  /**
-   * Set up menu button handlers
-   */
-  setupMenuHandlers() {
-    // New phrase button
-    const newPhraseButton = document.getElementById('new-phrase-button');
-    if (newPhraseButton) {
-      newPhraseButton.addEventListener('click', () => {
-        this.loadRandomPhrase();
-        document.getElementById('menu-dropdown').classList.remove('active');
-        document.getElementById('menu-toggle').classList.remove('active');
-      });
-    }
-    
-    // Reset selections button
-    const resetSelectionsButton = document.getElementById('reset-selections-button');
-    if (resetSelectionsButton) {
-      resetSelectionsButton.addEventListener('click', () => {
-        this.resetSelections();
-        document.getElementById('menu-dropdown').classList.remove('active');
-        document.getElementById('menu-toggle').classList.remove('active');
-      });
+  // Log the final configuration to help with debugging
+  console.log('GameController initialized with options:', this.options);
+  
+  // Game state
+  this.currentPhrase = null;
+  this.currentPath = null;
+  this.phrases = [];
+  this.phraseTemplate = null; // Store the underscores template
+  
+  // Initialize components
+  this.pathGenerator = new PathGenerator();
+  
+  // Pass gridSize correctly to GridRenderer
+  this.gridRenderer = new GridRenderer(this.options.gridContainerId, {
+    gridWidth: this.options.gridSize.desktop.width,
+    gridHeight: this.options.gridSize.desktop.height,
+    gridWidthSmall: this.options.gridSize.mobile.width,
+    gridHeightSmall: this.options.gridSize.mobile.height,
+    cellSize: this.options.cellSize,
+    randomFillPercentage: this.options.randomFillPercentage,
+    highlightPath: false,
+    onCellClick: (x, y, cell) => this.handleCellClick(x, y, cell),
+    onSelectionChange: () => this.handleSelectionChange()
+  });
+  
+  // Initialize scroll areas AFTER grid renderer is fully created
+  // This ensures the grid element exists for proper positioning
+  this.scrollHandler = new ArrowButtons(this.gridRenderer, {
+    gameContainerId: this.options.gameContainerId
+  });
+  
+  // Set up menu handlers
+  this.setupMenuHandlers();
+  
+  // NEW: Add event listener for revealed letters
+  document.addEventListener('revealedLettersUpdated', (e) => {
+    this.updatePhraseWithHints();
+  });
+  
+  // Add window resize handler
+  window.addEventListener('resize', () => {
+    this.handleResize();
+  });
+
+  // Dispatch custom event for initialization complete
+  document.dispatchEvent(new CustomEvent('gameInitialized', { 
+    detail: { controller: this }
+  }));
+
+  // Initialize Shakespeare component
+  this.initShakespeareComponent();
+}
+  
+/**
+ * Set up menu button handlers
+ */
+setupMenuHandlers() {
+  // New phrase button
+  const newPhraseButton = document.getElementById('new-phrase-button');
+  if (newPhraseButton) {
+    newPhraseButton.addEventListener('click', () => {
+      this.loadRandomPhrase();
+      document.getElementById('menu-dropdown').classList.remove('active');
+      document.getElementById('menu-toggle').classList.remove('active');
+    });
+  }
+  
+  // Reset selections button
+  const resetSelectionsButton = document.getElementById('reset-selections-button');
+  if (resetSelectionsButton) {
+    resetSelectionsButton.addEventListener('click', () => {
+      this.resetSelections();
+      document.getElementById('menu-dropdown').classList.remove('active');
+      document.getElementById('menu-toggle').classList.remove('active');
+    });
+  }
+  
+  // NEW: Hint level button
+  // First, create the button if it doesn't exist
+  let hintLevelButton = document.getElementById('hint-level-button');
+  if (!hintLevelButton) {
+    // Get the menu dropdown
+    const menuDropdown = document.getElementById('menu-dropdown');
+    if (menuDropdown) {
+      // Create the button
+      hintLevelButton = document.createElement('button');
+      hintLevelButton.id = 'hint-level-button';
+      hintLevelButton.className = 'menu-item';
+      hintLevelButton.innerHTML = 'Hint Level: <span id="hint-level-display">1</span>';
+      
+      // Add it to the menu
+      menuDropdown.appendChild(hintLevelButton);
     }
   }
+  
+  // Add event listener to the hint level button
+  if (hintLevelButton) {
+    hintLevelButton.addEventListener('click', () => {
+      // Cycle through hint levels (0-3)
+      const currentLevel = this.gridRenderer.hintLevel;
+      const newLevel = (currentLevel + 1) % 4;
+      this.setHintLevel(newLevel);
+      
+      // Update display
+      const levelDisplay = document.getElementById('hint-level-display');
+      if (levelDisplay) {
+        levelDisplay.textContent = newLevel;
+      }
+      
+      // Close menu
+      document.getElementById('menu-dropdown').classList.remove('active');
+      document.getElementById('menu-toggle').classList.remove('active');
+    });
+  }
+}
   
   /**
    * Handle cell click events
@@ -150,37 +193,38 @@ class GameController {
     this.handleSelectionChange();
   }
   
-  /**
-   * Handle changes to the selected cells
-   */
-  handleSelectionChange() {
-    // Get selected letters
-    const selectedLetters = this.gridRenderer.getSelectedLetters();
-    
-    // Update phrase display with currently selected letters
-    this.updatePhraseFromSelections(selectedLetters);
-    
-    // Update scroll area states
-    if (this.scrollHandler.updateScrollAreaStates) {
-      this.scrollHandler.updateScrollAreaStates();
-    }
-    
-    // Adjust phrase display height after content change
-    if (this.scrollHandler.adjustPhraseDisplayHeight) {
-      setTimeout(() => {
-        this.scrollHandler.adjustPhraseDisplayHeight();
-      }, 50);
-    }
-    
-    // Check if the phrase is completed
-    if (!this.gridRenderer.isCompleted && this.checkPhraseCompleted()) {
-      console.log('Phrase completed!');
-      this.gridRenderer.setCompleted(true);
-      
-      // Optional: Add a visual or audio indicator of completion
-      // For example, flash the phrase display or show a congratulations message
-    }
+/**
+ * Handle changes to the selected cells
+ */
+handleSelectionChange() {
+  // Get selected letters
+  const selectedLetters = this.gridRenderer.getSelectedLetters();
+  
+  // Update phrase display with currently selected letters
+  // CHANGED: Use the new method instead of updatePhraseFromSelections
+  this.updatePhraseWithHints();
+  
+  // Update scroll area states
+  if (this.scrollHandler.updateScrollAreaStates) {
+    this.scrollHandler.updateScrollAreaStates();
   }
+  
+  // Adjust phrase display height after content change
+  if (this.scrollHandler.adjustPhraseDisplayHeight) {
+    setTimeout(() => {
+      this.scrollHandler.adjustPhraseDisplayHeight();
+    }, 50);
+  }
+  
+  // Check if the phrase is completed
+  if (!this.gridRenderer.isCompleted && this.checkPhraseCompleted()) {
+    console.log('Phrase completed!');
+    this.gridRenderer.setCompleted(true);
+    
+    // Optional: Add a visual or audio indicator of completion
+    // For example, flash the phrase display or show a congratulations message
+  }
+}
   
   createPhraseTemplate(phrase) {
     // Only replace alphanumeric characters with underscores
@@ -239,6 +283,95 @@ class GameController {
     console.log('- Result:', result);
     return result;
   }
+
+
+/**
+ * Update phrase display with revealed letters
+ * This replaces the updatePhraseFromSelections method for hint-compatible display
+ */
+updatePhraseWithHints() {
+  if (!this.gridRenderer || !this.currentPhrase || !this.phraseTemplate) {
+    return;
+  }
+  
+  // Get revealed letters from grid renderer
+  const revealedLetters = this.gridRenderer.getRevealedLetters();
+  
+  // Update phrase display with revealed letters
+  const displayElement = document.getElementById('phrase-text');
+  if (!displayElement) return;
+  
+  // Create copy of the template
+  let updatedTemplate = this.phraseTemplate;
+  
+  // Fill in revealed letters directly into the phrase template
+  if (revealedLetters.length > 0) {
+    updatedTemplate = this.fillPhraseTemplateWithHints(
+      this.phraseTemplate,
+      this.currentPhrase.letterlist,
+      revealedLetters
+    );
+  }
+  
+  // Now update with any user-selected letters
+  const selectedLetters = this.gridRenderer.getSelectedLetters();
+  updatedTemplate = this.fillPhraseTemplate(
+    updatedTemplate,
+    this.currentPhrase.letterlist,
+    selectedLetters
+  );
+  
+  // Display the updated template
+  displayElement.textContent = updatedTemplate;
+  
+  // Adjust phrase display height
+  if (this.scrollHandler && this.scrollHandler.adjustPhraseDisplayHeight) {
+    this.scrollHandler.adjustPhraseDisplayHeight();
+  }
+}
+
+/**
+ * Fill phrase template with hints
+ * @param {string} template - Phrase template with underscores
+ * @param {string} phrase - Original phrase
+ * @param {Array} revealedLetters - Array of revealed letter objects
+ * @return {string} Updated template with revealed letters
+ */
+fillPhraseTemplateWithHints(template, phrase, revealedLetters) {
+  // Check if we have empty input
+  if (!template || !phrase || !revealedLetters || revealedLetters.length === 0) {
+    return template || '';
+  }
+  
+  const templateArray = template.split('');
+  const phraseArray = phrase.toUpperCase().split('');
+  
+  // Get the alphanumeric characters from the phrase
+  const alphanumericChars = phrase.split('').filter(char => /[a-zA-Z0-9]/.test(char));
+  
+  // Create a mapping of path indices to phrase positions
+  let alphaIndex = 0;
+  const pathIndexToCharPos = new Map();
+  
+  for (let i = 0; i < phrase.length; i++) {
+    if (/[a-zA-Z0-9]/.test(phrase[i])) {
+      pathIndexToCharPos.set(alphaIndex, i);
+      alphaIndex++;
+    }
+  }
+  
+  // Fill in revealed letters in the template
+  for (const revealedCell of revealedLetters) {
+    // Get the phrase position for this path index
+    const phrasePos = pathIndexToCharPos.get(revealedCell.pathIndex);
+    
+    if (phrasePos !== undefined) {
+      templateArray[phrasePos] = phraseArray[phrasePos];
+    }
+  }
+  
+  return templateArray.join('');
+}
   
   updatePhraseFromSelections(selectedLetters) {
     const displayElement = document.getElementById('phrase-text');
@@ -331,100 +464,111 @@ class GameController {
       });
   }
   
-  // Modified loadPhrase method to use adjacent random letters
-  loadPhrase(phraseData) {
-    this.currentPhrase = phraseData;
+// Modified loadPhrase method to use adjacent random letters
+loadPhrase(phraseData) {
+  this.currentPhrase = phraseData;
+  
+  // Log response for debugging
+  console.log(`Phrase response: "${phraseData.response}"`);
+  
+  // Reset any highlighting
+  this.gridRenderer.options.highlightPath = false;
+  
+  // Reset the completion state
+  this.gridRenderer.setCompleted(false);
+  
+  // Parse letter list from phrase data 
+  const letterList = phraseData.letterlist;
+  
+  console.log(`Loading phrase: "${letterList}" with letterlist: "${letterList}"`);
+  
+  // Create the phrase template with underscores using letterlist
+  this.phraseTemplate = this.createPhraseTemplate(letterList);
+  
+  // Track generation attempts
+  let generationSuccessful = false;
+  let attempts = 0;
+  const MAX_ATTEMPTS = 5; // Maximum number of generation attempts
+  
+  // Try generating the path up to MAX_ATTEMPTS times
+  while (!generationSuccessful && attempts < MAX_ATTEMPTS) {
+    attempts++;
+    console.log(`Path generation attempt #${attempts}`);
     
-    // Log response for debugging
-    console.log(`Phrase response: "${phraseData.response}"`);
+    // Generate path using path generator (will filter out non-alphanumerics)
+    this.currentPath = this.pathGenerator.generatePath(letterList);
     
-    // Reset any highlighting
-    this.gridRenderer.options.highlightPath = false;
-    
-    // Reset the completion state
-    this.gridRenderer.setCompleted(false);
-    
-    // Parse letter list from phrase data 
-    const letterList = phraseData.letterlist;
-    
-    console.log(`Loading phrase: "${letterList}" with letterlist: "${letterList}"`);
-    
-    // Create the phrase template with underscores using letterlist
-    this.phraseTemplate = this.createPhraseTemplate(letterList);
-    
-    // Track generation attempts
-    let generationSuccessful = false;
-    let attempts = 0;
-    const MAX_ATTEMPTS = 5; // Maximum number of generation attempts
-    
-    // Try generating the path up to MAX_ATTEMPTS times
-    while (!generationSuccessful && attempts < MAX_ATTEMPTS) {
-      attempts++;
-      console.log(`Path generation attempt #${attempts}`);
-      
-      // Generate path using path generator (will filter out non-alphanumerics)
-      this.currentPath = this.pathGenerator.generatePath(letterList);
-      
-      // Apply path to grid renderer and check if successful
-      generationSuccessful = this.gridRenderer.setPath(this.currentPath);
-      
-      if (!generationSuccessful) {
-        console.warn(`Path generation attempt #${attempts} failed - retrying...`);
-        // Wait a tiny bit before retrying to avoid tight loop
-        // and allow for different random paths
-        if (attempts < MAX_ATTEMPTS) {
-          // Force seed randomization between attempts
-          this.pathGenerator.shuffleArray([1, 2, 3, 4, 5]);
-        }
-      }
-    }
+    // Apply path to grid renderer and check if successful
+    generationSuccessful = this.gridRenderer.setPath(this.currentPath);
     
     if (!generationSuccessful) {
-      console.error(`Failed to generate valid path after ${MAX_ATTEMPTS} attempts. Phrase may be too long.`);
-      // Optionally: Show an error message to the user or choose a different phrase
-      // For now, we'll continue with the partial path
-    }
-    
-    // NEW: Generate and apply adjacent random letters
-    if (generationSuccessful && this.options.randomFillPercentage > 0) {
-      const randomLetters = this.pathGenerator.generateAdjacentRandomLetters();
-      this.gridRenderer.applyAdjacentRandomLetters(randomLetters);
-      console.log(`Applied ${randomLetters.length} adjacent random letters based on path`);
-    }
-    
-    // Center the grid on the start cell
-    this.gridRenderer.centerGridOnStartCell();
-    
-    // Update scroll area states
-    if (this.scrollHandler && this.scrollHandler.updateScrollAreaStates) {
-      this.scrollHandler.updateScrollAreaStates();
-    }
-    
-    // Display the initial template
-    const displayElement = document.getElementById('phrase-text');
-    if (displayElement) {
-      displayElement.textContent = this.phraseTemplate;
-      
-      // Adjust phrase display height after loading new content
-      if (this.scrollHandler && this.scrollHandler.adjustPhraseDisplayHeight) {
-        setTimeout(() => {
-          this.scrollHandler.adjustPhraseDisplayHeight();
-        }, 50);
+      console.warn(`Path generation attempt #${attempts} failed - retrying...`);
+      // Wait a tiny bit before retrying to avoid tight loop
+      // and allow for different random paths
+      if (attempts < MAX_ATTEMPTS) {
+        // Force seed randomization between attempts
+        this.pathGenerator.shuffleArray([1, 2, 3, 4, 5]);
       }
-    }
-    
-    // Clear any additional elements
-    const meaningEl = document.querySelector('.phrase-meaning');
-    if (meaningEl) {
-      meaningEl.remove();
-    }
-    
-    // If generation failed after all attempts, maybe load a different phrase
-    if (!generationSuccessful) {
-      // Optional: Uncomment to automatically try a different phrase
-      // setTimeout(() => this.loadRandomPhrase(), 500);
     }
   }
+  
+  if (!generationSuccessful) {
+    console.error(`Failed to generate valid path after ${MAX_ATTEMPTS} attempts. Phrase may be too long.`);
+    // Optionally: Show an error message to the user or choose a different phrase
+    // For now, we'll continue with the partial path
+  }
+  
+  // NEW: Generate and apply adjacent random letters
+  if (generationSuccessful && this.options.randomFillPercentage > 0) {
+    const randomLetters = this.pathGenerator.generateAdjacentRandomLetters();
+    this.gridRenderer.applyAdjacentRandomLetters(randomLetters);
+    console.log(`Applied ${randomLetters.length} adjacent random letters based on path`);
+    
+    // NEW: Apply hints after random letters are added
+    // A slight delay to ensure random letters are fully applied
+    setTimeout(() => {
+      this.gridRenderer.revealPathLetters();
+    }, 50);
+  } else {
+    // If no random letters or generation failed, reveal hints immediately
+    if (generationSuccessful) {
+      this.gridRenderer.revealPathLetters();
+    }
+  }
+  
+  // Center the grid on the start cell
+  this.gridRenderer.centerGridOnStartCell();
+  
+  // Update scroll area states
+  if (this.scrollHandler && this.scrollHandler.updateScrollAreaStates) {
+    this.scrollHandler.updateScrollAreaStates();
+  }
+  
+  // Display the initial template
+  const displayElement = document.getElementById('phrase-text');
+  if (displayElement) {
+    displayElement.textContent = this.phraseTemplate;
+    
+    // Adjust phrase display height after loading new content
+    if (this.scrollHandler && this.scrollHandler.adjustPhraseDisplayHeight) {
+      setTimeout(() => {
+        this.scrollHandler.adjustPhraseDisplayHeight();
+      }, 50);
+    }
+  }
+  
+  // Clear any additional elements
+  const meaningEl = document.querySelector('.phrase-meaning');
+  if (meaningEl) {
+    meaningEl.remove();
+  }
+  
+  // If generation failed after all attempts, maybe load a different phrase
+  if (!generationSuccessful) {
+    // Optional: Uncomment to automatically try a different phrase
+    // setTimeout(() => this.loadRandomPhrase(), 500);
+  }
+}
   
   /**
    * Handle window resize events
@@ -592,6 +736,15 @@ class GameController {
     // Load the phrase
     this.loadPhrase(randomPhrase);
   }
+
+setHintLevel(level) {
+  if (this.gridRenderer) {
+    this.gridRenderer.setHintLevel(level);
+    
+    // Update phrase display with revealed letters
+    this.updatePhraseWithHints();
+  }
+}
   
   /**
    * Reset all selections
