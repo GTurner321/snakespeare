@@ -457,41 +457,37 @@ fillPhraseTemplateWithHints(template, phrase, revealedLetters) {
   }
   
   // Fixed checkPhraseCompleted method in GameController.js
-  checkPhraseCompleted() {
-    if (!this.currentPhrase) return false;
-    
-    // Get selected letters - including the start cell
-    const selectedLetters = this.gridRenderer.getSelectedLetters();
-    
-    // Skip the start cell if it doesn't have a letter
-    const validSelectedLetters = selectedLetters.filter(cell => cell.letter.trim() !== '');
-    
-    // Count non-space characters in the letterlist that would be part of the path
-  // IMPORTANT: We need to skip the first letter since it corresponds to the start cell
+ checkPhraseCompleted() {
+  if (!this.currentPhrase) return false;
+  
+  // Get selected letters (which already excludes the start cell)
+  const selectedLetters = this.gridRenderer.getSelectedLetters();
+  const validSelectedLetters = selectedLetters.filter(cell => cell.letter.trim() !== '');
+  
+  // Count non-space characters in the letterlist that would be part of the path
   const letterListArray = this.currentPhrase.letterlist.split('');
-  const letterCountInPath = letterListArray
-    .filter(char => /[a-zA-Z0-9]/.test(char))
-    .length - 1; // Subtract 1 to exclude the first letter (start cell)
-    
-    console.log('Letter count check:', {
-      validSelectedCount: validSelectedLetters.length,
-      letterCountInPath: letterCountInPath
-    });
-    
-    // Check if we've selected exactly the right number of letters
-    // IMPORTANT: Make sure we're comparing the correct counts
-    const isCompleted = validSelectedLetters.length === letterCountInPath;
-    
-    // If newly completed, dispatch an event
-    if (isCompleted && !this.gridRenderer.isCompleted) {
-      console.log('Phrase completed!');
-      
-      // Event is dispatched by the GridRenderer when setCompleted is called
-      this.gridRenderer.setCompleted(true);
-    }
-    
-    return isCompleted;
+  const totalLetterCount = letterListArray.filter(char => /[a-zA-Z0-9]/.test(char)).length;
+  
+  // Subtract 1 from the total count to account for the start cell which is excluded
+  const targetLetterCount = totalLetterCount - 1;
+  
+  console.log('Letter count check:', {
+    validSelectedCount: validSelectedLetters.length,
+    totalLetterCount,
+    targetLetterCount
+  });
+  
+  // Check if we've selected exactly the right number of letters (excluding start cell)
+  const isCompleted = validSelectedLetters.length === targetLetterCount;
+  
+  // If newly completed, dispatch an event
+  if (isCompleted && !this.gridRenderer.isCompleted) {
+    console.log('Phrase completed!');
+    this.gridRenderer.setCompleted(true);
   }
+  
+  return isCompleted;
+}
   
   // New method to initialize ShakespeareResponse component with correct GitHub URL
   initShakespeareComponent() {
