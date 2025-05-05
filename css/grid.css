@@ -147,20 +147,37 @@ body {
 }
 
 /* Path cell highlighting in light yellow */
-.grid-cell.path-cell:not(.selected-cell):not(.start-cell) {
+.grid-cell.path-cell:not(.selected-cell):not(.start-cell):not(.revealed-cell) {
     background-color: #FFF9C4; /* Light yellow for path letters */
     color: #444;
     text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8);
     border: 1px solid #E6DD93; /* Slightly darker yellow border */
 }
 
+/* Style for revealed hint cells (light red) with !important for higher precedence */
+.grid-cell.revealed-cell:not(.selected-cell):not(.start-cell):not(.completed-cell) {
+    background-color: #ffcdd2 !important; /* Light red */
+    border: 1px solid #e57373 !important; /* Slightly darker red border */
+    color: #d32f2f !important; /* Darker red for the letter */
+    box-shadow: inset 0 0 5px rgba(211, 47, 47, 0.3) !important; /* Inner shadow for depth */
+    text-shadow: none !important; /* Remove any text shadow */
+}
+
+/* Specifically target path cells that are also revealed */
+.grid-cell.path-cell.revealed-cell:not(.selected-cell):not(.start-cell):not(.completed-cell) {
+    background-color: #ffcdd2 !important; /* Light red overrides the path cell color */
+    color: #d32f2f !important;
+    border-color: #e57373 !important;
+    text-shadow: none !important; /* Remove any inherited text shadows */
+}
+
 .grid-cell.selected-cell {
-    background-color: #2196F3; /* Blue for selected */
-    color: white;
-    text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.4);
-    z-index: 2; /* Ensure selected is on top of path */
-    box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
-    border: 2px solid #0D47A1; /* Darker blue border */
+    background-color: #2196F3 !important; /* Blue for selected */
+    color: white !important;
+    text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.4) !important;
+    z-index: 2 !important; /* Ensure selected is on top of path */
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.3) !important;
+    border: 2px solid #0D47A1 !important; /* Darker blue border */
 }
 
 /* Completed state styling */
@@ -176,13 +193,13 @@ body {
 /* Override for hover state */
 @media (hover: hover) and (pointer: fine) {
   .grid-cell.completed-cell:hover {
-    background-color: #4CAF50; /* Keep green for completed when hovering */
-    cursor: default; /* Change cursor to default for completed cells */
+    background-color: #4CAF50 !important; /* Keep green for completed when hovering */
+    cursor: default !important; /* Change cursor to default for completed cells */
   }
 }
 
 /* Only show the purple path when highlighting is enabled */
-.grid-cell.path-cell.highlight-enabled:not(.selected-cell):not(.start-cell) {
+.grid-cell.path-cell.highlight-enabled:not(.selected-cell):not(.start-cell):not(.revealed-cell) {
     background-color: #9C27B0; /* Purple for revealed path (when highlight enabled) */
     color: white;
     text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.4);
@@ -224,13 +241,19 @@ body {
     
     /* Ensure selected state always overrides hover */
     .grid-cell.selected-cell:hover {
-        background-color: #2196F3; /* Keep blue for selected when hovering */
-        z-index: 2; /* Keep selected on top */
+        background-color: #2196F3 !important; /* Keep blue for selected when hovering */
+        z-index: 2 !important; /* Keep selected on top */
     }
     
     /* Special hover for path cells */
-    .grid-cell.path-cell:not(.selected-cell):not(.start-cell):hover {
+    .grid-cell.path-cell:not(.selected-cell):not(.start-cell):not(.revealed-cell):hover {
         background-color: #F0E68C; /* Darker yellow on hover */
+    }
+    
+    /* Hover effect for revealed cells */
+    .grid-cell.revealed-cell:not(.selected-cell):not(.completed-cell):hover {
+        background-color: #ef9a9a !important; /* Slightly darker red on hover */
+        cursor: pointer;
     }
 }
 
@@ -272,45 +295,6 @@ body {
         -webkit-tap-highlight-color: transparent;
         /* Disable iOS callouts */
         -webkit-touch-callout: none;
-    }
-}
-
-/* 
- * Add these styles to your grid.css file
- * This defines the appearance of revealed cells
- */
-
-/* Style for revealed hint cells (light red) */
-.grid-cell.revealed-cell {
-    background-color: #ffcdd2; /* Light red */
-    border: 1px solid #e57373; /* Slightly darker red border */
-    color: #d32f2f; /* Darker red for the letter */
-    box-shadow: inset 0 0 5px rgba(211, 47, 47, 0.3); /* Inner shadow for depth */
-}
-
-/* Ensure revealed cell styling doesn't override when selected */
-.grid-cell.revealed-cell.selected-cell {
-    background-color: #2196F3; /* Blue for selected */
-    color: white;
-    text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.4);
-    border: 2px solid #0D47A1; /* Darker blue border */
-    box-shadow: 0 0 8px rgba(0, 0, 0, 0.3); /* Regular box shadow for selected cells */
-}
-
-/* Ensure revealed cell styling doesn't override when completed */
-.grid-cell.revealed-cell.completed-cell {
-    background-color: #4CAF50 !important; /* Green for completed cells */
-    color: white !important;
-    text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.4) !important;
-    border: 1px solid #2E7D32 !important; /* Darker green border */
-    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1) !important;
-}
-
-/* Hover effect for revealed cells (only on non-touch devices) */
-@media (hover: hover) and (pointer: fine) {
-    .grid-cell.revealed-cell:not(.selected-cell):hover {
-        background-color: #ef9a9a; /* Slightly darker red on hover */
-        cursor: pointer;
     }
 }
 
