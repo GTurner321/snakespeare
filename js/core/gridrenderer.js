@@ -1005,67 +1005,71 @@ revealPathLetters() {
   
   console.log(`Revealing ${cellsToReveal} cells (${percentage * 100}%) at hint level ${this.hintLevel}`);
   
-  // Create array of path indices (skip start cell at index 0 if it has no letter)
-  const indices = Array.from({ length: totalPathCells }, (_, i) => i);
+  // Create array of path indices (skip start cell at index 0)
+  const indices = Array.from({ length: totalPathCells - 1 }, (_, i) => i + 1);
   
-  // Shuffle the indices to get random candidates
-  const shuffledIndices = this.shuffleArray(indices);
+  // Shuffle the indices
+  const shuffledIndices = this.shuffleArray([...indices]);
   
-  // Selected indices will store our final selection
-  const selectedIndices = [];
-  
-  // For all hint levels, ensure revealed cells are not adjacent in the path
-  // We'll select positions randomly, but skip any that are adjacent to already selected positions
-  for (let i = 0; i < shuffledIndices.length && selectedIndices.length < cellsToReveal; i++) {
-    const candidateIndex = shuffledIndices[i];
+  // For level 1, ensure revealed cells are not adjacent in the path
+  if (this.hintLevel === 1) {
+    const selectedIndices = [];
+    const usedIndices = new Set();
     
-    // Check if this index is adjacent to any already selected index
-    let isAdjacent = false;
-    for (const selectedIndex of selectedIndices) {
-      if (Math.abs(candidateIndex - selectedIndex) === 1) {
-        isAdjacent = true;
-        break;
-      }
-    }
-    
-    // If not adjacent to any existing selections, add it
-    if (!isAdjacent) {
-      selectedIndices.push(candidateIndex);
-    }
-  }
-  
-  // If we couldn't find enough non-adjacent cells, try one more pass with less strict criteria
-  // This is a fallback in case the phrase is very short and we need more hints
-  if (selectedIndices.length < cellsToReveal) {
-    console.log(`Could only find ${selectedIndices.length} non-adjacent positions. Adding more...`);
-    
-    // Try adding more positions, skipping only those directly adjacent to existing ones
+    // Add indices that don't have adjacent neighbors already selected
     for (let i = 0; i < shuffledIndices.length && selectedIndices.length < cellsToReveal; i++) {
-      const candidateIndex = shuffledIndices[i];
+      const index = shuffledIndices[i];
       
-      // Skip if already selected
-      if (selectedIndices.includes(candidateIndex)) {
+      // Skip if this index is adjacent to an already selected index
+      if (usedIndices.has(index - 1) || usedIndices.has(index + 1)) {
         continue;
       }
       
-      // Add this position
-      selectedIndices.push(candidateIndex);
+      selectedIndices.push(index);
+      usedIndices.add(index);
     }
-  }
-  
-  // Sort indices to maintain path order
-  selectedIndices.sort((a, b) => a - b);
-  
-  console.log('Selected path indices for hints:', selectedIndices);
-  
-  // Mark cells as revealed
-  for (const index of selectedIndices) {
-    const pathCell = this.path[index];
-    const gridX = 25 + pathCell.x; // Convert from path coords to grid coords
-    const gridY = 25 + pathCell.y;
     
-    this.revealedCells.push({ x: gridX, y: gridY, pathIndex: index });
-    this.grid[gridY][gridX].isRevealed = true;
+    // If we couldn't find enough non-adjacent cells, add more until we reach the target
+    let remainingIdx = 0;
+    while (selectedIndices.length < cellsToReveal && remainingIdx < shuffledIndices.length) {
+      const index = shuffledIndices[remainingIdx];
+      if (!usedIndices.has(index)) {
+        selectedIndices.push(index);
+        usedIndices.add(index);
+      }
+      remainingIdx++;
+    }
+    
+    // Sort indices to maintain path order
+    selectedIndices.sort((a, b) => a - b);
+    
+    // Mark cells as revealed
+    for (const index of selectedIndices) {
+      const pathCell = this.path[index];
+      const gridX = 25 + pathCell.x; // Convert from path coords to grid coords
+      const gridY = 25 + pathCell.y;
+      
+      this.revealedCells.push({ x: gridX, y: gridY, pathIndex: index });
+      this.grid[gridY][gridX].isRevealed = true;
+    }
+  } 
+  // For levels 2 and 3, just take random cells without the non-adjacency constraint
+  else {
+    // Take the first cellsToReveal indices from shuffled list
+    const selectedIndices = shuffledIndices.slice(0, cellsToReveal);
+    
+    // Sort indices to maintain path order
+    selectedIndices.sort((a, b) => a - b);
+    
+    // Mark cells as revealed
+    for (const index of selectedIndices) {
+      const pathCell = this.path[index];
+      const gridX = 25 + pathCell.x; // Convert from path coords to grid coords
+      const gridY = 25 + pathCell.y;
+      
+      this.revealedCells.push({ x: gridX, y: gridY, pathIndex: index });
+      this.grid[gridY][gridX].isRevealed = true;
+    }
   }
   
   console.log('Revealed cells:', this.revealedCells);
