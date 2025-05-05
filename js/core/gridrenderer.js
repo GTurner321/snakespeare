@@ -1509,7 +1509,7 @@ setPath(path) {
   getSelectedLetters() {
   const letters = [];
   
-  // Add all selected cells (skipping the start cell)
+  // Add all selected cells (EXPLICITLY skipping the start cell)
   this.selectedCells.forEach(pos => {
     const cell = this.grid[pos.y][pos.x];
     
@@ -1528,12 +1528,6 @@ setPath(path) {
         pathIndex: cell.pathIndex
       });
     }
-  });
-  
-  // Debug logging
-  console.log('getSelectedLetters:', {
-    totalLetters: letters.length,
-    letters: letters.map(l => l.letter).join('')
   });
   
   return letters;
