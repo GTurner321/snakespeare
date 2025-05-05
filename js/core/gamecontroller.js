@@ -467,11 +467,11 @@ fillPhraseTemplateWithHints(template, phrase, revealedLetters) {
     const validSelectedLetters = selectedLetters.filter(cell => cell.letter.trim() !== '');
     
     // Count non-space characters in the letterlist that would be part of the path
-    // This should match the pathGenerator's filtering logic
-    const letterListArray = this.currentPhrase.letterlist.split('');
-    const letterCountInPath = letterListArray
-      .filter(char => /[a-zA-Z0-9]/.test(char))
-      .length;
+  // IMPORTANT: We need to skip the first letter since it corresponds to the start cell
+  const letterListArray = this.currentPhrase.letterlist.split('');
+  const letterCountInPath = letterListArray
+    .filter(char => /[a-zA-Z0-9]/.test(char))
+    .length - 1; // Subtract 1 to exclude the first letter (start cell)
     
     console.log('Letter count check:', {
       validSelectedCount: validSelectedLetters.length,
