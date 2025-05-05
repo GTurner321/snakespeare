@@ -1,5 +1,5 @@
 /**
- * Shakespeare Response Component - Improved Modal Version
+ * Shakespeare Response Component - Improved Modal Version with Close Button
  * Shows Shakespeare image and response in speech bubble when a phrase is completed
  */
 
@@ -33,6 +33,17 @@ class ShakespeareResponse {
     this.bubbleContainer = document.createElement('div');
     this.bubbleContainer.className = 'speech-bubble';
     this.shakespeareContainer.appendChild(this.bubbleContainer);
+    
+    // Create close button (X) in top right of speech bubble
+    this.closeButton = document.createElement('button');
+    this.closeButton.className = 'speech-bubble-close';
+    this.closeButton.innerHTML = '&times;'; // × symbol
+    this.closeButton.setAttribute('aria-label', 'Close');
+    this.closeButton.title = 'Close';
+    this.bubbleContainer.appendChild(this.closeButton);
+    
+    // Add event listener to close button
+    this.closeButton.addEventListener('click', () => this.hideResponse());
     
     // Create paragraph for the response text
     this.responseText = document.createElement('p');
@@ -136,6 +147,42 @@ class ShakespeareResponse {
         width: 0;
       }
       
+      .speech-bubble-close {
+        position: absolute;
+        top: 8px;
+        right: 12px;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background-color: #f44336;
+        color: white;
+        border: none;
+        font-size: 20px;
+        line-height: 1;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        transition: all 0.2s ease-in-out;
+        z-index: 10;
+      }
+      
+      .speech-bubble-close:hover {
+        background-color: #d32f2f;
+        transform: scale(1.1);
+      }
+      
+      .speech-bubble-close:active {
+        transform: scale(0.95);
+      }
+      
+      .speech-bubble-close:focus {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(244, 67, 54, 0.3);
+      }
+      
       .response-text {
         margin: 0;
         font-family: 'Georgia', serif;
@@ -158,6 +205,12 @@ class ShakespeareResponse {
         .response-text {
           font-size: 20px;
         }
+        
+        .speech-bubble-close {
+          width: 26px;
+          height: 26px;
+          font-size: 18px;
+        }
       }
       
       /* Small screens */
@@ -173,6 +226,14 @@ class ShakespeareResponse {
         
         .response-text {
           font-size: 18px;
+        }
+        
+        .speech-bubble-close {
+          width: 24px;
+          height: 24px;
+          font-size: 16px;
+          top: 6px;
+          right: 10px;
         }
       }
     `;
@@ -195,17 +256,27 @@ class ShakespeareResponse {
     // Set a timeout to hide after the specified duration
     clearTimeout(this.hideTimeout);
     this.hideTimeout = setTimeout(() => {
-      // Add fade-out class
-      this.modalOverlay.classList.add('fade-out');
-      
-      // Hide completely after fade animation completes
-      setTimeout(() => {
-        this.modalOverlay.style.display = 'none';
-      }, this.options.fadeDuration);
+      this.hideResponse();
     }, this.options.displayDuration);
     
     // Log that we're showing the response
     console.log('Showing Shakespeare response:', response);
+  }
+  
+  /**
+   * Hide the response modal with fade animation
+   */
+  hideResponse() {
+    // Add fade-out class
+    this.modalOverlay.classList.add('fade-out');
+    
+    // Hide completely after fade animation completes
+    setTimeout(() => {
+      this.modalOverlay.style.display = 'none';
+    }, this.options.fadeDuration);
+    
+    // Clear any existing timeout
+    clearTimeout(this.hideTimeout);
   }
   
   /**
