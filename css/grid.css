@@ -644,6 +644,12 @@ body {
     background-color: #e8e8e8;
 }
 
+.menu-item.hint-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 /* Add your new styles here */
 .menu-item.hint-button.active-hint {
     background-color: #e0e0e0;
