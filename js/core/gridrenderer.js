@@ -987,6 +987,10 @@ constructor(containerId, options = {}) {
  * Reveal pathway letters based on the current hint level
  * This should be called after setPath() is complete
  */
+/**
+ * Reveal pathway letters based on the current hint level
+ * This should be called after setPath() is complete
+ */
 revealPathLetters() {
   // Clear any previously revealed cells
   this.revealedCells = [];
@@ -1011,18 +1015,22 @@ revealPathLetters() {
   // Get percentage based on hint level
   const percentage = this.hintLevelPercentages[this.hintLevel];
   
+  // IMPORTANT CHANGE: Create array of available path indices (excluding start cell at index 0)
+  // All calculations will now be based on this reduced set
+  const availableIndices = [];
+  for (let i = 1; i < this.path.length; i++) {
+    availableIndices.push(i);
+  }
+  
   // Calculate number of cells to reveal (round to nearest whole number)
-  // IMPORTANT: Skip the start cell at index 0 when calculating
-  const totalPathCells = this.path.length - 1; // Subtract 1 to exclude start cell
-  const cellsToReveal = Math.round(totalPathCells * percentage);
+  // Now based on availableIndices.length instead of path.length - 1
+  const totalAvailablePathCells = availableIndices.length;
+  const cellsToReveal = Math.round(totalAvailablePathCells * percentage);
   
-  console.log(`Revealing ${cellsToReveal} cells (${percentage * 100}%) at hint level ${this.hintLevel}`);
-  
-  // Create array of path indices (skip start cell at index 0)
-  const indices = Array.from({ length: totalPathCells }, (_, i) => i + 1);
+  console.log(`Revealing ${cellsToReveal} cells (${percentage * 100}%) at hint level ${this.hintLevel} from ${totalAvailablePathCells} available cells`);
   
   // Shuffle the indices
-  const shuffledIndices = this.shuffleArray([...indices]);
+  const shuffledIndices = this.shuffleArray([...availableIndices]);
   
   // Clear any previously revealed cells first
   for (let y = 0; y < this.grid.length; y++) {
@@ -1065,6 +1073,7 @@ revealPathLetters() {
       const gridX = 25 + pathCell.x; // Convert from path coords to grid coords
       const gridY = 25 + pathCell.y;
       
+      // Store the pathIndex for proper phrase syncing
       this.revealedCells.push({ x: gridX, y: gridY, pathIndex: index });
       this.grid[gridY][gridX].isRevealed = true;
     }
@@ -1074,7 +1083,9 @@ revealPathLetters() {
   else if (this.hintLevel === 2 || this.hintLevel === 3) {
     // First, get the level 1 percentage for non-adjacent cells
     const level1Percentage = this.hintLevelPercentages[1]; // 0.15 or 15%
-    const level1CellCount = Math.round(totalPathCells * level1Percentage);
+    
+    // IMPORTANT CHANGE: Calculate level 1 cells based on totalAvailablePathCells
+    const level1CellCount = Math.round(totalAvailablePathCells * level1Percentage);
     
     // Calculate additional cells for current level
     const additionalCellCount = cellsToReveal - level1CellCount;
@@ -1126,6 +1137,7 @@ revealPathLetters() {
   }
   
   console.log(`Total revealed cells: ${this.revealedCells.length}`);
+  console.log('Revealed cells pathIndices:', this.revealedCells.map(cell => cell.pathIndex).join(', '));
   
   // Re-render grid to show revealed cells
   this.renderVisibleGrid();
