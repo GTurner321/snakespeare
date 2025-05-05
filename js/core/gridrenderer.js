@@ -776,7 +776,7 @@ class GridRenderer {
     const lastCell = this.selectedCells[this.selectedCells.length - 1];
     
     // Buffer size - how many cells we want to maintain between edge and selected cell
-    const bufferSize = 1;
+    const bufferSize = 4;
     
     // Minimum distance before scrolling is triggered
     const minDistance = 0;
