@@ -644,6 +644,18 @@ body {
     background-color: #e8e8e8;
 }
 
+/* Add your new styles here */
+.menu-item.hint-button.active-hint {
+    background-color: #e0e0e0;
+    font-weight: bold;
+}
+
+.menu-dropdown {
+    max-height: 80vh;
+    overflow-y: auto;
+    z-index: 1000; /* Ensure menu appears above other elements */
+}
+
 /* Medium/Small screens */
 @media (max-width: 768px) {
     #menu-button-container {
