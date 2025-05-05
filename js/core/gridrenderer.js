@@ -993,6 +993,18 @@ revealPathLetters() {
   
   // If hint level is 0, no letters are revealed
   if (this.hintLevel === 0) {
+    console.log('Hint level 0 - no letters revealed');
+    // Make sure to clear any previously revealed letter markers
+    for (let y = 0; y < this.grid.length; y++) {
+      for (let x = 0; x < this.grid[0].length; x++) {
+        if (this.grid[y][x].isRevealed) {
+          this.grid[y][x].isRevealed = false;
+        }
+      }
+    }
+    // Update the phrase display to reflect no revealed letters
+    this.updatePhraseWithRevealedLetters();
+    this.renderVisibleGrid();
     return;
   }
   
@@ -1012,6 +1024,15 @@ revealPathLetters() {
   // Shuffle the indices
   const shuffledIndices = this.shuffleArray([...indices]);
   
+  // Clear any previously revealed cells first
+  for (let y = 0; y < this.grid.length; y++) {
+    for (let x = 0; x < this.grid[0].length; x++) {
+      if (this.grid[y][x].isRevealed) {
+        this.grid[y][x].isRevealed = false;
+      }
+    }
+  }
+  
   // For level 1, ensure revealed cells are not adjacent in the path
   if (this.hintLevel === 1) {
     const selectedIndices = [];
@@ -1028,21 +1049,15 @@ revealPathLetters() {
       
       selectedIndices.push(index);
       usedIndices.add(index);
-    }
-    
-    // If we couldn't find enough non-adjacent cells, add more until we reach the target
-    let remainingIdx = 0;
-    while (selectedIndices.length < cellsToReveal && remainingIdx < shuffledIndices.length) {
-      const index = shuffledIndices[remainingIdx];
-      if (!usedIndices.has(index)) {
-        selectedIndices.push(index);
-        usedIndices.add(index);
-      }
-      remainingIdx++;
+      
+      // Also mark adjacent indices as "used" to prevent them from being selected
+      usedIndices.add(index - 1);
+      usedIndices.add(index + 1);
     }
     
     // Sort indices to maintain path order
     selectedIndices.sort((a, b) => a - b);
+    console.log('Level 1 - Selected indices:', selectedIndices);
     
     // Mark cells as revealed
     for (const index of selectedIndices) {
@@ -1054,16 +1069,53 @@ revealPathLetters() {
       this.grid[gridY][gridX].isRevealed = true;
     }
   } 
-  // For levels 2 and 3, just take random cells without the non-adjacency constraint
-  else {
-    // Take the first cellsToReveal indices from shuffled list
-    const selectedIndices = shuffledIndices.slice(0, cellsToReveal);
+  // For levels 2 and 3, we need to maintain the level 1 non-adjacent cells,
+  // then add additional random cells without the adjacency restriction
+  else if (this.hintLevel === 2 || this.hintLevel === 3) {
+    // First, get the level 1 percentage for non-adjacent cells
+    const level1Percentage = this.hintLevelPercentages[1]; // 0.15 or 15%
+    const level1CellCount = Math.round(totalPathCells * level1Percentage);
+    
+    // Calculate additional cells for current level
+    const additionalCellCount = cellsToReveal - level1CellCount;
+    
+    // Step 1: Select level 1 cells (non-adjacent)
+    const level1Indices = [];
+    const usedIndices = new Set();
+    
+    // Add indices that don't have adjacent neighbors already selected
+    for (let i = 0; i < shuffledIndices.length && level1Indices.length < level1CellCount; i++) {
+      const index = shuffledIndices[i];
+      
+      // Skip if this index is adjacent to an already selected index
+      if (usedIndices.has(index - 1) || usedIndices.has(index + 1)) {
+        continue;
+      }
+      
+      level1Indices.push(index);
+      usedIndices.add(index);
+      
+      // Also mark adjacent indices as "used" to prevent them from being selected in level 1
+      usedIndices.add(index - 1);
+      usedIndices.add(index + 1);
+    }
+    
+    console.log(`Level ${this.hintLevel} - Selected ${level1Indices.length} non-adjacent cells from level 1`);
+    
+    // Step 2: Select additional cells for current level (can be adjacent)
+    const remainingIndices = shuffledIndices.filter(index => !level1Indices.includes(index));
+    const additionalIndices = remainingIndices.slice(0, additionalCellCount);
+    
+    console.log(`Level ${this.hintLevel} - Selected ${additionalIndices.length} additional cells`);
+    
+    // Combine all indices
+    const allSelectedIndices = [...level1Indices, ...additionalIndices];
     
     // Sort indices to maintain path order
-    selectedIndices.sort((a, b) => a - b);
+    allSelectedIndices.sort((a, b) => a - b);
     
     // Mark cells as revealed
-    for (const index of selectedIndices) {
+    for (const index of allSelectedIndices) {
       const pathCell = this.path[index];
       const gridX = 25 + pathCell.x; // Convert from path coords to grid coords
       const gridY = 25 + pathCell.y;
@@ -1073,7 +1125,7 @@ revealPathLetters() {
     }
   }
   
-  console.log('Revealed cells:', this.revealedCells);
+  console.log(`Total revealed cells: ${this.revealedCells.length}`);
   
   // Re-render grid to show revealed cells
   this.renderVisibleGrid();
@@ -1455,50 +1507,37 @@ setPath(path) {
   }
   
   getSelectedLetters() {
-    const letters = [];
+  const letters = [];
+  
+  // Add all selected cells (skipping the start cell)
+  this.selectedCells.forEach(pos => {
+    const cell = this.grid[pos.y][pos.x];
     
-    // Start with the start cell (if it has a letter)
-    const centerX = 25;
-    const centerY = 25;
-    const startCell = this.grid[centerY][centerX];
-    
-    // If the start cell is already selected, don't add it twice
-    const isStartCellSelected = this.selectedCells.some(
-      cell => cell.x === centerX && cell.y === centerY
-    );
-    
-    // Add start cell only if:
-    // 1. It has a letter
-    // 2. It's not already in selectedCells (to avoid duplication)
-    if (!isStartCellSelected && startCell.letter && startCell.letter.trim() !== '') {
-      letters.push({
-        x: centerX,
-        y: centerY,
-        letter: startCell.letter
-      });
+    // Skip the start cell at 25,25
+    const isStartCell = (pos.x === 25 && pos.y === 25);
+    if (isStartCell) {
+      return; // Skip the start cell
     }
     
-    // Add all selected cells
-    this.selectedCells.forEach(pos => {
-      const cell = this.grid[pos.y][pos.x];
-      // Only include if the cell has a letter
-      if (cell.letter && cell.letter.trim() !== '') {
-        letters.push({
-          x: pos.x,
-          y: pos.y,
-          letter: cell.letter
-        });
-      }
-    });
-    
-    // Debug logging
-    console.log('getSelectedLetters:', {
-      totalLetters: letters.length,
-      letters: letters.map(l => l.letter).join('')
-    });
-    
-    return letters;
-  }
+    // Only include if the cell has a letter
+    if (cell.letter && cell.letter.trim() !== '') {
+      letters.push({
+        x: pos.x,
+        y: pos.y,
+        letter: cell.letter,
+        pathIndex: cell.pathIndex
+      });
+    }
+  });
+  
+  // Debug logging
+  console.log('getSelectedLetters:', {
+    totalLetters: letters.length,
+    letters: letters.map(l => l.letter).join('')
+  });
+  
+  return letters;
+}
   
   /**
    * Clear all selected cells
