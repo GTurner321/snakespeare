@@ -12,6 +12,20 @@
 </head>
 <body>
     <div id="game-container" class="game-container">
+        <!-- Menu button and dropdown -->
+        <div id="menu-button-container">
+            <button id="menu-toggle" class="menu-button">
+                <div class="menu-icon">
+                    <span></span>
+                </div>
+            </button>
+            <div id="menu-dropdown" class="menu-dropdown">
+                <button id="new-phrase-button" class="menu-item">New Phrase</button>
+                <button id="reset-selections-button" class="menu-item">Reset Selections</button>
+                <button id="hint-level-button" class="menu-item">Hint Level: <span id="hint-level-display">1</span></button>
+            </div>
+        </div>
+        
         <!-- Grid container only - everything else will be created by JS -->
         <div id="grid-container" class="grid-container-wrapper"></div>
     </div>
@@ -36,6 +50,12 @@
                 },
                 cellSize: 45,
                 randomFillPercentage: 0.8  // Enable adjacent-cells random letter filling (80% to create sufficient clutter)
+            });
+            
+            // Set up menu toggle functionality
+            document.getElementById('menu-toggle').addEventListener('click', function() {
+                this.classList.toggle('active');
+                document.getElementById('menu-dropdown').classList.toggle('active');
             });
             
             // Attempt to load phrase data from CSV
