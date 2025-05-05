@@ -162,14 +162,7 @@ setupMenuHandlers() {
     });
   }
   
-  // Create hint level buttons with descriptive labels
-  // First, ensure the menu dropdown exists
-  if (!menuDropdown) {
-    console.error('Menu dropdown not found. Cannot add hint level buttons.');
-    return;
-  }
-  
-  // Remove any existing hint level buttons
+  // Clear any existing hint level buttons
   const existingHintButtons = menuDropdown.querySelectorAll('[id^="hint-level-"]');
   existingHintButtons.forEach(button => button.remove());
   
