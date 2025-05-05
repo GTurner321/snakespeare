@@ -122,13 +122,32 @@ class GameController {
 }
   
 setupMenuHandlers() {
+  // First, set up the menu toggle button functionality
+  const menuToggle = document.getElementById('menu-toggle');
+  const menuDropdown = document.getElementById('menu-dropdown');
+  
+  if (menuToggle && menuDropdown) {
+    menuToggle.addEventListener('click', () => {
+      menuToggle.classList.toggle('active');
+      menuDropdown.classList.toggle('active');
+    });
+    
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!menuToggle.contains(e.target) && !menuDropdown.contains(e.target)) {
+        menuToggle.classList.remove('active');
+        menuDropdown.classList.remove('active');
+      }
+    });
+  }
+  
   // New phrase button
   const newPhraseButton = document.getElementById('new-phrase-button');
   if (newPhraseButton) {
     newPhraseButton.addEventListener('click', () => {
       this.loadRandomPhrase();
-      document.getElementById('menu-dropdown').classList.remove('active');
-      document.getElementById('menu-toggle').classList.remove('active');
+      menuDropdown.classList.remove('active');
+      menuToggle.classList.remove('active');
     });
   }
   
@@ -137,48 +156,53 @@ setupMenuHandlers() {
   if (resetSelectionsButton) {
     resetSelectionsButton.addEventListener('click', () => {
       this.resetSelections();
-      document.getElementById('menu-dropdown').classList.remove('active');
-      document.getElementById('menu-toggle').classList.remove('active');
+      menuDropdown.classList.remove('active');
+      menuToggle.classList.remove('active');
     });
   }
   
-  // Hint level button
-  // First, create the button if it doesn't exist
-  let hintLevelButton = document.getElementById('hint-level-button');
-  if (!hintLevelButton) {
-    // Get the menu dropdown
-    const menuDropdown = document.getElementById('menu-dropdown');
-    if (menuDropdown) {
-      // Create the button
-      hintLevelButton = document.createElement('button');
-      hintLevelButton.id = 'hint-level-button';
-      hintLevelButton.className = 'menu-item';
-      hintLevelButton.innerHTML = 'Hint Level: <span id="hint-level-display">1</span>';
-      
-      // Add it to the menu
-      menuDropdown.appendChild(hintLevelButton);
-    }
-  }
+  // Create hint level buttons with descriptive labels
+  // First, clear any existing hint level buttons
+  const existingHintButtons = menuDropdown.querySelectorAll('[id^="hint-level-"]');
+  existingHintButtons.forEach(button => button.remove());
   
-  // Add event listener to the hint level button
-  if (hintLevelButton) {
-    hintLevelButton.addEventListener('click', () => {
-      // Cycle through hint levels (0-3)
-      const currentLevel = this.gridRenderer.hintLevel;
-      const newLevel = (currentLevel + 1) % 4;
-      this.setHintLevel(newLevel);
+  // Create hint level options
+  const hintLevels = [
+    { level: 0, label: "No Hints" },
+    { level: 1, label: "Reveal 1 (15%)" },
+    { level: 2, label: "Reveal 2 (25%)" },
+    { level: 3, label: "Reveal 3 (35%)" }
+  ];
+  
+  // Add each hint level button to the menu
+  hintLevels.forEach(hint => {
+    const hintButton = document.createElement('button');
+    hintButton.id = `hint-level-${hint.level}`;
+    hintButton.className = 'menu-item hint-button';
+    hintButton.textContent = hint.label;
+    
+    // Highlight the current active hint level
+    if (this.gridRenderer.hintLevel === hint.level) {
+      hintButton.classList.add('active-hint');
+    }
+    
+    hintButton.addEventListener('click', () => {
+      // Set the hint level
+      this.setHintLevel(hint.level);
       
-      // Update display
-      const levelDisplay = document.getElementById('hint-level-display');
-      if (levelDisplay) {
-        levelDisplay.textContent = newLevel;
-      }
+      // Update active class on all hint buttons
+      document.querySelectorAll('.hint-button').forEach(btn => {
+        btn.classList.remove('active-hint');
+      });
+      hintButton.classList.add('active-hint');
       
       // Close menu
-      document.getElementById('menu-dropdown').classList.remove('active');
-      document.getElementById('menu-toggle').classList.remove('active');
+      menuDropdown.classList.remove('active');
+      menuToggle.classList.remove('active');
     });
-  }
+    
+    menuDropdown.appendChild(hintButton);
+  });
 }
   
   /**
