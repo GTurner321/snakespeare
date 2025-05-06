@@ -347,14 +347,30 @@ fillPhraseTemplate(template, phrase, selectedLetters) {
   const validSelectedLetters = selectedLetters.filter(cell => 
     cell.letter && cell.letter.trim() !== '');
   
+  // DEBUG: Print selected letter path indices
+  console.log('Selected letter path indices:', validSelectedLetters.map(cell => cell.pathIndex).join(', '));
+  
   // Create a mapping of path indices to phrase positions
   let alphaIndex = 0;
   const pathIndexToCharPos = new Map();
   
   for (let i = 0; i < phrase.length; i++) {
     if (/[a-zA-Z0-9]/.test(phrase[i])) {
+      // Map all path indices including start cell (index 0)
       pathIndexToCharPos.set(alphaIndex, i);
+      console.log(`Path index ${alphaIndex} maps to phrase position ${i} (letter: ${phrase[i]})`);
       alphaIndex++;
+    }
+  }
+  
+  // Add the start cell letter manually if it exists in the path
+  // This is to handle the case where the start cell isn't included in selectedLetters
+  if (this.currentPath && this.currentPath.length > 0 && this.currentPath[0].letter) {
+    const startCellLetter = this.currentPath[0].letter;
+    const startCellPhrasePos = pathIndexToCharPos.get(0);
+    if (startCellPhrasePos !== undefined) {
+      console.log(`Adding start cell letter ${startCellLetter} at phrase position ${startCellPhrasePos}`);
+      templateArray[startCellPhrasePos] = phraseArray[startCellPhrasePos];
     }
   }
   
@@ -364,6 +380,9 @@ fillPhraseTemplate(template, phrase, selectedLetters) {
     if (phrasePos !== undefined) {
       // Use the actual letter from the phrase at this position
       templateArray[phrasePos] = phraseArray[phrasePos];
+      console.log(`Mapping selected letter at path index ${cell.pathIndex} to phrase position ${phrasePos}: ${phraseArray[phrasePos]}`);
+    } else {
+      console.warn(`No phrase position found for path index ${cell.pathIndex}`);
     }
   });
   
