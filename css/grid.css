@@ -172,12 +172,12 @@ body {
 }
 
 .grid-cell.selected-cell {
-    background-color: #2196F3 !important; /* Blue for selected */
-    color: white !important;
-    text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.4) !important;
-    z-index: 2 !important; /* Ensure selected is on top of path */
-    box-shadow: 0 0 8px rgba(0, 0, 0, 0.3) !important;
-    border: 2px solid #0D47A1 !important; /* Darker blue border */
+  background-color: #2196F3 !important; /* Blue for selected */
+  color: white !important;
+  text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.4) !important;
+  z-index: 2 !important; /* Ensure selected is on top of path */
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.3) !important;
+  border: 2px solid #0D47A1 !important; /* Darker blue border */
 }
 
 /* Completed state styling */
