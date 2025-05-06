@@ -1186,9 +1186,10 @@ setHintLevel(level) {
 getRevealedLetters() {
   const letters = [];
   
-  // Add all revealed cells
+  // Add all revealed cells INCLUDING start cell if it's revealed
   this.revealedCells.forEach(pos => {
     const cell = this.grid[pos.y][pos.x];
+    // Only add if it has a non-empty letter
     if (cell.letter && cell.letter.trim() !== '') {
       letters.push({
         x: pos.x,
@@ -1199,9 +1200,10 @@ getRevealedLetters() {
     }
   });
   
+  console.log('Revealed letters:', letters.map(l => `${l.letter}(${l.pathIndex})`).join(', '));
   return letters;
 }
-
+  
 /**
  * Update the phrase with revealed letters
  * This will be called from setPath and revealPathLetters
