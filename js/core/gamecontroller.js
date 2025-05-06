@@ -260,59 +260,42 @@ handleSelectionChange() {
     return phrase.replace(/[a-zA-Z0-9]/g, '_');
   }
   
-  fillPhraseTemplate(template, phrase, selectedLetters) {
-    // Check if we have empty input
-    if (!template || !phrase || !selectedLetters) {
-      return template || '';
-    }
-    
-    // Log for debugging
-    console.log('Filling phrase template:');
-    console.log('- Template:', template);
-    console.log('- Phrase:', phrase);
-    console.log('- Selected letters:', selectedLetters.map(l => l.letter).join(''));
-    
-    const templateArray = template.split('');
-    const phraseArray = phrase.toUpperCase().split('');
-    
-    // Only use letters that actually have content
-    const validSelectedLetters = selectedLetters.filter(cell => 
-      cell.letter && cell.letter.trim() !== '');
-    
-    // Log the filtered letters
-    console.log('- Valid selected letters:', validSelectedLetters.map(l => l.letter).join(''));
-    
-    // Get the alphanumeric characters from the phrase (matching the path filtering)
-    const alphanumericFromPhrase = phrase.split('')
-      .filter(char => /[a-zA-Z0-9]/.test(char));
-    
-    console.log('- Alphanumeric chars in phrase:', alphanumericFromPhrase.join(''));
-    console.log('- Selected letter count:', validSelectedLetters.length);
-    
-    // Create a mapping of underscore positions to selected letters
-    let filledLetterIndex = 0;
-    
-    // Go through each character in the phrase
-    for (let i = 0; i < phrase.length; i++) {
-      const phraseChar = phrase.charAt(i);
-      
-      // If this character is alphanumeric (and thus has an underscore in the template)
-      if (/[a-zA-Z0-9]/.test(phraseChar)) {
-        // Check if we have a selected letter for this position
-        if (filledLetterIndex < validSelectedLetters.length) {
-          // Fill the underscore with the actual letter from the phrase
-          templateArray[i] = phraseArray[i];
-          filledLetterIndex++;
-        }
-      }
-    }
-    
-    const result = templateArray.join('');
-    console.log('- Result:', result);
-    return result;
+fillPhraseTemplate(template, phrase, selectedLetters) {
+  // Check if we have empty input
+  if (!template || !phrase || !selectedLetters) {
+    return template || '';
   }
-
-
+  
+  const templateArray = template.split('');
+  const phraseArray = phrase.toUpperCase().split('');
+  
+  // Only use letters that actually have content
+  const validSelectedLetters = selectedLetters.filter(cell => 
+    cell.letter && cell.letter.trim() !== '');
+  
+  // Create a mapping of path indices to phrase positions
+  let alphaIndex = 0;
+  const pathIndexToCharPos = new Map();
+  
+  for (let i = 0; i < phrase.length; i++) {
+    if (/[a-zA-Z0-9]/.test(phrase[i])) {
+      pathIndexToCharPos.set(alphaIndex, i);
+      alphaIndex++;
+    }
+  }
+  
+  // For each selected letter, find its position in the phrase using pathIndex
+  validSelectedLetters.forEach(cell => {
+    const phrasePos = pathIndexToCharPos.get(cell.pathIndex);
+    if (phrasePos !== undefined) {
+      // Use the actual letter from the phrase at this position
+      templateArray[phrasePos] = phraseArray[phrasePos];
+    }
+  });
+  
+  return templateArray.join('');
+}
+  
 updatePhraseWithHints() {
   if (!this.gridRenderer || !this.currentPhrase || !this.phraseTemplate) {
     return;
