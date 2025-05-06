@@ -122,29 +122,64 @@ class GameController {
 }
   
 /**
- * Complete setupMenuHandlers method with comprehensive debugging
- * This should replace the entire method in your gamecontroller.js file
- */
-/**
  * Sets up the menu handlers for the hamburger menu
  * Creates 5 menu options: New Phrase, Reset Selections, and 3 hint levels
+ * Also handles potential duplicate menu elements
  */
 setupMenuHandlers() {
   console.log('Setting up menu handlers');
   
-  // Get references to menu elements
-  const menuToggle = document.getElementById('menu-toggle');
-  const menuDropdown = document.getElementById('menu-dropdown');
+  // Step 1: Find all menu elements
+  const menuDropdowns = document.querySelectorAll('.menu-dropdown');
+  console.log(`Found ${menuDropdowns.length} menu dropdown elements`);
   
-  if (!menuToggle || !menuDropdown) {
-    console.error('Cannot find menu elements - aborting setup');
+  // Step 2: Handle duplicate menus if they exist
+  let menuDropdown;
+  
+  if (menuDropdowns.length > 1) {
+    console.warn('Multiple menu dropdowns found - resolving duplicates');
+    
+    // Find the one we should keep (prefer the visible one if active)
+    let keepMenu = null;
+    
+    for (const menu of menuDropdowns) {
+      if (menu.classList.contains('active')) {
+        keepMenu = menu;
+        break;
+      }
+    }
+    
+    // If no active menu found, use the first one
+    if (!keepMenu) {
+      keepMenu = menuDropdowns[0];
+    }
+    
+    menuDropdown = keepMenu;
+    
+    // Remove other menus
+    for (const menu of menuDropdowns) {
+      if (menu !== keepMenu && menu.parentNode) {
+        menu.parentNode.removeChild(menu);
+      }
+    }
+  } else if (menuDropdowns.length === 1) {
+    menuDropdown = menuDropdowns[0];
+  } else {
+    console.error('No menu dropdown found');
     return;
   }
   
-  // Clear existing menu content
+  // Step 3: Get reference to menu toggle
+  const menuToggle = document.getElementById('menu-toggle');
+  if (!menuToggle) {
+    console.error('Menu toggle button not found');
+    return;
+  }
+  
+  // Step 4: Clear existing menu content
   menuDropdown.innerHTML = '';
   
-  // Create menu items
+  // Step 5: Create menu items
   const menuItems = [
     { id: 'new-phrase-button', text: 'New Phrase', action: () => this.loadRandomPhrase() },
     { id: 'reset-selections-button', text: 'Reset Selections', action: () => this.resetSelections() },
@@ -153,19 +188,16 @@ setupMenuHandlers() {
     { id: 'hint-level-3-button', text: 'Hint Level 3 (35%)', action: () => this.setHintLevel(3) }
   ];
   
-  // Add menu items to dropdown
+  // Add to menu
   menuItems.forEach(item => {
     const button = document.createElement('button');
     button.id = item.id;
     button.className = 'menu-item';
     button.textContent = item.text;
     
-    // Add click handler with proper context binding
     button.addEventListener('click', () => {
       console.log(`${item.id} clicked`);
-      // Execute the action
       item.action();
-      // Close the menu
       menuDropdown.classList.remove('active');
       menuToggle.classList.remove('active');
     });
@@ -173,14 +205,14 @@ setupMenuHandlers() {
     menuDropdown.appendChild(button);
   });
   
-  // Menu toggle click handler
+  // Step 6: Set up menu toggle
   menuToggle.addEventListener('click', (e) => {
-    e.stopPropagation(); // Prevent document click from immediately closing
+    e.stopPropagation();
     menuToggle.classList.toggle('active');
     menuDropdown.classList.toggle('active');
   });
   
-  // Close menu when clicking outside
+  // Step 7: Close menu when clicking outside
   document.addEventListener('click', (e) => {
     if (!menuToggle.contains(e.target) && !menuDropdown.contains(e.target)) {
       menuToggle.classList.remove('active');
@@ -188,7 +220,7 @@ setupMenuHandlers() {
     }
   });
   
-  // Add reset hint level functionality for new phrases
+  // Step 8: Initialize with no hints
   this.resetHintLevel = () => {
     if (this.gridRenderer) {
       console.log('Resetting hint level to 0');
@@ -196,7 +228,6 @@ setupMenuHandlers() {
     }
   };
   
-  // Initialize with no hints
   if (this.gridRenderer) {
     this.gridRenderer.setHintLevel(0);
   }
