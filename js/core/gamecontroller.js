@@ -121,80 +121,102 @@ class GameController {
   this.initShakespeareComponent();
 }
   
-// Replace your current setupMenuHandlers method in GameController.js with this one
-// Replace your current setupMenuHandlers method in GameController.js with this one
+/**
+ * Complete setupMenuHandlers method with comprehensive debugging
+ * This should replace the entire method in your gamecontroller.js file
+ */
 setupMenuHandlers() {
-  // First, set up the menu toggle button functionality
+  console.log('--- MENU SETUP STARTING ---');
+  
+  // Get references to menu elements
   const menuToggle = document.getElementById('menu-toggle');
   const menuDropdown = document.getElementById('menu-dropdown');
   
-  if (menuToggle && menuDropdown) {
-    // Clear any existing menu items
-    menuDropdown.innerHTML = '';
-    
-    // Create the menu items
-    const menuItems = [
-      { id: 'new-phrase-button', text: 'New Phrase' },
-      { id: 'reset-selections-button', text: 'Reset Selections' },
-      { id: 'hint-level-1-button', text: 'Hint Level 1 (15%)' },
-      { id: 'hint-level-2-button', text: 'Hint Level 2 (25%)' },
-      { id: 'hint-level-3-button', text: 'Hint Level 3 (35%)' }
-    ];
-    
-    // Add menu items to dropdown
-    menuItems.forEach(item => {
-      const button = document.createElement('button');
-      button.id = item.id;
-      button.className = 'menu-item';
-      button.textContent = item.text;
-      menuDropdown.appendChild(button);
-    });
-    
-    // Add click event to toggle menu
-    menuToggle.addEventListener('click', (e) => {
-      e.stopPropagation(); // Prevent document click from immediately closing
-      menuToggle.classList.toggle('active');
-      menuDropdown.classList.toggle('active');
-    });
-    
-    // Close menu when clicking outside
-    document.addEventListener('click', (e) => {
-      if (!menuToggle.contains(e.target) && !menuDropdown.contains(e.target)) {
-        menuToggle.classList.remove('active');
-        menuDropdown.classList.remove('active');
-      }
-    });
+  console.log('Menu references:', { 
+    menuToggle: menuToggle ? 'found' : 'missing', 
+    menuDropdown: menuDropdown ? 'found' : 'missing' 
+  });
+  
+  if (!menuToggle || !menuDropdown) {
+    console.error('Cannot find menu elements - aborting setup');
+    return;
   }
   
-  // New phrase button
-  const newPhraseButton = document.getElementById('new-phrase-button');
-  if (newPhraseButton) {
-    newPhraseButton.addEventListener('click', () => {
-      this.loadRandomPhrase();
-      menuDropdown.classList.remove('active');
+  // Clear existing menu content
+  console.log('Clearing existing menu content');
+  menuDropdown.innerHTML = '';
+  
+  // Create menu structure manually
+  const createButton = (id, text) => {
+    const button = document.createElement('button');
+    button.id = id;
+    button.className = 'menu-item';
+    button.textContent = text;
+    return button;
+  };
+  
+  // Create and append all buttons 
+  console.log('Creating menu buttons');
+  const newPhraseButton = createButton('new-phrase-button', 'New Phrase');
+  const resetSelectionsButton = createButton('reset-selections-button', 'Reset Selections');
+  const hintLevel1Button = createButton('hint-level-1-button', 'Hint Level 1 (15%)');
+  const hintLevel2Button = createButton('hint-level-2-button', 'Hint Level 2 (25%)');
+  const hintLevel3Button = createButton('hint-level-3-button', 'Hint Level 3 (35%)');
+  
+  // Append all buttons to menu
+  menuDropdown.appendChild(newPhraseButton);
+  menuDropdown.appendChild(resetSelectionsButton);
+  menuDropdown.appendChild(hintLevel1Button);
+  menuDropdown.appendChild(hintLevel2Button);
+  menuDropdown.appendChild(hintLevel3Button);
+  
+  console.log(`Menu now has ${menuDropdown.children.length} items`);
+  
+  // Menu toggle event
+  console.log('Setting up menu toggle event');
+  menuToggle.addEventListener('click', (e) => {
+    console.log('Menu toggle clicked');
+    e.stopPropagation();
+    menuToggle.classList.toggle('active');
+    menuDropdown.classList.toggle('active');
+  });
+  
+  // Close menu when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!menuToggle.contains(e.target) && !menuDropdown.contains(e.target)) {
       menuToggle.classList.remove('active');
-    });
-  }
-  
-  // Reset selections button
-  const resetSelectionsButton = document.getElementById('reset-selections-button');
-  if (resetSelectionsButton) {
-    resetSelectionsButton.addEventListener('click', () => {
-      this.resetSelections();
       menuDropdown.classList.remove('active');
-      menuToggle.classList.remove('active');
-    });
-  }
+    }
+  });
   
-  // Hint level buttons
+  // New phrase button handler
+  console.log('Setting up new phrase button handler');
+  newPhraseButton.addEventListener('click', () => {
+    console.log('New phrase button clicked');
+    this.loadRandomPhrase();
+    menuDropdown.classList.remove('active');
+    menuToggle.classList.remove('active');
+  });
+  
+  // Reset selections button handler
+  console.log('Setting up reset selections button handler');
+  resetSelectionsButton.addEventListener('click', () => {
+    console.log('Reset selections button clicked');
+    this.resetSelections();
+    menuDropdown.classList.remove('active');
+    menuToggle.classList.remove('active');
+  });
+  
+  // Hint level button handlers
   for (let level = 1; level <= 3; level++) {
     const hintButton = document.getElementById(`hint-level-${level}-button`);
     if (hintButton) {
+      console.log(`Setting up hint level ${level} button handler`);
       hintButton.addEventListener('click', () => {
-        // Set the hint level
+        console.log(`Hint level ${level} button clicked`);
         this.setHintLevel(level);
         
-        // Update active class on all hint buttons
+        // Update active class on hint buttons
         for (let i = 1; i <= 3; i++) {
           const btn = document.getElementById(`hint-level-${i}-button`);
           if (btn) {
@@ -206,31 +228,21 @@ setupMenuHandlers() {
           }
         }
         
-        // Close the menu
         menuDropdown.classList.remove('active');
         menuToggle.classList.remove('active');
       });
     }
   }
   
-  // Add some CSS for the active hint level
-  const style = document.createElement('style');
-  style.textContent = `
-    .menu-item.active-hint {
-      font-weight: bold;
-      background-color: rgba(0, 0, 0, 0.1);
-    }
-  `;
-  document.head.appendChild(style);
+  console.log('Menu handlers setup complete');
   
-  console.log('Menu handlers set up successfully');
-  
-  // Initialize with no hints (level 0)
+  // Add method to reset hint level for new phrases
   this.resetHintLevel = function() {
+    console.log('Resetting hint level');
     if (this.gridRenderer) {
       this.gridRenderer.setHintLevel(0);
       
-      // Remove active class from all hint buttons
+      // Update hint button states
       for (let i = 1; i <= 3; i++) {
         const btn = document.getElementById(`hint-level-${i}-button`);
         if (btn) {
@@ -240,8 +252,13 @@ setupMenuHandlers() {
     }
   };
   
-  // Call resetHintLevel when setupMenuHandlers is called
-  this.resetHintLevel();
+  // Initialize with no hints
+  console.log('Setting initial hint level to 0');
+  if (this.gridRenderer) {
+    this.gridRenderer.setHintLevel(0);
+  }
+  
+  console.log('--- MENU SETUP COMPLETED ---');
 }
   
   /**
