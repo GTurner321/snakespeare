@@ -349,56 +349,35 @@ fillPhraseTemplateWithHints(template, phrase, revealedLetters) {
     return template || '';
   }
   
-  // Log inputs for debugging
-  console.log('--------- fillPhraseTemplateWithHints ---------');
-  console.log('Template:', template);
-  console.log('Phrase:', phrase);
-  console.log('Revealed letters count:', revealedLetters.length);
-  
   const templateArray = template.split('');
   const phraseArray = phrase.toUpperCase().split('');
   
-  // Get the alphanumeric characters from the phrase
-  const alphanumericChars = phrase.split('').filter(char => /[a-zA-Z0-9]/.test(char));
-  console.log('Alphanumeric characters in phrase:', alphanumericChars.join(''));
-  console.log('Total alphanumeric chars:', alphanumericChars.length);
-  
   // Create a mapping of path indices to phrase positions
-  let alphaIndex = 0;
+  // This is the key change - we need to correctly map path indices to phrase positions
   const pathIndexToCharPos = new Map();
+  let phrasePos = 0;
   
   for (let i = 0; i < phrase.length; i++) {
     if (/[a-zA-Z0-9]/.test(phrase[i])) {
-      pathIndexToCharPos.set(alphaIndex, i);
-      console.log(`Path index ${alphaIndex} maps to phrase position ${i} (char: ${phrase[i]})`);
-      alphaIndex++;
+      // Map the path index to the phrase position
+      // The path index should match the alphanumeric index
+      pathIndexToCharPos.set(phrasePos, i);
+      phrasePos++;
     }
   }
   
   // Fill in revealed letters in the template
   for (const revealedCell of revealedLetters) {
-    // Check if this is the start cell - should never be revealed
-    if (revealedCell.pathIndex === 0) {
-      console.warn('WARNING: Start cell (index 0) is in revealed letters! This should not happen.');
-      continue; // Skip the start cell
-    }
-    
     // Get the phrase position for this path index
     const phrasePos = pathIndexToCharPos.get(revealedCell.pathIndex);
     
     if (phrasePos !== undefined) {
-      console.log(`Revealing letter at path index ${revealedCell.pathIndex}, phrase pos ${phrasePos}: ${phraseArray[phrasePos]}`);
-      // Use the letter from the phrase rather than the cell's letter to ensure consistency
+      // Use the letter from the phrase rather than the cell's letter
       templateArray[phrasePos] = phraseArray[phrasePos];
-    } else {
-      console.warn(`No phrase position found for path index ${revealedCell.pathIndex}`);
     }
   }
   
-  const result = templateArray.join('');
-  console.log('Final template after applying hints:', result);
-  console.log('----------------------------------------');
-  return result;
+  return templateArray.join('');
 }
   
   updatePhraseFromSelections(selectedLetters) {
