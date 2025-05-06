@@ -121,6 +121,7 @@ class GameController {
   this.initShakespeareComponent();
 }
   
+// Replace your current setupMenuHandlers method in GameController.js with this one
 setupMenuHandlers() {
   // First, set up the menu toggle button functionality
   const menuToggle = document.getElementById('menu-toggle');
@@ -164,7 +165,17 @@ setupMenuHandlers() {
   
   // Clear any existing hint level buttons
   const existingHintButtons = menuDropdown.querySelectorAll('[id^="hint-level-"]');
-  existingHintButtons.forEach(button => button.remove());
+  existingHintButtons.forEach(button => {
+    if (button.id !== 'hint-level-display') { // Don't remove the display span
+      button.remove();
+    }
+  });
+  
+  // Remove the old hint-level-button if it exists
+  const oldHintButton = document.getElementById('hint-level-button');
+  if (oldHintButton) {
+    oldHintButton.remove();
+  }
   
   // Create hint level options with clear labels
   const hintLevels = [
