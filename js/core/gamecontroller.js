@@ -354,41 +354,64 @@ updatePhraseWithHints() {
  * This adds detailed debugging to help identify why the first letter might be showing
  * as revealed or why consecutive letters are being revealed in level 1
  */
+/**
+ * Enhanced version of fillPhraseTemplateWithHints method for GameController.js
+ * This fixes the issue where the first letter is never revealed
+ */
 fillPhraseTemplateWithHints(template, phrase, revealedLetters) {
   // Check if we have empty input
   if (!template || !phrase || !revealedLetters || revealedLetters.length === 0) {
     return template || '';
   }
   
+  // Log inputs for debugging
+  console.log('--------- fillPhraseTemplateWithHints ---------');
+  console.log('Template:', template);
+  console.log('Phrase:', phrase);
+  console.log('Revealed letters count:', revealedLetters.length);
+  
   const templateArray = template.split('');
   const phraseArray = phrase.toUpperCase().split('');
   
-  // Create a mapping of path indices to phrase positions
-  // This is the key change - we need to correctly map path indices to phrase positions
-  const pathIndexToCharPos = new Map();
-  let phrasePos = 0;
+  // Log the pathIndices of the revealed letters for debugging
+  console.log('Revealed letters pathIndices:', revealedLetters.map(cell => cell.pathIndex).join(', '));
   
+  // Create a mapping to track where each letter in the path corresponds to in the phrase
+  let alphaCount = 0;
+  const pathPositionToCharIndex = new Map();
+  
+  // Map each alphanumeric character in the phrase to its corresponding path position
+  // The start cell is at path position 0, so the first letter is at path position 1
   for (let i = 0; i < phrase.length; i++) {
     if (/[a-zA-Z0-9]/.test(phrase[i])) {
-      // Map the path index to the phrase position
-      // The path index should match the alphanumeric index
-      pathIndexToCharPos.set(phrasePos, i);
-      phrasePos++;
+      // Map path position to phrase index
+      pathPositionToCharIndex.set(alphaCount, i);
+      console.log(`Path position ${alphaCount} maps to phrase index ${i} (char: ${phrase[i]})`);
+      alphaCount++;
     }
   }
   
   // Fill in revealed letters in the template
   for (const revealedCell of revealedLetters) {
-    // Get the phrase position for this path index
-    const phrasePos = pathIndexToCharPos.get(revealedCell.pathIndex);
+    // We need the raw path position (the pathIndex property) and translate it
+    const pathPosition = revealedCell.pathIndex;
     
-    if (phrasePos !== undefined) {
-      // Use the letter from the phrase rather than the cell's letter
-      templateArray[phrasePos] = phraseArray[phrasePos];
+    // Get the corresponding phrase index using our mapping
+    const phraseIndex = pathPositionToCharIndex.get(pathPosition);
+    
+    if (phraseIndex !== undefined) {
+      console.log(`Revealing letter at path position ${pathPosition}, phrase index ${phraseIndex}: ${phraseArray[phraseIndex]}`);
+      // Use the letter from the phrase rather than the cell's letter to ensure consistency
+      templateArray[phraseIndex] = phraseArray[phraseIndex];
+    } else {
+      console.warn(`No phrase index found for path position ${pathPosition}`);
     }
   }
   
-  return templateArray.join('');
+  const result = templateArray.join('');
+  console.log('Final template after applying hints:', result);
+  console.log('----------------------------------------');
+  return result;
 }
   
   updatePhraseFromSelections(selectedLetters) {
