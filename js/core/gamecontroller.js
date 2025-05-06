@@ -455,8 +455,9 @@ fillPhraseTemplateWithHints(template, phrase, revealedLetters) {
   let pathPosition = 0;
   for (let i = 0; i < phrase.length; i++) {
     if (/[a-zA-Z0-9]/.test(phrase[i])) {
-      pathIndexToCharPosition.set(pathPosition, i);
-      console.log(`Path position ${pathPosition} maps to phrase position ${i} (letter: ${phrase[i]})`);
+      // Skip pathPosition 0 to align with revealed letters
+      pathIndexToCharPosition.set(pathPosition + 1, i);
+      console.log(`Path position ${pathPosition + 1} maps to phrase position ${i} (letter: ${phrase[i]})`);
       pathPosition++;
     }
   }
