@@ -122,12 +122,35 @@ class GameController {
 }
   
 // Replace your current setupMenuHandlers method in GameController.js with this one
+// Replace your current setupMenuHandlers method in GameController.js with this one
 setupMenuHandlers() {
   // First, set up the menu toggle button functionality
   const menuToggle = document.getElementById('menu-toggle');
   const menuDropdown = document.getElementById('menu-dropdown');
   
   if (menuToggle && menuDropdown) {
+    // Clear any existing menu items
+    menuDropdown.innerHTML = '';
+    
+    // Create the menu items
+    const menuItems = [
+      { id: 'new-phrase-button', text: 'New Phrase' },
+      { id: 'reset-selections-button', text: 'Reset Selections' },
+      { id: 'hint-level-1-button', text: 'Hint Level 1 (15%)' },
+      { id: 'hint-level-2-button', text: 'Hint Level 2 (25%)' },
+      { id: 'hint-level-3-button', text: 'Hint Level 3 (35%)' }
+    ];
+    
+    // Add menu items to dropdown
+    menuItems.forEach(item => {
+      const button = document.createElement('button');
+      button.id = item.id;
+      button.className = 'menu-item';
+      button.textContent = item.text;
+      menuDropdown.appendChild(button);
+    });
+    
+    // Add click event to toggle menu
     menuToggle.addEventListener('click', (e) => {
       e.stopPropagation(); // Prevent document click from immediately closing
       menuToggle.classList.toggle('active');
@@ -163,122 +186,62 @@ setupMenuHandlers() {
     });
   }
   
-  // Handle hint level button
-  const hintLevelButton = document.getElementById('hint-level-button');
-  const hintLevelDisplay = document.getElementById('hint-level-display');
-  
-  if (hintLevelButton && hintLevelDisplay) {
-    // Update display value of current hint level
-    hintLevelDisplay.textContent = this.gridRenderer.hintLevel;
-    
-    // Create hint level options in a submenu directly inside the menu dropdown
-    const hintSubmenu = document.createElement('div');
-    hintSubmenu.id = 'hint-level-submenu';
-    hintSubmenu.className = 'hint-submenu';
-    hintSubmenu.style.display = 'none';
-    menuDropdown.appendChild(hintSubmenu);
-    
-    // Create hint level options - levels 1, 2, and 3
-    const hintLevels = [
-      { level: 1, label: "Level 1 (15%)" },
-      { level: 2, label: "Level 2 (25%)" },
-      { level: 3, label: "Level 3 (35%)" }
-    ];
-    
-    // Add each hint level option to the submenu
-    hintLevels.forEach(hint => {
-      const hintOption = document.createElement('button');
-      hintOption.id = `hint-level-option-${hint.level}`;
-      hintOption.className = 'menu-item hint-option';
-      hintOption.textContent = hint.label;
-      
-      // Highlight active hint level
-      if (this.gridRenderer && this.gridRenderer.hintLevel === hint.level) {
-        hintOption.classList.add('active-hint');
-      }
-      
-      hintOption.addEventListener('click', () => {
+  // Hint level buttons
+  for (let level = 1; level <= 3; level++) {
+    const hintButton = document.getElementById(`hint-level-${level}-button`);
+    if (hintButton) {
+      hintButton.addEventListener('click', () => {
         // Set the hint level
-        this.setHintLevel(hint.level);
+        this.setHintLevel(level);
         
-        // Update display in the main hint button
-        hintLevelDisplay.textContent = hint.level;
+        // Update active class on all hint buttons
+        for (let i = 1; i <= 3; i++) {
+          const btn = document.getElementById(`hint-level-${i}-button`);
+          if (btn) {
+            if (i === level) {
+              btn.classList.add('active-hint');
+            } else {
+              btn.classList.remove('active-hint');
+            }
+          }
+        }
         
-        // Update active class on all hint options
-        hintSubmenu.querySelectorAll('.hint-option').forEach(btn => {
-          btn.classList.remove('active-hint');
-        });
-        hintOption.classList.add('active-hint');
-        
-        // Close the submenu
-        hintSubmenu.style.display = 'none';
-        
-        // Close the main menu
+        // Close the menu
         menuDropdown.classList.remove('active');
         menuToggle.classList.remove('active');
       });
-      
-      hintSubmenu.appendChild(hintOption);
-    });
-    
-    // Apply some additional style to the submenu options
-    const style = document.createElement('style');
-    style.textContent = `
-      .hint-submenu {
-        width: 100%;
-      }
-      .hint-option {
-        display: block;
-        width: 100%;
-        padding: 10px 15px;
-        text-align: left;
-        border: none;
-        background: none;
-        cursor: pointer;
-        transition: background-color 0.2s;
-      }
-      .hint-option:hover {
-        background-color: rgba(0, 0, 0, 0.05);
-      }
-      .hint-option.active-hint {
-        font-weight: bold;
-        background-color: rgba(0, 0, 0, 0.1);
-      }
-    `;
-    document.head.appendChild(style);
-    
-    // Toggle hint submenu on hint button click
-    hintLevelButton.addEventListener('click', (e) => {
-      e.stopPropagation(); // Prevent closing the main menu
-      
-      // Toggle visibility of hint submenu
-      hintSubmenu.style.display = hintSubmenu.style.display === 'none' ? 'block' : 'none';
-    });
+    }
   }
   
-  console.log('Menu handlers and hint submenu set up successfully');
+  // Add some CSS for the active hint level
+  const style = document.createElement('style');
+  style.textContent = `
+    .menu-item.active-hint {
+      font-weight: bold;
+      background-color: rgba(0, 0, 0, 0.1);
+    }
+  `;
+  document.head.appendChild(style);
   
-  // Add a method to reset hint level to 0 when loading a new phrase
-  // This function should be called from within loadPhrase
+  console.log('Menu handlers set up successfully');
+  
+  // Initialize with no hints (level 0)
   this.resetHintLevel = function() {
     if (this.gridRenderer) {
       this.gridRenderer.setHintLevel(0);
       
-      // Update the display if it exists
-      const hintLevelDisplay = document.getElementById('hint-level-display');
-      if (hintLevelDisplay) {
-        hintLevelDisplay.textContent = 0;
-      }
-      
-      // Update active class on hint options
-      const hintSubmenu = document.getElementById('hint-level-submenu');
-      if (hintSubmenu) {
-        hintSubmenu.querySelectorAll('.hint-option').forEach(btn => {
+      // Remove active class from all hint buttons
+      for (let i = 1; i <= 3; i++) {
+        const btn = document.getElementById(`hint-level-${i}-button`);
+        if (btn) {
           btn.classList.remove('active-hint');
-        });
+        }
       }
     }
   };
+  
+  // Call resetHintLevel when setupMenuHandlers is called
+  this.resetHintLevel();
 }
   
   /**
