@@ -988,9 +988,6 @@ constructor(containerId, options = {}) {
  * This should be called after setPath() is complete
  */
 /**
- * Reveal pathway letters based on the current hint level
- * This should be called after setPath() is complete
- */
 revealPathLetters() {
   // Clear any previously revealed cells
   this.revealedCells = [];
@@ -1015,15 +1012,13 @@ revealPathLetters() {
   // Get percentage based on hint level
   const percentage = this.hintLevelPercentages[this.hintLevel];
   
-  // IMPORTANT CHANGE: Create array of available path indices (excluding start cell at index 0)
-  // All calculations will now be based on this reduced set
+  // IMPORTANT CHANGE: Create array of available path indices INCLUDING start cell at index 0
   const availableIndices = [];
-  for (let i = 1; i < this.path.length; i++) {
+  for (let i = 0; i < this.path.length; i++) {
     availableIndices.push(i);
   }
   
   // Calculate number of cells to reveal (round to nearest whole number)
-  // Now based on availableIndices.length instead of path.length - 1
   const totalAvailablePathCells = availableIndices.length;
   const cellsToReveal = Math.round(totalAvailablePathCells * percentage);
   
@@ -1076,6 +1071,12 @@ revealPathLetters() {
       // Store the pathIndex for proper phrase syncing
       this.revealedCells.push({ x: gridX, y: gridY, pathIndex: index });
       this.grid[gridY][gridX].isRevealed = true;
+      
+      // If this is the start cell (index 0), we may need special handling
+      if (index === 0) {
+        console.log('Start cell revealed as hint');
+        // You might want to add special UI handling here
+      }
     }
   } 
   // For levels 2 and 3, we need to maintain the level 1 non-adjacent cells,
@@ -1084,7 +1085,7 @@ revealPathLetters() {
     // First, get the level 1 percentage for non-adjacent cells
     const level1Percentage = this.hintLevelPercentages[1]; // 0.15 or 15%
     
-    // IMPORTANT CHANGE: Calculate level 1 cells based on totalAvailablePathCells
+    // Calculate level 1 cells based on totalAvailablePathCells
     const level1CellCount = Math.round(totalAvailablePathCells * level1Percentage);
     
     // Calculate additional cells for current level
@@ -1133,6 +1134,12 @@ revealPathLetters() {
       
       this.revealedCells.push({ x: gridX, y: gridY, pathIndex: index });
       this.grid[gridY][gridX].isRevealed = true;
+      
+      // If this is the start cell (index 0), we may need special handling
+      if (index === 0) {
+        console.log('Start cell revealed as hint');
+        // You might want to add special UI handling here
+      }
     }
   }
   
@@ -1145,7 +1152,7 @@ revealPathLetters() {
   // Update the phrase display with revealed letters
   this.updatePhraseWithRevealedLetters();
 }
-  
+
 /**
  * Helper method to shuffle an array using Fisher-Yates algorithm
  * If PathGenerator already has this method, you can skip adding it here
