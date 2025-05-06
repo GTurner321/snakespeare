@@ -1279,7 +1279,7 @@ updateCellElementClasses(cellElement, x, y) {
   if (y >= 0 && y < this.grid.length && x >= 0 && x < this.grid[0].length) {
     const cell = this.grid[y][x];
     
-    // Class application with proper precedence:
+    // FIXED CLASS PRECEDENCE:
     
     // 1. Path cell class is applied first as a base state
     if (cell.isPath) {
@@ -1296,18 +1296,22 @@ updateCellElementClasses(cellElement, x, y) {
       cellElement.classList.add('revealed-cell');
     }
     
-    // 3. Start cell, selected, and completed states have highest precedence
+    // 3. Completed state has highest precedence
     if (cell.isCompleted) {
       cellElement.classList.add('completed-cell');
       return; // No need to check other states when completed
     }
     
+    // 4. IMPORTANT CHANGE: Apply selected state BEFORE start cell state
+    //    This ensures selected state overrides start cell appearance
+    if (cell.isSelected) {
+      cellElement.classList.add('selected-cell');
+    }
+    
+    // 5. Apply start cell state last (but will be overridden by selected-cell if present)
     if (cell.isStart) {
       cellElement.classList.add('start-cell');
     } 
-    else if (cell.isSelected) {
-      cellElement.classList.add('selected-cell');
-    }
   }
 }
   
