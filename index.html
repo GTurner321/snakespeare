@@ -20,9 +20,7 @@
                 </div>
             </button>
             <div id="menu-dropdown" class="menu-dropdown">
-                <button id="new-phrase-button" class="menu-item">New Phrase</button>
-                <button id="reset-selections-button" class="menu-item">Reset Selections</button>
-                <button id="hint-level-button" class="menu-item">Hint Level: <span id="hint-level-display">1</span></button>
+                <!-- Menu items will be dynamically created by JS -->
             </div>
         </div>
         
@@ -47,8 +45,9 @@
                 'menu-dropdown',
                 'new-phrase-button',
                 'reset-selections-button',
-                'hint-level-button',
-                'hint-level-display'
+                'hint-level-1-button',
+                'hint-level-2-button',
+                'hint-level-3-button'
             ];
             
             for (const id of elements) {
@@ -74,36 +73,11 @@
                 randomFillPercentage: 0.8  // Enable adjacent-cells random letter filling (80% to create sufficient clutter)
             });
             
-            // Validate menu elements exist
-            validateMenuElements();
-            
-            // Set up menu toggle functionality
-            const menuToggle = document.getElementById('menu-toggle');
-            const menuDropdown = document.getElementById('menu-dropdown');
-            
-            if (menuToggle && menuDropdown) {
-                console.log('Setting up menu toggle event handler');
-                menuToggle.addEventListener('click', function() {
-                    console.log('Menu toggle clicked');
-                    this.classList.toggle('active');
-                    menuDropdown.classList.toggle('active');
-                });
-            } else {
-                console.error('Menu toggle or dropdown elements not found!');
-            }
-            
-            // IMPORTANT: Manually trigger the setupMenuHandlers method again
-            // This ensures the handlers are properly attached after DOM is fully loaded
-            if (typeof gameController.setupMenuHandlers === 'function') {
-                console.log('Manually triggering menu handler setup');
-                gameController.setupMenuHandlers();
-                
-                // Update hint level display
-                const levelDisplay = document.getElementById('hint-level-display');
-                if (levelDisplay && gameController.gridRenderer) {
-                    levelDisplay.textContent = gameController.gridRenderer.hintLevel;
-                }
-            }
+            // Wait a moment for the menu elements to be created by setupMenuHandlers
+            setTimeout(() => {
+                // Validate menu elements exist
+                validateMenuElements();
+            }, 500);
             
             // Attempt to load phrase data from CSV
             try {
