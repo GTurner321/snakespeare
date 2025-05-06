@@ -125,17 +125,16 @@ class GameController {
  * Complete setupMenuHandlers method with comprehensive debugging
  * This should replace the entire method in your gamecontroller.js file
  */
+/**
+ * Sets up the menu handlers for the hamburger menu
+ * Creates 5 menu options: New Phrase, Reset Selections, and 3 hint levels
+ */
 setupMenuHandlers() {
-  console.log('--- MENU SETUP STARTING ---');
+  console.log('Setting up menu handlers');
   
   // Get references to menu elements
   const menuToggle = document.getElementById('menu-toggle');
   const menuDropdown = document.getElementById('menu-dropdown');
-  
-  console.log('Menu references:', { 
-    menuToggle: menuToggle ? 'found' : 'missing', 
-    menuDropdown: menuDropdown ? 'found' : 'missing' 
-  });
   
   if (!menuToggle || !menuDropdown) {
     console.error('Cannot find menu elements - aborting setup');
@@ -143,40 +142,40 @@ setupMenuHandlers() {
   }
   
   // Clear existing menu content
-  console.log('Clearing existing menu content');
   menuDropdown.innerHTML = '';
   
-  // Create menu structure manually
-  const createButton = (id, text) => {
+  // Create menu items
+  const menuItems = [
+    { id: 'new-phrase-button', text: 'New Phrase', action: () => this.loadRandomPhrase() },
+    { id: 'reset-selections-button', text: 'Reset Selections', action: () => this.resetSelections() },
+    { id: 'hint-level-1-button', text: 'Hint Level 1 (15%)', action: () => this.setHintLevel(1) },
+    { id: 'hint-level-2-button', text: 'Hint Level 2 (25%)', action: () => this.setHintLevel(2) },
+    { id: 'hint-level-3-button', text: 'Hint Level 3 (35%)', action: () => this.setHintLevel(3) }
+  ];
+  
+  // Add menu items to dropdown
+  menuItems.forEach(item => {
     const button = document.createElement('button');
-    button.id = id;
+    button.id = item.id;
     button.className = 'menu-item';
-    button.textContent = text;
-    return button;
-  };
+    button.textContent = item.text;
+    
+    // Add click handler with proper context binding
+    button.addEventListener('click', () => {
+      console.log(`${item.id} clicked`);
+      // Execute the action
+      item.action();
+      // Close the menu
+      menuDropdown.classList.remove('active');
+      menuToggle.classList.remove('active');
+    });
+    
+    menuDropdown.appendChild(button);
+  });
   
-  // Create and append all buttons 
-  console.log('Creating menu buttons');
-  const newPhraseButton = createButton('new-phrase-button', 'New Phrase');
-  const resetSelectionsButton = createButton('reset-selections-button', 'Reset Selections');
-  const hintLevel1Button = createButton('hint-level-1-button', 'Hint Level 1 (15%)');
-  const hintLevel2Button = createButton('hint-level-2-button', 'Hint Level 2 (25%)');
-  const hintLevel3Button = createButton('hint-level-3-button', 'Hint Level 3 (35%)');
-  
-  // Append all buttons to menu
-  menuDropdown.appendChild(newPhraseButton);
-  menuDropdown.appendChild(resetSelectionsButton);
-  menuDropdown.appendChild(hintLevel1Button);
-  menuDropdown.appendChild(hintLevel2Button);
-  menuDropdown.appendChild(hintLevel3Button);
-  
-  console.log(`Menu now has ${menuDropdown.children.length} items`);
-  
-  // Menu toggle event
-  console.log('Setting up menu toggle event');
+  // Menu toggle click handler
   menuToggle.addEventListener('click', (e) => {
-    console.log('Menu toggle clicked');
-    e.stopPropagation();
+    e.stopPropagation(); // Prevent document click from immediately closing
     menuToggle.classList.toggle('active');
     menuDropdown.classList.toggle('active');
   });
@@ -189,76 +188,20 @@ setupMenuHandlers() {
     }
   });
   
-  // New phrase button handler
-  console.log('Setting up new phrase button handler');
-  newPhraseButton.addEventListener('click', () => {
-    console.log('New phrase button clicked');
-    this.loadRandomPhrase();
-    menuDropdown.classList.remove('active');
-    menuToggle.classList.remove('active');
-  });
-  
-  // Reset selections button handler
-  console.log('Setting up reset selections button handler');
-  resetSelectionsButton.addEventListener('click', () => {
-    console.log('Reset selections button clicked');
-    this.resetSelections();
-    menuDropdown.classList.remove('active');
-    menuToggle.classList.remove('active');
-  });
-  
-  // Hint level button handlers
-  for (let level = 1; level <= 3; level++) {
-    const hintButton = document.getElementById(`hint-level-${level}-button`);
-    if (hintButton) {
-      console.log(`Setting up hint level ${level} button handler`);
-      hintButton.addEventListener('click', () => {
-        console.log(`Hint level ${level} button clicked`);
-        this.setHintLevel(level);
-        
-        // Update active class on hint buttons
-        for (let i = 1; i <= 3; i++) {
-          const btn = document.getElementById(`hint-level-${i}-button`);
-          if (btn) {
-            if (i === level) {
-              btn.classList.add('active-hint');
-            } else {
-              btn.classList.remove('active-hint');
-            }
-          }
-        }
-        
-        menuDropdown.classList.remove('active');
-        menuToggle.classList.remove('active');
-      });
-    }
-  }
-  
-  console.log('Menu handlers setup complete');
-  
-  // Add method to reset hint level for new phrases
-  this.resetHintLevel = function() {
-    console.log('Resetting hint level');
+  // Add reset hint level functionality for new phrases
+  this.resetHintLevel = () => {
     if (this.gridRenderer) {
+      console.log('Resetting hint level to 0');
       this.gridRenderer.setHintLevel(0);
-      
-      // Update hint button states
-      for (let i = 1; i <= 3; i++) {
-        const btn = document.getElementById(`hint-level-${i}-button`);
-        if (btn) {
-          btn.classList.remove('active-hint');
-        }
-      }
     }
   };
   
   // Initialize with no hints
-  console.log('Setting initial hint level to 0');
   if (this.gridRenderer) {
     this.gridRenderer.setHintLevel(0);
   }
   
-  console.log('--- MENU SETUP COMPLETED ---');
+  console.log('Menu handlers setup complete');
 }
   
   /**
