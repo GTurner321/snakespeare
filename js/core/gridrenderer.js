@@ -987,7 +987,6 @@ constructor(containerId, options = {}) {
  * Reveal pathway letters based on the current hint level
  * This should be called after setPath() is complete
  */
-/**
 revealPathLetters() {
   // Clear any previously revealed cells
   this.revealedCells = [];
