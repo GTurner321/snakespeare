@@ -365,6 +365,21 @@ class PathGenerator {
     console.log(`Level 0: ${this.preGeneratedCells[0].length} cells`);
     console.log(`Level 1: ${this.preGeneratedCells[1].length} cells`);
     console.log(`Level 2: ${this.preGeneratedCells[2].length} cells`);
+
+console.log('Details of pre-generated cells:');
+console.log(`Level 0: ${JSON.stringify(this.preGeneratedCells[0].slice(0, 3))}... (total: ${this.preGeneratedCells[0].length})`);
+console.log(`Level 1: ${JSON.stringify(this.preGeneratedCells[1].slice(0, 3))}... (total: ${this.preGeneratedCells[1].length})`);
+console.log(`Level 2: ${JSON.stringify(this.preGeneratedCells[2].slice(0, 3))}... (total: ${this.preGeneratedCells[2].length})`);
+
+// Make sure Level 1 is more than Level 2
+if (this.preGeneratedCells[1].length <= this.preGeneratedCells[2].length) {
+  console.error('Error: Level 1 should have more cells than Level 2!');
+}
+
+// Make sure Level 0 is more than Level 1
+if (this.preGeneratedCells[0].length <= this.preGeneratedCells[1].length) {
+  console.error('Error: Level 0 should have more cells than Level 1!');
+}
     
     return true;
   }
