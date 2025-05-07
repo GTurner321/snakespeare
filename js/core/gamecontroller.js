@@ -601,6 +601,17 @@ setIslandReductionLevel(level) {
     // Update button styles
     this.updateIslandReductionButtonStyles();
     
+    // Force a grid re-render immediately
+    this.gridRenderer.renderVisibleGrid();
+    
+    // Close the menu to show the changes
+    const menuDropdown = document.getElementById('menu-dropdown');
+    const menuToggle = document.getElementById('menu-toggle');
+    if (menuDropdown && menuToggle) {
+      menuDropdown.classList.remove('active');
+      menuToggle.classList.remove('active');
+    }
+    
     console.log(`Island reduction level set to ${level}`);
   }
 }
