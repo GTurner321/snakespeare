@@ -154,7 +154,7 @@ body {
     text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8);
 }
 
-/* Yellow borders for letter cells adjacent to sea */
+/* Yellow borders for letter cells adjacent to sea - thicker borders (3px) */
 .grid-cell.path-cell.island-edge-top:not(.selected-cell):not(.start-cell):not(.revealed-cell):not(.completed-cell) {
     border-top: 3px solid #ffeb3b; /* Yellow top border */
 }
