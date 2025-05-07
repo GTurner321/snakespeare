@@ -152,18 +152,17 @@ setupMenuHandlers() {
   menuDropdown.innerHTML = '';
   
   // Step 3: Create menu items - UPDATED with island reduction levels
-  const menuItems = [
-    { id: 'new-phrase-button', text: 'New Phrase', action: () => this.loadRandomPhrase() },
-    { id: 'reset-selections-button', text: 'Reset Selections', action: () => this.resetSelections() },
-    { id: 'separator-1', text: 'divider', type: 'separator' },
-    { id: 'hint-level-1-button', text: 'Hint Level 1 (15%)', action: () => this.setHintLevel(1), hintLevel: 1 },
-    { id: 'hint-level-2-button', text: 'Hint Level 2 (25%)', action: () => this.setHintLevel(2), hintLevel: 2 },
-    { id: 'hint-level-3-button', text: 'Hint Level 3 (35%)', action: () => this.setHintLevel(3), hintLevel: 3 },
-    { id: 'separator-2', text: 'divider', type: 'separator' },
-    { id: 'island-level-0-button', text: 'Add All Letters', action: () => this.setIslandReductionLevel(0), islandLevel: 0 },
-    { id: 'island-level-1-button', text: 'Reduce Islands 1', action: () => this.setIslandReductionLevel(1), islandLevel: 1 },
-    { id: 'island-level-2-button', text: 'Reduce Islands 2', action: () => this.setIslandReductionLevel(2), islandLevel: 2 }
-  ];
+const menuItems = [
+  { id: 'new-phrase-button', text: 'New Phrase', action: () => this.loadRandomPhrase() },
+  { id: 'reset-selections-button', text: 'Reset Selections', action: () => this.resetSelections() },
+  { id: 'separator-1', text: 'divider', type: 'separator' },
+  { id: 'hint-level-1-button', text: 'Hint Level 1 (15%)', action: () => this.setHintLevel(1), hintLevel: 1 },
+  { id: 'hint-level-2-button', text: 'Hint Level 2 (25%)', action: () => this.setHintLevel(2), hintLevel: 2 },
+  { id: 'hint-level-3-button', text: 'Hint Level 3 (35%)', action: () => this.setHintLevel(3), hintLevel: 3 },
+  { id: 'separator-2', text: 'divider', type: 'separator' },
+  { id: 'island-level-1-button', text: 'Reduce Islands 1', action: () => this.setIslandReductionLevel(1), islandLevel: 1 },
+  { id: 'island-level-2-button', text: 'Reduce Islands 2', action: () => this.setIslandReductionLevel(2), islandLevel: 2 }
+];
   
   // Step 4: Add to menu and set up click handlers
   menuItems.forEach(item => {
