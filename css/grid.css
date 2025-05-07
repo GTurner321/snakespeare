@@ -142,16 +142,16 @@ body {
 
 /* Style for "adjacent to letter" sea cells - lighter blue */
 .grid-cell.sea-adjacent {
-    background-color: #4d94ff; /* Lighter blue for cells adjacent to islands */
-    border-color: #2979ff; /* Slightly lighter border */
+    background-color: #4d94ff !important; /* Lighter blue for cells adjacent to islands */
+    border-color: #2979ff !important; /* Slightly lighter border */
 }
 
 /* Style for letter cells - pale green islands */
 .grid-cell.path-cell {
-    background-color: #b2dfdb; /* Pale green for letter islands */
-    color: #004d40; /* Dark teal for letters */
-    border: 1px solid #80cbc4; /* Lighter teal border */
-    text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8);
+    background-color: #b2dfdb !important; /* Pale green for letter islands */
+    color: #004d40 !important; /* Dark teal for letters */
+    border: 1px solid #80cbc4 !important; /* Lighter teal border */
+    text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8) !important;
 }
 
 /* Yellow borders for letter cells adjacent to sea */
@@ -220,8 +220,8 @@ body {
 
 /* Style for cells being touched - improved for better visual feedback */
 .grid-cell.touch-active {
-    box-shadow: 0 0 8px rgba(33, 150, 243, 0.5);
-    border-color: #0D47A1;
+    box-shadow: 0 0 8px rgba(33, 150, 243, 0.5) !important;
+    border-color: #0D47A1 !important;
     /* Speed up the touch feedback transition */
     transition: box-shadow 0.1s ease, border-color 0.1s ease;
 }
@@ -247,8 +247,8 @@ body {
     }
     
     /* Hover for letter island cells */
-    .grid-cell.path-cell:not(.selected-cell):not(.start-cell):not(.revealed-cell):not(.completed-cell):hover {
-        background-color: #80cbc4; /* Slightly darker green on hover */
+    .grid-cell.path-cell:hover:not(.selected-cell):not(.start-cell):not(.revealed-cell):not(.completed-cell) {
+        background-color: #80cbc4 !important; /* Slightly darker green on hover */
         cursor: pointer;
     }
     
@@ -259,7 +259,7 @@ body {
     }
     
     /* Hover effect for revealed cells */
-    .grid-cell.revealed-cell:not(.selected-cell):not(.completed-cell):hover {
+    .grid-cell.revealed-cell:hover:not(.selected-cell):not(.completed-cell) {
         background-color: #ef9a9a !important; /* Slightly darker red on hover */
         cursor: pointer;
     }
