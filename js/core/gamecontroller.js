@@ -124,80 +124,59 @@ class GameController {
 /**
  * Sets up the menu handlers for the hamburger menu
  * Creates 5 menu options: New Phrase, Reset Selections, and 3 hint levels
- * Also handles potential duplicate menu elements
  */
 setupMenuHandlers() {
   console.log('Setting up menu handlers');
   
-  // Step 1: Find all menu elements
-  const menuDropdowns = document.querySelectorAll('.menu-dropdown');
-  console.log(`Found ${menuDropdowns.length} menu dropdown elements`);
-  
-  // Step 2: Handle duplicate menus if they exist
-  let menuDropdown;
-  
-  if (menuDropdowns.length > 1) {
-    console.warn('Multiple menu dropdowns found - resolving duplicates');
-    
-    // Find the one we should keep (prefer the visible one if active)
-    let keepMenu = null;
-    
-    for (const menu of menuDropdowns) {
-      if (menu.classList.contains('active')) {
-        keepMenu = menu;
-        break;
-      }
-    }
-    
-    // If no active menu found, use the first one
-    if (!keepMenu) {
-      keepMenu = menuDropdowns[0];
-    }
-    
-    menuDropdown = keepMenu;
-    
-    // Remove other menus
-    for (const menu of menuDropdowns) {
-      if (menu !== keepMenu && menu.parentNode) {
-        menu.parentNode.removeChild(menu);
-      }
-    }
-  } else if (menuDropdowns.length === 1) {
-    menuDropdown = menuDropdowns[0];
-  } else {
-    console.error('No menu dropdown found');
-    return;
-  }
-  
-  // Step 3: Get reference to menu toggle
+  // Step 1: Find the menu elements
   const menuToggle = document.getElementById('menu-toggle');
-  if (!menuToggle) {
-    console.error('Menu toggle button not found');
+  const menuDropdown = document.getElementById('menu-dropdown');
+  
+  if (!menuToggle || !menuDropdown) {
+    console.error('Menu elements not found. Make sure "menu-toggle" and "menu-dropdown" elements exist in the HTML.');
     return;
   }
   
-  // Step 4: Clear existing menu content
+  // Step 2: Clear existing menu content
   menuDropdown.innerHTML = '';
   
-  // Step 5: Create menu items
+  // Step 3: Create menu items
   const menuItems = [
     { id: 'new-phrase-button', text: 'New Phrase', action: () => this.loadRandomPhrase() },
     { id: 'reset-selections-button', text: 'Reset Selections', action: () => this.resetSelections() },
-    { id: 'hint-level-1-button', text: 'Hint Level 1 (15%)', action: () => this.setHintLevel(1) },
-    { id: 'hint-level-2-button', text: 'Hint Level 2 (25%)', action: () => this.setHintLevel(2) },
-    { id: 'hint-level-3-button', text: 'Hint Level 3 (35%)', action: () => this.setHintLevel(3) }
+    { id: 'hint-level-1-button', text: 'Hint Level 1 (15%)', action: () => this.setHintLevel(1), hintLevel: 1 },
+    { id: 'hint-level-2-button', text: 'Hint Level 2 (25%)', action: () => this.setHintLevel(2), hintLevel: 2 },
+    { id: 'hint-level-3-button', text: 'Hint Level 3 (35%)', action: () => this.setHintLevel(3), hintLevel: 3 }
   ];
   
-  // Add to menu
+  // Step 4: Add to menu and set up click handlers
   menuItems.forEach(item => {
     const button = document.createElement('button');
     button.id = item.id;
     button.className = 'menu-item';
+    if (item.hintLevel) {
+      button.classList.add('hint-button');
+    }
     button.textContent = item.text;
     
     button.addEventListener('click', () => {
       console.log(`${item.id} clicked`);
+      
+      // Execute the action
       item.action();
+      
+      // Update hint button styles if this is a hint button
+      if (item.hintLevel) {
+        // Remove active class from all hint buttons
+        document.querySelectorAll('.hint-button').forEach(btn => {
+          btn.classList.remove('active-hint');
+        });
+        
+        // Add active class to the clicked button
+        button.classList.add('active-hint');
+      }
+      
+      // Close the menu
       menuDropdown.classList.remove('active');
       menuToggle.classList.remove('active');
     });
@@ -205,14 +184,14 @@ setupMenuHandlers() {
     menuDropdown.appendChild(button);
   });
   
-  // Step 6: Set up menu toggle
+  // Step 5: Set up menu toggle
   menuToggle.addEventListener('click', (e) => {
     e.stopPropagation();
     menuToggle.classList.toggle('active');
     menuDropdown.classList.toggle('active');
   });
   
-  // Step 7: Close menu when clicking outside
+  // Step 6: Close menu when clicking outside
   document.addEventListener('click', (e) => {
     if (!menuToggle.contains(e.target) && !menuDropdown.contains(e.target)) {
       menuToggle.classList.remove('active');
@@ -220,14 +199,20 @@ setupMenuHandlers() {
     }
   });
   
-  // Step 8: Initialize with no hints
+  // Step 7: Initialize hint level
   this.resetHintLevel = () => {
     if (this.gridRenderer) {
       console.log('Resetting hint level to 0');
       this.gridRenderer.setHintLevel(0);
+      
+      // Update hint button styles
+      document.querySelectorAll('.hint-button').forEach(btn => {
+        btn.classList.remove('active-hint');
+      });
     }
   };
   
+  // Initialize with no hints
   if (this.gridRenderer) {
     this.gridRenderer.setHintLevel(0);
   }
