@@ -71,7 +71,8 @@ class GameController {
   this.currentPath = null;
   this.phrases = [];
   this.phraseTemplate = null; // Store the underscores template
-  
+  this.highestHintLevelUsed = 0; // Track the highest hint level used for the current phrase
+    
   // Initialize components
   this.pathGenerator = new PathGenerator();
   
@@ -168,27 +169,28 @@ setupMenuHandlers() {
     }
     button.textContent = item.text;
     
-    button.addEventListener('click', () => {
-      console.log(`${item.id} clicked`);
-      
-      // Execute the action
-      item.action();
-      
-      // Update hint button styles if this is a hint button
-      if (item.hintLevel) {
-        // Remove active class from all hint buttons
-        document.querySelectorAll('.hint-button').forEach(btn => {
-          btn.classList.remove('active-hint');
-        });
-        
-        // Add active class to the clicked button
-        button.classList.add('active-hint');
-      }
-      
-      // Close the menu
-      menuDropdown.classList.remove('active');
-      menuToggle.classList.remove('active');
-    });
+button.addEventListener('click', () => {
+  console.log(`${item.id} clicked`);
+  
+  // For hint buttons, check if they're disabled
+  if (item.hintLevel && item.hintLevel <= this.highestHintLevelUsed && 
+      item.hintLevel !== this.gridRenderer.hintLevel) {
+    console.log(`Hint level ${item.hintLevel} is disabled`);
+    return; // Don't execute the action
+  }
+  
+  // Execute the action
+  item.action();
+  
+  // Update hint button styles
+  if (item.hintLevel) {
+    this.updateHintButtonStyles();
+  } else {
+    // Close the menu for non-hint buttons
+    menuDropdown.classList.remove('active');
+    menuToggle.classList.remove('active');
+  }
+});
     
     menuDropdown.appendChild(button);
   });
@@ -526,6 +528,12 @@ loadPhrase(phraseData) {
   
   // Create the phrase template with underscores using letterlist
   this.phraseTemplate = this.createPhraseTemplate(letterList);
+
+this.highestHintLevelUsed = 0;
+if (this.gridRenderer) {
+  this.gridRenderer.setHintLevel(0);
+  this.updateHintButtonStyles(); // Update button styles
+}
   
   // Track generation attempts
   let generationSuccessful = false;
@@ -783,13 +791,53 @@ if (generationSuccessful) {
 
 setHintLevel(level) {
   if (this.gridRenderer) {
+    // Don't allow going back to a lower level
+    if (level < this.highestHintLevelUsed) {
+      console.log(`Cannot go back to hint level ${level} after using level ${this.highestHintLevelUsed}`);
+      return;
+    }
+    
+    // Set the hint level in the grid renderer
     this.gridRenderer.setHintLevel(level);
+    
+    // Update the highest level used
+    this.highestHintLevelUsed = level;
     
     // Update phrase display with revealed letters
     this.updatePhraseWithHints();
     
+    // Update button styles to reflect disabled state
+    this.updateHintButtonStyles();
+    
     console.log(`Hint level set to ${level} (${this.gridRenderer.hintLevelPercentages[level] * 100}%)`);
   }
+}
+
+updateHintButtonStyles() {
+  // Get all hint buttons
+  const hintButtons = document.querySelectorAll('.hint-button');
+  
+  // Update each button
+  hintButtons.forEach(button => {
+    // Extract level from button ID (hint-level-X-button)
+    const buttonLevel = parseInt(button.id.split('-')[2], 10);
+    
+    // Remove any existing state classes
+    button.classList.remove('active-hint', 'disabled-hint');
+    
+    // Current level - active
+    if (buttonLevel === this.gridRenderer.hintLevel) {
+      button.classList.add('active-hint');
+    }
+    
+    // Lower than highest used - disabled
+    if (buttonLevel <= this.highestHintLevelUsed && buttonLevel !== this.gridRenderer.hintLevel) {
+      button.classList.add('disabled-hint');
+      button.style.color = 'grey';
+    } else {
+      button.style.color = '';  // Reset to default
+    }
+  });
 }
   
   /**
