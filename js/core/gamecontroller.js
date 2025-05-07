@@ -181,11 +181,11 @@ setupMenuHandlers() {
     button.className = 'menu-item';
     
     // Add special classes for hint and island reduction buttons
-    if (item.hintLevel) {
-      button.classList.add('hint-button');
-    } else if (item.islandLevel !== undefined) {
-      button.classList.add('island-button');
-    }
+if (item.hintLevel) {
+  button.classList.add('hint-button');
+} else if (item.islandLevel !== undefined) {
+  button.classList.add('hint-button'); // Use hint-button instead of island-button
+}
     
     button.textContent = item.text;
     
@@ -565,16 +565,16 @@ updateIslandReductionButtonStyles() {
     const buttonLevel = parseInt(button.id.split('-')[2], 10);
     
     // Remove any existing state classes
-    button.classList.remove('active-island', 'disabled-island');
+    button.classList.remove('active-hint', 'disabled-hint'); // Use hint classes
     
     // Current level - active
     if (buttonLevel === this.gridRenderer.islandReductionLevel) {
-      button.classList.add('active-island');
+      button.classList.add('active-hint'); // Use active-hint
     }
     
     // Lower than highest used - disabled
     if (buttonLevel < this.highestIslandReductionLevelUsed) {
-      button.classList.add('disabled-island');
+      button.classList.add('disabled-hint'); // Use disabled-hint
       button.style.color = 'grey';
     } else {
       button.style.color = '';  // Reset to default
