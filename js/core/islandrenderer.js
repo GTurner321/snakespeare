@@ -111,21 +111,31 @@ class IslandRenderer {
       }
     });
     
-    // Second pass: process each cell
+    // Second pass: process path cells first to identify islands
+    // and apply edge classes to them
     cellMap.forEach((cellInfo, key) => {
       const { element, x, y, isPath } = cellInfo;
       
-      // Skip processing for selected, start, or completed cells
-      if (cellInfo.isSelected || cellInfo.isStart || cellInfo.isCompleted) {
-        return;
-      }
-      
-      // Is this a path cell (letter cell)?
+      // Only process path (letter) cells first
       if (isPath) {
-        // Process island cell
+        // Skip processing for selected, completed or start cells
+        // as they have different visual styles that take precedence
+        if (cellInfo.isSelected || cellInfo.isCompleted) {
+          return;
+        }
+        
+        // Process letter cell to add edge classes
         this.processIslandCell(element, x, y, cellMap);
-      } else {
-        // Process sea cell
+      }
+    });
+    
+    // Third pass: process non-path cells to add sea-adjacent class
+    cellMap.forEach((cellInfo, key) => {
+      const { element, x, y, isPath } = cellInfo;
+      
+      // Only process non-path (sea) cells
+      if (!isPath) {
+        // Process sea cell to add adjacent class if needed
         this.processSeaCell(element, x, y, cellMap);
       }
     });
@@ -153,10 +163,12 @@ class IslandRenderer {
     directions.forEach(dir => {
       const nx = x + dir.dx;
       const ny = y + dir.dy;
-      const neighbor = cellMap.get(`${nx},${ny}`);
+      const neighborKey = `${nx},${ny}`;
+      const neighbor = cellMap.get(neighborKey);
       
-      // If no neighbor, or neighbor is not a path cell, add edge class
+      // If no neighbor or neighbor is not a path cell, add edge class
       if (!neighbor || !neighbor.isPath) {
+        // Add yellow border on this edge since it's adjacent to sea
         element.classList.add(dir.edge);
       }
     });
@@ -172,19 +184,20 @@ class IslandRenderer {
   processSeaCell(element, x, y, cellMap) {
     // Define directions to check
     const directions = [
-      { dx: 0, dy: -1 },
-      { dx: 1, dy: 0 },
-      { dx: 0, dy: 1 },
-      { dx: -1, dy: 0 }
+      { dx: 0, dy: -1 },  // top
+      { dx: 1, dy: 0 },   // right
+      { dx: 0, dy: 1 },   // bottom
+      { dx: -1, dy: 0 }   // left
     ];
     
     // Check each direction
     for (const dir of directions) {
       const nx = x + dir.dx;
       const ny = y + dir.dy;
-      const neighbor = cellMap.get(`${nx},${ny}`);
+      const neighborKey = `${nx},${ny}`;
+      const neighbor = cellMap.get(neighborKey);
       
-      // If neighbor is a path cell (island), mark this cell as adjacent
+      // If neighbor is a path cell (island), mark this cell as adjacent to sea
       if (neighbor && neighbor.isPath) {
         element.classList.add('sea-adjacent');
         break; // One adjacent island is enough
