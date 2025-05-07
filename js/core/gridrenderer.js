@@ -62,6 +62,10 @@ constructor(containerId, options = {}) {
   this.hintLevel = 1;                             // Default hint level (0-3)
   this.revealedCells = [];                        // Array to track revealed cell coordinates
   this.hintLevelPercentages = [0, 0.15, 0.25, 0.35]; // Percentages for each level
+
+this.level1HintIndices = [];  // Store level 1 hint indices (15%)
+this.level2HintIndices = [];  // Store level 2 hint indices (25%)
+this.level3HintIndices = [];  // Store level 3 hint indices (35%)
   
   // Initialize the grid
   this.initializeGrid();
@@ -1168,8 +1172,158 @@ shuffleArray(array) {
 }
 
 /**
- * Sets the hint level (0-3) and updates revealed cells
- * @param {number} level - Hint level (0-3)
+ * New method to pre-generate hint indices for all levels
+ */
+preGenerateHintIndices() {
+  // Reset all hint indices
+  this.level1HintIndices = [];
+  this.level2HintIndices = [];
+  this.level3HintIndices = [];
+  
+  // Create array of available path indices EXCLUDING index 0 (start cell)
+  const availableIndices = [];
+  for (let i = 1; i < this.path.length; i++) {
+    availableIndices.push(i);
+  }
+  
+  // Calculate number of cells to reveal for each level
+  const totalAvailablePathCells = availableIndices.length;
+  const level1Count = Math.round(totalAvailablePathCells * this.hintLevelPercentages[1]);
+  const level2Count = Math.round(totalAvailablePathCells * this.hintLevelPercentages[2]);
+  const level3Count = Math.round(totalAvailablePathCells * this.hintLevelPercentages[3]);
+  
+  console.log(`Pre-generating hint indices: Level 1: ${level1Count}, Level 2: ${level2Count}, Level 3: ${level3Count}`);
+  
+  // Shuffle available indices
+  const shuffledIndices = this.shuffleArray([...availableIndices]);
+  
+  // Level 1: Select non-adjacent indices
+  const usedIndices = new Set();
+  
+  // Add indices that don't have adjacent neighbors already selected
+  for (let i = 0; i < shuffledIndices.length && this.level1HintIndices.length < level1Count; i++) {
+    const index = shuffledIndices[i];
+    
+    // Skip if this index is adjacent to an already selected index
+    if (usedIndices.has(index - 1) || usedIndices.has(index + 1)) {
+      continue;
+    }
+    
+    this.level1HintIndices.push(index);
+    usedIndices.add(index);
+    
+    // Also mark adjacent indices as "used" to prevent them from being selected
+    usedIndices.add(index - 1);
+    usedIndices.add(index + 1);
+  }
+  
+  // Sort level 1 indices
+  this.level1HintIndices.sort((a, b) => a - b);
+  
+  // Level 2: Include all level 1 indices + additional non-adjacent ones
+  this.level2HintIndices = [...this.level1HintIndices];
+  
+  // Calculate how many additional indices we need
+  const level2Additional = level2Count - this.level1HintIndices.length;
+  
+  // Find remaining indices not yet used and not adjacent to level 1
+  const remainingForLevel2 = shuffledIndices.filter(index => !this.level1HintIndices.includes(index));
+  
+  // First try to find non-adjacent ones to add
+  for (let i = 0; i < remainingForLevel2.length && this.level2HintIndices.length < level2Count; i++) {
+    const index = remainingForLevel2[i];
+    
+    // Skip if already in level 2
+    if (this.level2HintIndices.includes(index)) {
+      continue;
+    }
+    
+    // Add this index
+    this.level2HintIndices.push(index);
+  }
+  
+  // Sort level 2 indices
+  this.level2HintIndices.sort((a, b) => a - b);
+  
+  // Level 3: Include all level 2 indices + additional ones
+  this.level3HintIndices = [...this.level2HintIndices];
+  
+  // Calculate how many additional indices we need
+  const level3Additional = level3Count - this.level2HintIndices.length;
+  
+  // Find remaining indices not yet used
+  const remainingForLevel3 = shuffledIndices.filter(index => !this.level2HintIndices.includes(index));
+  
+  // Add additional indices for level 3
+  for (let i = 0; i < remainingForLevel3.length && this.level3HintIndices.length < level3Count; i++) {
+    this.level3HintIndices.push(remainingForLevel3[i]);
+  }
+  
+  // Sort level 3 indices
+  this.level3HintIndices.sort((a, b) => a - b);
+  
+  console.log('Pre-generated hint indices:');
+  console.log('Level 1:', this.level1HintIndices);
+  console.log('Level 2:', this.level2HintIndices);
+  console.log('Level 3:', this.level3HintIndices);
+}
+
+/**
+ * New method to apply stored hint letters based on current hint level
+ */
+applyStoredHintLetters() {
+  // Clear any previously revealed cells
+  this.revealedCells = [];
+  
+  // Clear revealed state for all cells
+  for (let y = 0; y < this.grid.length; y++) {
+    for (let x = 0; x < this.grid[0].length; x++) {
+      if (this.grid[y][x].isRevealed) {
+        this.grid[y][x].isRevealed = false;
+      }
+    }
+  }
+  
+  // If hint level is 0, no letters are revealed
+  if (this.hintLevel === 0) {
+    console.log('Hint level 0 - no letters revealed');
+    this.updatePhraseWithRevealedLetters();
+    this.renderVisibleGrid();
+    return;
+  }
+  
+  // Determine which hint indices to use based on current level
+  let indicesToReveal = [];
+  
+  if (this.hintLevel === 1) {
+    indicesToReveal = this.level1HintIndices;
+  } else if (this.hintLevel === 2) {
+    indicesToReveal = this.level2HintIndices;
+  } else if (this.hintLevel === 3) {
+    indicesToReveal = this.level3HintIndices;
+  }
+  
+  console.log(`Applying ${indicesToReveal.length} stored hint indices for level ${this.hintLevel}`);
+  
+  // Mark cells as revealed based on stored indices
+  for (const index of indicesToReveal) {
+    const pathCell = this.path[index];
+    const gridX = 25 + pathCell.x; // Convert from path coords to grid coords
+    const gridY = 25 + pathCell.y;
+    
+    this.revealedCells.push({ x: gridX, y: gridY, pathIndex: index });
+    this.grid[gridY][gridX].isRevealed = true;
+  }
+  
+  // Re-render grid to show revealed cells
+  this.renderVisibleGrid();
+  
+  // Update the phrase display with revealed letters
+  this.updatePhraseWithRevealedLetters();
+}
+
+/**
+ * Modified setHintLevel method
  */
 setHintLevel(level) {
   // Validate level
@@ -1181,8 +1335,16 @@ setHintLevel(level) {
   this.hintLevel = level;
   console.log(`Hint level set to ${level}`);
   
-  // Reveal letters for the new hint level
-  this.revealPathLetters();
+  // Apply the pre-stored hint letters for this level
+  this.applyStoredHintLetters();
+}
+
+/**
+ * Replace the existing revealPathLetters method with this one
+ */
+revealPathLetters() {
+  // Instead of generating new hint indices, use the pre-stored ones
+  this.applyStoredHintLetters();
 }
 
 /**
