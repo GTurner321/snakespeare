@@ -586,11 +586,17 @@ setIslandReductionLevel(level) {
       return;
     }
     
-    // Set the level in the grid renderer and apply letters
+    console.log(`Setting island reduction level to ${level} from ${this.gridRenderer.islandReductionLevel}`);
+    
+    // Set the level in the grid renderer
     this.gridRenderer.setIslandReductionLevel(level);
     
+    // Apply island reduction letters with the pathGenerator
+    this.gridRenderer.applyIslandReductionLetters(this.pathGenerator);
+    
     // Update the highest level used
-    this.highestIslandReductionLevelUsed = level;
+    this.highestIslandReductionLevelUsed = Math.max(this.highestIslandReductionLevelUsed, level);
+    this.gridRenderer.highestIslandReductionLevelUsed = this.highestIslandReductionLevelUsed;
     
     // Update button styles
     this.updateIslandReductionButtonStyles();
