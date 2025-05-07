@@ -1394,12 +1394,18 @@ setIslandReductionLevel(level) {
   }));
 }
   
+/**
+ * Apply random letters based on the current island reduction level
+ * @param {PathGenerator} pathGenerator - The path generator with pre-generated cells
+ */
 applyIslandReductionLetters(pathGenerator) {
-  // Clear all existing random letters
-  this.clearRandomLetters();
+  // First, clear all existing random letters and log how many were removed
+  const clearedLetterCount = this.clearRandomLetters();
+  console.log(`Cleared ${clearedLetterCount} random letters from grid`);
   
   // Get random letters for the current level
   const randomLetters = pathGenerator.getRandomLettersForLevel(this.islandReductionLevel);
+  console.log(`Retrieved ${randomLetters.length} random letters for island reduction level ${this.islandReductionLevel}`);
   
   // Apply these letters to the grid
   this.applyAdjacentRandomLetters(randomLetters);
@@ -1407,15 +1413,32 @@ applyIslandReductionLetters(pathGenerator) {
   // Re-render the grid to show changes
   this.renderVisibleGrid();
   
-  console.log(`Applied ${randomLetters.length} random letters for island reduction level ${this.islandReductionLevel}`);
-  
   // Dispatch an event to notify that letters were updated
   document.dispatchEvent(new CustomEvent('islandLettersUpdated', { 
     detail: { 
       level: this.islandReductionLevel,
+      letterCount: randomLetters.length,
       gridRenderer: this 
     }
   }));
+  
+  // Trigger an island appearance update to ensure styling is properly applied
+  setTimeout(() => {
+    // Try to find the IslandRenderer instance if it's attached to window
+    if (window.islandRenderer && typeof window.islandRenderer.updateIslandAppearance === 'function') {
+      console.log('Calling IslandRenderer.updateIslandAppearance() after letter updates');
+      window.islandRenderer.updateIslandAppearance();
+    } else {
+      // Otherwise dispatch an event that IslandRenderer can listen for
+      console.log('Dispatching updateIslandStyling event for IslandRenderer');
+      document.dispatchEvent(new CustomEvent('updateIslandStyling', { 
+        detail: { 
+          level: this.islandReductionLevel,
+          gridRenderer: this 
+        }
+      }));
+    }
+  }, 100);
 }
   
 /**
