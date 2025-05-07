@@ -153,77 +153,7 @@ class ScrollAreaHandler {
     // Adjust phrase display to match grid width
     this.adjustPhraseDisplayWidth();
   }
-  
-  /**
-   * Create menu system
-   */
-  createMenuSystem() {
-    const menuContainer = document.createElement('div');
-    menuContainer.id = 'menu-button-container';
     
-    // Create menu toggle button
-    const menuToggle = document.createElement('button');
-    menuToggle.id = 'menu-toggle';
-    menuToggle.className = 'metallic-button menu-button';
-    
-    // Create the menu icon (three bars)
-    const menuIcon = document.createElement('span');
-    menuIcon.className = 'menu-icon';
-    menuIcon.innerHTML = '<span></span>'; // Middle bar
-    
-    menuToggle.appendChild(menuIcon);
-    
-    // Create dropdown menu
-    const menuDropdown = document.createElement('div');
-    menuDropdown.id = 'menu-dropdown';
-    menuDropdown.className = 'menu-dropdown';
-    
-    // Create menu items
-    const newPhraseButton = document.createElement('button');
-    newPhraseButton.id = 'new-phrase-button';
-    newPhraseButton.className = 'menu-item';
-    newPhraseButton.textContent = 'New Random Phrase';
-    
-    const resetSelectionsButton = document.createElement('button');
-    resetSelectionsButton.id = 'reset-selections-button';
-    resetSelectionsButton.className = 'menu-item';
-    resetSelectionsButton.textContent = 'Reset Selections';
-    
-    // Add menu items to dropdown
-    menuDropdown.appendChild(newPhraseButton);
-    menuDropdown.appendChild(resetSelectionsButton);
-    
-    // Assemble menu
-    menuContainer.appendChild(menuToggle);
-    menuContainer.appendChild(menuDropdown);
-    
-    // Add to game container
-    this.gameContainer.appendChild(menuContainer);
-    
-    // Setup menu event handlers
-    this.setupMenuHandlers(menuToggle, menuDropdown);
-  }
-  
-  /**
-   * Setup menu event handlers
-   */
-  setupMenuHandlers(menuToggle, menuDropdown) {
-    // Toggle menu on button click
-    menuToggle.addEventListener('click', (e) => {
-      e.stopPropagation(); // Prevent click from immediately closing menu
-      menuToggle.classList.toggle('active');
-      menuDropdown.classList.toggle('active');
-    });
-    
-    // Close menu when clicking outside
-    document.addEventListener('click', (e) => {
-      if (!menuToggle.contains(e.target) && !menuDropdown.contains(e.target)) {
-        menuToggle.classList.remove('active');
-        menuDropdown.classList.remove('active');
-      }
-    });
-  }
-  
   /**
    * Create a scroll area with the specified properties
    * @param {string} id - Element ID
