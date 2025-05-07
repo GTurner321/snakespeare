@@ -147,47 +147,48 @@ body {
 }
 
 /* Style for letter cells - pale green islands */
-.grid-cell.path-cell:not(.selected-cell):not(.start-cell):not(.revealed-cell):not(.completed-cell) {
+.grid-cell.path-cell {
     background-color: #b2dfdb; /* Pale green for letter islands */
     color: #004d40; /* Dark teal for letters */
     border: 1px solid #80cbc4; /* Lighter teal border */
     text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8);
 }
 
-/* Yellow borders for letter cells adjacent to sea - thicker borders (3px) */
-.grid-cell.path-cell.island-edge-top:not(.selected-cell):not(.start-cell):not(.revealed-cell):not(.completed-cell) {
-    border-top: 3px solid #ffeb3b; /* Yellow top border */
+/* Yellow borders for letter cells adjacent to sea */
+.grid-cell.path-cell.island-edge-top {
+    border-top: 3px solid #ffeb3b !important; /* Yellow top border */
 }
 
-.grid-cell.path-cell.island-edge-right:not(.selected-cell):not(.start-cell):not(.revealed-cell):not(.completed-cell) {
-    border-right: 3px solid #ffeb3b; /* Yellow right border */
+.grid-cell.path-cell.island-edge-right {
+    border-right: 3px solid #ffeb3b !important; /* Yellow right border */
 }
 
-.grid-cell.path-cell.island-edge-bottom:not(.selected-cell):not(.start-cell):not(.revealed-cell):not(.completed-cell) {
-    border-bottom: 3px solid #ffeb3b; /* Yellow bottom border */
+.grid-cell.path-cell.island-edge-bottom {
+    border-bottom: 3px solid #ffeb3b !important; /* Yellow bottom border */
 }
 
-.grid-cell.path-cell.island-edge-left:not(.selected-cell):not(.start-cell):not(.revealed-cell):not(.completed-cell) {
-    border-left: 3px solid #ffeb3b; /* Yellow left border */
+.grid-cell.path-cell.island-edge-left {
+    border-left: 3px solid #ffeb3b !important; /* Yellow left border */
 }
 
 /* Preserve the start cell style - green */
 .grid-cell.start-cell {
-    background-color: #4CAF50; /* Green for start */
-    color: white;
-    text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.4);
-    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2);
-    z-index: 5; /* Higher z-index to stand out */
+    background-color: #4CAF50 !important; /* Green for start */
+    color: white !important;
+    text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.4) !important;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2) !important;
+    z-index: 5 !important; /* Higher z-index to stand out */
+    border: 1px solid #2E7D32 !important; /* Darker green border */
 }
 
 /* Style for revealed hint cells - preserve as red */
-.grid-cell.revealed-cell:not(.selected-cell):not(.start-cell):not(.completed-cell) {
+.grid-cell.revealed-cell {
     background-color: #ffcdd2 !important; /* Light red */
     border: 1px solid #e57373 !important; /* Slightly darker red border */
     color: #d32f2f !important; /* Darker red for the letter */
     box-shadow: inset 0 0 5px rgba(211, 47, 47, 0.3) !important;
     text-shadow: none !important;
-    z-index: 4; /* Higher than regular cells */
+    z-index: 4 !important; /* Higher than regular cells */
 }
 
 /* Selected cell style - preserve as blue for now */
