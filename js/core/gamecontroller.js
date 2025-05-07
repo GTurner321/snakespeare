@@ -72,6 +72,7 @@ class GameController {
   this.phrases = [];
   this.phraseTemplate = null; // Store the underscores template
   this.highestHintLevelUsed = 0; // Track the highest hint level used for the current phrase
+  this.highestIslandReductionLevelUsed = 0; // Track the highest island reduction level used
     
   // Initialize components
   this.pathGenerator = new PathGenerator();
@@ -150,47 +151,75 @@ setupMenuHandlers() {
   // Step 2: Clear existing menu content
   menuDropdown.innerHTML = '';
   
-  // Step 3: Create menu items
+  // Step 3: Create menu items - UPDATED with island reduction levels
   const menuItems = [
     { id: 'new-phrase-button', text: 'New Phrase', action: () => this.loadRandomPhrase() },
     { id: 'reset-selections-button', text: 'Reset Selections', action: () => this.resetSelections() },
+    { id: 'separator-1', text: 'divider', type: 'separator' },
     { id: 'hint-level-1-button', text: 'Hint Level 1 (15%)', action: () => this.setHintLevel(1), hintLevel: 1 },
     { id: 'hint-level-2-button', text: 'Hint Level 2 (25%)', action: () => this.setHintLevel(2), hintLevel: 2 },
-    { id: 'hint-level-3-button', text: 'Hint Level 3 (35%)', action: () => this.setHintLevel(3), hintLevel: 3 }
+    { id: 'hint-level-3-button', text: 'Hint Level 3 (35%)', action: () => this.setHintLevel(3), hintLevel: 3 },
+    { id: 'separator-2', text: 'divider', type: 'separator' },
+    { id: 'island-level-0-button', text: 'Add All Letters', action: () => this.setIslandReductionLevel(0), islandLevel: 0 },
+    { id: 'island-level-1-button', text: 'Reduce Islands 1', action: () => this.setIslandReductionLevel(1), islandLevel: 1 },
+    { id: 'island-level-2-button', text: 'Reduce Islands 2', action: () => this.setIslandReductionLevel(2), islandLevel: 2 }
   ];
   
   // Step 4: Add to menu and set up click handlers
   menuItems.forEach(item => {
+    // For separators, create a divider
+    if (item.type === 'separator') {
+      const divider = document.createElement('div');
+      divider.className = 'menu-separator';
+      menuDropdown.appendChild(divider);
+      return;
+    }
+    
+    // Create button for normal menu items
     const button = document.createElement('button');
     button.id = item.id;
     button.className = 'menu-item';
+    
+    // Add special classes for hint and island reduction buttons
     if (item.hintLevel) {
       button.classList.add('hint-button');
+    } else if (item.islandLevel !== undefined) {
+      button.classList.add('island-button');
     }
+    
     button.textContent = item.text;
     
-button.addEventListener('click', () => {
-  console.log(`${item.id} clicked`);
-  
-  // For hint buttons, check if they're disabled
-  if (item.hintLevel && item.hintLevel <= this.highestHintLevelUsed && 
-      item.hintLevel !== this.gridRenderer.hintLevel) {
-    console.log(`Hint level ${item.hintLevel} is disabled`);
-    return; // Don't execute the action
-  }
-  
-  // Execute the action
-  item.action();
-  
-  // Update hint button styles
-  if (item.hintLevel) {
-    this.updateHintButtonStyles();
-  } else {
-    // Close the menu for non-hint buttons
-    menuDropdown.classList.remove('active');
-    menuToggle.classList.remove('active');
-  }
-});
+    button.addEventListener('click', () => {
+      console.log(`${item.id} clicked`);
+      
+      // For hint buttons, check if they're disabled
+      if (item.hintLevel && item.hintLevel <= this.highestHintLevelUsed && 
+          item.hintLevel !== this.gridRenderer.hintLevel) {
+        console.log(`Hint level ${item.hintLevel} is disabled`);
+        return; // Don't execute the action
+      }
+      
+      // For island reduction buttons, check if they're disabled
+      if (item.islandLevel !== undefined && 
+          item.islandLevel < this.highestIslandReductionLevelUsed) {
+        console.log(`Island reduction level ${item.islandLevel} is disabled`);
+        return; // Don't execute the action
+      }
+      
+      // Execute the action
+      item.action();
+      
+      // Update button styles
+      if (item.hintLevel) {
+        this.updateHintButtonStyles();
+      } else if (item.islandLevel !== undefined) {
+        this.updateIslandReductionButtonStyles();
+      } else {
+        // Close the menu for non-hint/non-island buttons
+        menuDropdown.classList.remove('active');
+        menuToggle.classList.remove('active');
+      }
+    });
     
     menuDropdown.appendChild(button);
   });
@@ -210,7 +239,7 @@ button.addEventListener('click', () => {
     }
   });
   
-  // Step 7: Initialize hint level
+  // Step 7: Initialize hint level and island reduction level
   this.resetHintLevel = () => {
     if (this.gridRenderer) {
       console.log('Resetting hint level to 0');
@@ -223,9 +252,24 @@ button.addEventListener('click', () => {
     }
   };
   
-  // Initialize with no hints
+  this.resetIslandReductionLevel = () => {
+    if (this.gridRenderer) {
+      console.log('Resetting island reduction level to 0');
+      this.gridRenderer.islandReductionLevel = 0;
+      this.gridRenderer.highestIslandReductionLevelUsed = 0;
+      this.highestIslandReductionLevelUsed = 0;
+      
+      // Update island reduction button styles
+      document.querySelectorAll('.island-button').forEach(btn => {
+        btn.classList.remove('active-island');
+      });
+    }
+  };
+  
+  // Initialize with no hints and default island reduction level
   if (this.gridRenderer) {
     this.gridRenderer.setHintLevel(0);
+    this.gridRenderer.islandReductionLevel = 0;
   }
   
   console.log('Menu handlers setup complete');
@@ -507,6 +551,74 @@ fillPhraseTemplateWithHints(template, phrase, revealedLetters) {
         console.error('Failed to load Shakespeare component:', error);
       });
   }
+
+  /**
+ * Update island reduction button styles
+ */
+updateIslandReductionButtonStyles() {
+  // Get all island reduction buttons
+  const islandButtons = document.querySelectorAll('.island-button');
+  
+  // Update each button
+  islandButtons.forEach(button => {
+    // Extract level from button ID (island-level-X-button)
+    const buttonLevel = parseInt(button.id.split('-')[2], 10);
+    
+    // Remove any existing state classes
+    button.classList.remove('active-island', 'disabled-island');
+    
+    // Current level - active
+    if (buttonLevel === this.gridRenderer.islandReductionLevel) {
+      button.classList.add('active-island');
+    }
+    
+    // Lower than highest used - disabled
+    if (buttonLevel < this.highestIslandReductionLevelUsed) {
+      button.classList.add('disabled-island');
+      button.style.color = 'grey';
+    } else {
+      button.style.color = '';  // Reset to default
+    }
+  });
+}
+
+/**
+ * Set the island reduction level
+ * @param {number} level - Island reduction level to set (0-2)
+ */
+setIslandReductionLevel(level) {
+  if (this.gridRenderer) {
+    // Don't allow going back to a lower level
+    if (level < this.highestIslandReductionLevelUsed) {
+      console.log(`Cannot go back to island reduction level ${level} after using level ${this.highestIslandReductionLevelUsed}`);
+      return;
+    }
+    
+    // Set the level in the grid renderer
+    this.gridRenderer.setIslandReductionLevel(level);
+    
+    // Update the highest level used
+    this.highestIslandReductionLevelUsed = level;
+    
+    // Apply the new random letters based on the level
+    this.applyIslandReductionLetters();
+    
+    // Update button styles
+    this.updateIslandReductionButtonStyles();
+    
+    console.log(`Island reduction level set to ${level}`);
+  }
+}
+
+/**
+ * Apply random letters based on the current island reduction level
+ */
+applyIslandReductionLetters() {
+  if (this.gridRenderer && this.pathGenerator) {
+    // Apply random letters based on current level
+    this.gridRenderer.applyIslandReductionLetters(this.pathGenerator);
+  }
+}
   
 // Modified loadPhrase method to use adjacent random letters
 loadPhrase(phraseData) {
