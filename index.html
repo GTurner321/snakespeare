@@ -40,8 +40,9 @@
     
     <!-- JavaScript Modules -->
     <script type="module">
-        // Import with the correct path to gamecontroller.js
+        // Import with the correct path to gamecontroller.js and islandrenderer.js
         import GameController from './js/core/gamecontroller.js';
+        import IslandRenderer from './js/core/islandrenderer.js';
         
         // Initialize game when DOM is loaded
         document.addEventListener('DOMContentLoaded', () => {
@@ -57,6 +58,13 @@
                 },
                 cellSize: 45,
                 randomFillPercentage: 0.8  // Enable adjacent-cells random letter filling
+            });
+            
+            // Initialize island renderer when grid renderer is ready
+            document.addEventListener('gridRendererInitialized', (e) => {
+                const gridRenderer = e.detail.gridRenderer;
+                console.log('Grid renderer initialized, applying island theme...');
+                const islandRenderer = new IslandRenderer(gridRenderer);
             });
             
             // Attempt to load phrase data from CSV
