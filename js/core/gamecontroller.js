@@ -702,7 +702,6 @@ if (generationSuccessful && this.options.randomFillPercentage > 0) {
   setTimeout(() => {
     this.gridRenderer.revealPathLetters();
   }, 50);
-}
   } else {
     // If no random letters or generation failed, reveal hints immediately
 if (generationSuccessful) {
