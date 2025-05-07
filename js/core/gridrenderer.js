@@ -1360,11 +1360,6 @@ setHintLevel(level) {
   this.applyStoredHintLetters();
 }
 
-// Add this method to GridRenderer class
-/**
- * Set the island reduction level
- * @param {number} level - The island reduction level (0, 1, or 2)
- */
 setIslandReductionLevel(level) {
   // Validate level
   if (level < 0 || level > 2) {
@@ -1378,26 +1373,27 @@ setIslandReductionLevel(level) {
     return;
   }
   
+  // Store previous level for comparison
+  const previousLevel = this.islandReductionLevel;
+  
+  // Update the level
   this.islandReductionLevel = level;
   this.highestIslandReductionLevelUsed = Math.max(this.highestIslandReductionLevelUsed, level);
   
-  console.log(`Island reduction level set to ${level}`);
+  console.log(`Grid renderer island reduction level set to ${level} from ${previousLevel}`);
   
   // Trigger event for island reduction level change
   document.dispatchEvent(new CustomEvent('islandReductionLevelChanged', { 
     detail: { 
       level: this.islandReductionLevel,
+      previousLevel: previousLevel,
       gridRenderer: this 
     }
   }));
 }
-
-/**
- * Apply random letters based on the current island reduction level
- * @param {PathGenerator} pathGenerator - The path generator with pre-generated cells
- */
+  
 applyIslandReductionLetters(pathGenerator) {
-  // First, clear all existing random letters
+  // Clear all existing random letters
   this.clearRandomLetters();
   
   // Get random letters for the current level
@@ -1410,8 +1406,16 @@ applyIslandReductionLetters(pathGenerator) {
   this.renderVisibleGrid();
   
   console.log(`Applied ${randomLetters.length} random letters for island reduction level ${this.islandReductionLevel}`);
-}  
-
+  
+  // Dispatch an event to notify that letters were updated
+  document.dispatchEvent(new CustomEvent('islandLettersUpdated', { 
+    detail: { 
+      level: this.islandReductionLevel,
+      gridRenderer: this 
+    }
+  }));
+}
+  
 /**
  * Replace the existing revealPathLetters method with this one
  */
