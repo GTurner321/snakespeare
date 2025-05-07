@@ -552,12 +552,9 @@ fillPhraseTemplateWithHints(template, phrase, revealedLetters) {
       });
   }
 
-  /**
- * Update island reduction button styles
- */
 updateIslandReductionButtonStyles() {
-// Get all island reduction buttons by ID pattern 
-const islandButtons = document.querySelectorAll('[id^="island-level-"]');
+  // Get all island reduction buttons by ID pattern
+  const islandButtons = document.querySelectorAll('[id^="island-level-"]');
   
   // Update each button
   islandButtons.forEach(button => {
@@ -565,16 +562,16 @@ const islandButtons = document.querySelectorAll('[id^="island-level-"]');
     const buttonLevel = parseInt(button.id.split('-')[2], 10);
     
     // Remove any existing state classes
-    button.classList.remove('active-hint', 'disabled-hint'); // Use hint classes
+    button.classList.remove('active-hint', 'disabled-hint');
     
     // Current level - active
     if (buttonLevel === this.gridRenderer.islandReductionLevel) {
-      button.classList.add('active-hint'); // Use active-hint
+      button.classList.add('active-hint');
     }
     
     // Lower than highest used - disabled
     if (buttonLevel < this.highestIslandReductionLevelUsed) {
-      button.classList.add('disabled-hint'); // Use disabled-hint
+      button.classList.add('disabled-hint');
       button.style.color = 'grey';
     } else {
       button.style.color = '';  // Reset to default
@@ -611,13 +608,40 @@ setIslandReductionLevel(level) {
 }
 
 /**
- * Apply random letters based on the current island reduction level
+ * Clear all random letters from the grid (non-path cells)
  */
-applyIslandReductionLetters() {
-  if (this.gridRenderer && this.pathGenerator) {
-    // Apply random letters based on current level
-    this.gridRenderer.applyIslandReductionLetters(this.pathGenerator);
+clearRandomLetters() {
+  // For each cell in the grid
+  for (let y = 0; y < this.grid.length; y++) {
+    for (let x = 0; x < this.grid[0].length; x++) {
+      // If this cell is not part of the path, clear the letter
+      if (!this.grid[y][x].isPath) {
+        this.grid[y][x].letter = '';
+      }
+    }
   }
+  
+  console.log('Cleared all random letters from grid');
+}
+
+/**
+ * Apply random letters based on the current island reduction level
+ * @param {PathGenerator} pathGenerator - The path generator with pre-generated cells
+ */
+applyIslandReductionLetters(pathGenerator) {
+  // First, clear all existing random letters
+  this.clearRandomLetters();
+  
+  // Get random letters for the current level
+  const randomLetters = pathGenerator.getRandomLettersForLevel(this.islandReductionLevel);
+  
+  // Apply these letters to the grid
+  this.applyAdjacentRandomLetters(randomLetters);
+  
+  // Re-render the grid to show changes
+  this.renderVisibleGrid();
+  
+  console.log(`Applied ${randomLetters.length} random letters for island reduction level ${this.islandReductionLevel}`);
 }
   
 // Modified loadPhrase method to use adjacent random letters
