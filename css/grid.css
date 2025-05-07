@@ -57,7 +57,7 @@ body {
 }
 
 /* ==========================================================================
-   2. Grid Container & Cells
+   2. Grid Container & Cells - Island Theme
    ========================================================================== */
 
 /* Grid container wrapper - ensure proper dimensions */
@@ -76,9 +76,9 @@ body {
 
 .grid-container {
     display: grid;
-    gap: 2px;
-    background-color: #ccc;
-    border: 2px solid #888;
+    gap: 0; /* Remove gaps between cells for a continuous sea */
+    background-color: #1a75ff; /* Deeper blue for the sea */
+    border: 2px solid #0d47a1; /* Darker blue border for the grid */
     border-radius: 4px;
     padding: 2px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
@@ -110,12 +110,15 @@ body {
     grid-template-rows: repeat(9, 45px);
 }
 
+/* Default non-letter cell - deep blue sea */
 .grid-cell {
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: #f0f0f0;
-    border: 1px solid #ccc;
+    background-color: #1a75ff; /* Deep blue for non-letter cells (sea) */
+    color: white;
+    border: 1px solid #1565c0; /* Slightly lighter blue border */
+    text-shadow: none; /* Remove text shadow */
     border-radius: 4px;
     font-family: 'Trebuchet MS', Arial, sans-serif;
     font-weight: bold;
@@ -123,8 +126,6 @@ body {
     user-select: none;
     /* CHANGED: Targeted transitions instead of 'all' for better performance */
     transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-    color: #444;
-    text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8);
     box-sizing: border-box;
     width: 50px;
     height: 50px;
@@ -136,79 +137,84 @@ body {
     pointer-events: auto;
     /* Fix for occasional touch events not registering */
     z-index: 1;
+    margin: 0; /* No margins between cells */
 }
 
-/* Different cell states */
+/* Style for "adjacent to letter" sea cells - lighter blue */
+.grid-cell.sea-adjacent {
+    background-color: #4d94ff; /* Lighter blue for cells adjacent to islands */
+    border-color: #2979ff; /* Slightly lighter border */
+}
+
+/* Style for letter cells - pale green islands */
+.grid-cell.path-cell:not(.selected-cell):not(.start-cell):not(.revealed-cell):not(.completed-cell) {
+    background-color: #b2dfdb; /* Pale green for letter islands */
+    color: #004d40; /* Dark teal for letters */
+    border: 1px solid #80cbc4; /* Lighter teal border */
+    text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8);
+}
+
+/* Yellow borders for letter cells adjacent to sea */
+.grid-cell.path-cell.island-edge-top:not(.selected-cell):not(.start-cell):not(.revealed-cell):not(.completed-cell) {
+    border-top: 3px solid #ffeb3b; /* Yellow top border */
+}
+
+.grid-cell.path-cell.island-edge-right:not(.selected-cell):not(.start-cell):not(.revealed-cell):not(.completed-cell) {
+    border-right: 3px solid #ffeb3b; /* Yellow right border */
+}
+
+.grid-cell.path-cell.island-edge-bottom:not(.selected-cell):not(.start-cell):not(.revealed-cell):not(.completed-cell) {
+    border-bottom: 3px solid #ffeb3b; /* Yellow bottom border */
+}
+
+.grid-cell.path-cell.island-edge-left:not(.selected-cell):not(.start-cell):not(.revealed-cell):not(.completed-cell) {
+    border-left: 3px solid #ffeb3b; /* Yellow left border */
+}
+
+/* Preserve the start cell style - green */
 .grid-cell.start-cell {
     background-color: #4CAF50; /* Green for start */
     color: white;
     text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.4);
     box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2);
+    z-index: 5; /* Higher z-index to stand out */
 }
 
-/* Path cell highlighting in light yellow */
-.grid-cell.path-cell:not(.selected-cell):not(.start-cell):not(.revealed-cell) {
-    background-color: #FFF9C4; /* Light yellow for path letters */
-    color: #444;
-    text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8);
-    border: 1px solid #E6DD93; /* Slightly darker yellow border */
-}
-
-/* Style for revealed hint cells (light red) with !important for higher precedence */
+/* Style for revealed hint cells - preserve as red */
 .grid-cell.revealed-cell:not(.selected-cell):not(.start-cell):not(.completed-cell) {
     background-color: #ffcdd2 !important; /* Light red */
     border: 1px solid #e57373 !important; /* Slightly darker red border */
     color: #d32f2f !important; /* Darker red for the letter */
-    box-shadow: inset 0 0 5px rgba(211, 47, 47, 0.3) !important; /* Inner shadow for depth */
-    text-shadow: none !important; /* Remove any text shadow */
+    box-shadow: inset 0 0 5px rgba(211, 47, 47, 0.3) !important;
+    text-shadow: none !important;
+    z-index: 4; /* Higher than regular cells */
 }
 
-/* Specifically target path cells that are also revealed */
-.grid-cell.path-cell.revealed-cell:not(.selected-cell):not(.start-cell):not(.completed-cell) {
-    background-color: #ffcdd2 !important; /* Light red overrides the path cell color */
-    color: #d32f2f !important;
-    border-color: #e57373 !important;
-    text-shadow: none !important; /* Remove any inherited text shadows */
-}
-
+/* Selected cell style - preserve as blue for now */
 .grid-cell.selected-cell {
-  background-color: #2196F3 !important; /* Blue for selected */
-  color: white !important;
-  text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.4) !important;
-  z-index: 2 !important; /* Ensure selected is on top of path */
-  box-shadow: 0 0 8px rgba(0, 0, 0, 0.3) !important;
-  border: 2px solid #0D47A1 !important; /* Darker blue border */
+    background-color: #2196F3 !important; /* Blue for selected */
+    color: white !important;
+    text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.4) !important;
+    z-index: 6 !important; /* Ensure selected is on top */
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.3) !important;
+    border: 2px solid #0D47A1 !important; /* Darker blue border */
 }
 
-/* Completed state styling */
+/* Completed path style - preserve as green for now */
 .grid-cell.completed-cell {
-  background-color: #4CAF50 !important; /* Green for completed cells */
-  color: white !important;
-  text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.4) !important;
-  border: 1px solid #2E7D32 !important; /* Darker green border */
-  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1) !important;
-  z-index: 3 !important; /* Ensure completed is on top of all other states */
+    background-color: #4CAF50 !important; /* Green for completed cells */
+    color: white !important;
+    text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.4) !important;
+    border: 1px solid #2E7D32 !important; /* Darker green border */
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1) !important;
+    z-index: 7 !important; /* Ensure completed is on top of all other states */
 }
 
-/* Override for hover state */
-@media (hover: hover) and (pointer: fine) {
-  .grid-cell.completed-cell:hover {
-    background-color: #4CAF50 !important; /* Keep green for completed when hovering */
-    cursor: default !important; /* Change cursor to default for completed cells */
-  }
-}
-
-/* Only show the purple path when highlighting is enabled */
-.grid-cell.path-cell.highlight-enabled:not(.selected-cell):not(.start-cell):not(.revealed-cell) {
-    background-color: #9C27B0; /* Purple for revealed path (when highlight enabled) */
-    color: white;
-    text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.4);
-}
-
+/* Out of bounds cells as darker blue */
 .grid-cell.out-of-bounds {
-    background-color: #ddd;
-    color: #aaa;
-    border-color: #bbb;
+    background-color: #0d47a1; /* Darker blue for out of bounds */
+    color: #64b5f6; /* Light blue text */
+    border-color: #1565c0; /* Medium blue border */
 }
 
 /* Style for cells being touched - improved for better visual feedback */
@@ -230,13 +236,19 @@ body {
     animation: invalid-selection-pulse 0.3s ease;
 }
 
-/* Cell hover effect (only on non-touch devices) */
+/* Hover effects for the island theme */
 @media (hover: hover) and (pointer: fine) {
-    .grid-cell:not(.start-cell):not(.out-of-bounds):hover {
-        background-color: #e0e0e0;
+    /* Hover for sea cells */
+    .grid-cell:not(.path-cell):not(.start-cell):not(.out-of-bounds):hover {
+        background-color: #66a3ff; /* Lighter blue on hover */
         cursor: pointer;
         box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
-        z-index: 1; /* Ensure hover is above regular cells */
+    }
+    
+    /* Hover for letter island cells */
+    .grid-cell.path-cell:not(.selected-cell):not(.start-cell):not(.revealed-cell):not(.completed-cell):hover {
+        background-color: #80cbc4; /* Slightly darker green on hover */
+        cursor: pointer;
     }
     
     /* Ensure selected state always overrides hover */
@@ -245,15 +257,16 @@ body {
         z-index: 2 !important; /* Keep selected on top */
     }
     
-    /* Special hover for path cells */
-    .grid-cell.path-cell:not(.selected-cell):not(.start-cell):not(.revealed-cell):hover {
-        background-color: #F0E68C; /* Darker yellow on hover */
-    }
-    
     /* Hover effect for revealed cells */
     .grid-cell.revealed-cell:not(.selected-cell):not(.completed-cell):hover {
         background-color: #ef9a9a !important; /* Slightly darker red on hover */
         cursor: pointer;
+    }
+    
+    /* Keep hover for completed */
+    .grid-cell.completed-cell:hover {
+        background-color: #4CAF50 !important; /* Keep green for completed when hovering */
+        cursor: default !important; /* Change cursor to default for completed cells */
     }
 }
 
