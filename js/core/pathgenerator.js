@@ -545,20 +545,19 @@ class PathGenerator {
     });
   }
   
-  /**
-   * Get random letters for a specific island reduction level
-   * @param {number} level - The island reduction level (0, 1, or 2)
-   * @return {Array} Array of {x, y, letter} objects with random letters
-   */
-  getRandomLettersForLevel(level) {
-    if (level < 0 || level > 2) {
-      console.error(`Invalid island reduction level: ${level}. Using level 0.`);
-      level = 0;
-    }
-    
-    return this.preGeneratedCells[level];
+getRandomLettersForLevel(level) {
+  if (level < 0 || level > 2) {
+    console.error(`Invalid island reduction level: ${level}. Using level 0.`);
+    level = 0;
   }
-
+  
+  const cellCount = this.preGeneratedCells[level].length;
+  console.log(`Getting ${cellCount} pre-generated cells for island reduction level ${level}`);
+  
+  // Deep clone the cells to prevent modification of the originals
+  return JSON.parse(JSON.stringify(this.preGeneratedCells[level]));
+}
+  
   /**
    * Legacy method for backward compatibility
    * Now uses pre-generated cells for the default level (2)
