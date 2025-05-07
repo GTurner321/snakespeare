@@ -579,10 +579,6 @@ updateIslandReductionButtonStyles() {
   });
 }
 
-/**
- * Set the island reduction level
- * @param {number} level - Island reduction level to set (0-2)
- */
 setIslandReductionLevel(level) {
   if (this.gridRenderer) {
     // Don't allow going back to a lower level
@@ -591,14 +587,11 @@ setIslandReductionLevel(level) {
       return;
     }
     
-    // Set the level in the grid renderer
+    // Set the level in the grid renderer and apply letters
     this.gridRenderer.setIslandReductionLevel(level);
     
     // Update the highest level used
     this.highestIslandReductionLevelUsed = level;
-    
-    // Apply the new random letters based on the level
-    this.applyIslandReductionLetters();
     
     // Update button styles
     this.updateIslandReductionButtonStyles();
