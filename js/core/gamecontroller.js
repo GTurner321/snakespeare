@@ -556,8 +556,8 @@ fillPhraseTemplateWithHints(template, phrase, revealedLetters) {
  * Update island reduction button styles
  */
 updateIslandReductionButtonStyles() {
-  // Get all island reduction buttons
-  const islandButtons = document.querySelectorAll('.island-button');
+// Get all island reduction buttons by ID pattern 
+const islandButtons = document.querySelectorAll('[id^="island-level-"]');
   
   // Update each button
   islandButtons.forEach(button => {
