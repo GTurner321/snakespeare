@@ -66,6 +66,10 @@ constructor(containerId, options = {}) {
 this.level1HintIndices = [];  // Store level 1 hint indices (15%)
 this.level2HintIndices = [];  // Store level 2 hint indices (25%)
 this.level3HintIndices = [];  // Store level 3 hint indices (35%)
+
+// NEW: Add island reduction level properties
+this.islandReductionLevel = 0;                 // Default island reduction level (0-2)
+this.highestIslandReductionLevelUsed = 0;      // Track highest level used
   
   // Initialize the grid
   this.initializeGrid();
@@ -1339,6 +1343,53 @@ setHintLevel(level) {
   this.applyStoredHintLetters();
 }
 
+// Add this method to GridRenderer class
+/**
+ * Set the island reduction level
+ * @param {number} level - The island reduction level (0, 1, or 2)
+ */
+setIslandReductionLevel(level) {
+  // Validate level
+  if (level < 0 || level > 2) {
+    console.error('Invalid island reduction level. Must be between 0 and 2.');
+    return;
+  }
+  
+  // Don't allow going back to a lower level
+  if (level < this.highestIslandReductionLevelUsed) {
+    console.log(`Cannot go back to island reduction level ${level} after using level ${this.highestIslandReductionLevelUsed}`);
+    return;
+  }
+  
+  this.islandReductionLevel = level;
+  this.highestIslandReductionLevelUsed = Math.max(this.highestIslandReductionLevelUsed, level);
+  
+  console.log(`Island reduction level set to ${level}`);
+  
+  // Trigger event for island reduction level change
+  document.dispatchEvent(new CustomEvent('islandReductionLevelChanged', { 
+    detail: { 
+      level: this.islandReductionLevel,
+      gridRenderer: this 
+    }
+  }));
+}
+
+// Add this method to apply random letters based on the current island reduction level
+/**
+ * Apply random letters based on the current island reduction level
+ * @param {PathGenerator} pathGenerator - The path generator with pre-generated cells
+ */
+applyIslandReductionLetters(pathGenerator) {
+  // Get random letters for the current level
+  const randomLetters = pathGenerator.getRandomLettersForLevel(this.islandReductionLevel);
+  
+  // Apply these letters to the grid
+  this.applyAdjacentRandomLetters(randomLetters);
+  
+  console.log(`Applied ${randomLetters.length} random letters for island reduction level ${this.islandReductionLevel}`);
+}
+  
 /**
  * Replace the existing revealPathLetters method with this one
  */
