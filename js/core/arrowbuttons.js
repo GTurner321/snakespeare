@@ -107,9 +107,6 @@ class ScrollAreaHandler {
       phraseDisplay.appendChild(phraseText);
     }
     
-    // Insert the gameplay area and phrase display into the game container
-    this.createMenuSystem();
-    
     // Insert elements at appropriate positions
     const existingElements = Array.from(this.gameContainer.children);
     let inserted = false;
@@ -197,19 +194,6 @@ class ScrollAreaHandler {
           this.handleScrollAreaClick(direction, element);
         });
       });
-    }
-    
-    // Set up menu button handlers
-    const newPhraseButton = document.getElementById('new-phrase-button');
-    if (newPhraseButton) {
-      // The actual event handler will be set up by the game controller
-      // Just making sure the element exists
-    }
-    
-    const resetSelectionsButton = document.getElementById('reset-selections-button');
-    if (resetSelectionsButton) {
-      // The actual event handler will be set up by the game controller
-      // Just making sure the element exists
     }
     
     // Keyboard navigation (preserved from original code)
