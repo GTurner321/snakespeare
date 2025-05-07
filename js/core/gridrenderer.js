@@ -1412,21 +1412,6 @@ applyIslandReductionLetters(pathGenerator) {
   console.log(`Applied ${randomLetters.length} random letters for island reduction level ${this.islandReductionLevel}`);
 }  
 
-// Add this method to apply random letters based on the current island reduction level
-/**
- * Apply random letters based on the current island reduction level
- * @param {PathGenerator} pathGenerator - The path generator with pre-generated cells
- */
-applyIslandReductionLetters(pathGenerator) {
-  // Get random letters for the current level
-  const randomLetters = pathGenerator.getRandomLettersForLevel(this.islandReductionLevel);
-  
-  // Apply these letters to the grid
-  this.applyAdjacentRandomLetters(randomLetters);
-  
-  console.log(`Applied ${randomLetters.length} random letters for island reduction level ${this.islandReductionLevel}`);
-}
-  
 /**
  * Replace the existing revealPathLetters method with this one
  */
