@@ -773,21 +773,23 @@ this.highestIslandReductionLevelUsed = 0;      // Track highest level used
     console.log(`Applied ${randomLetterCells.length} adjacent random letters to grid`);
   }
 
-/**
- * Clear all random letters from the grid (non-path cells)
- */
 clearRandomLetters() {
+  // Keep track of how many cells were cleared
+  let clearedCount = 0;
+  
   // For each cell in the grid
   for (let y = 0; y < this.grid.length; y++) {
     for (let x = 0; x < this.grid[0].length; x++) {
-      // If this cell is not part of the path, clear the letter
-      if (!this.grid[y][x].isPath) {
+      // If this cell is not part of the path and has a letter, clear it
+      if (!this.grid[y][x].isPath && this.grid[y][x].letter !== '') {
         this.grid[y][x].letter = '';
+        clearedCount++;
       }
     }
   }
   
-  console.log('Cleared all random letters from grid');
+  console.log(`Cleared ${clearedCount} random letters from grid`);
+  return clearedCount;
 }
   
   /**
