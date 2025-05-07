@@ -13,22 +13,40 @@ class IslandRenderer {
     
     // Listen for path set event to update island rendering
     document.addEventListener('pathSet', (e) => {
-      if (e.detail.success) {
-        this.updateIslandAppearance();
-      }
+      console.log('Path set event received, updating island appearance');
+      setTimeout(() => this.updateIslandAppearance(), 200);
     });
     
     // Listen for grid rebuilt event to reapply island styling
     document.addEventListener('gridRebuilt', () => {
-      this.updateIslandAppearance();
+      console.log('Grid rebuilt event received, updating island appearance');
+      setTimeout(() => this.updateIslandAppearance(), 200);
     });
     
     // Listen for selections changed
     document.addEventListener('selectionsCleared', () => {
-      this.updateIslandAppearance();
+      console.log('Selections cleared, updating island appearance');
+      setTimeout(() => this.updateIslandAppearance(), 200);
     });
     
-    console.log('IslandRenderer initialized');
+    // Additional listeners for other grid state changes
+    document.addEventListener('gridScrolled', () => {
+      console.log('Grid scrolled, updating island appearance');
+      setTimeout(() => this.updateIslandAppearance(), 200);
+    });
+    
+    document.addEventListener('gridCompletionChanged', () => {
+      console.log('Grid completion changed, updating island appearance');
+      setTimeout(() => this.updateIslandAppearance(), 200);
+    });
+    
+    // Listen for selection changes
+    document.addEventListener('revealedLettersUpdated', () => {
+      console.log('Revealed letters updated, updating island appearance');
+      setTimeout(() => this.updateIslandAppearance(), 200);
+    });
+    
+    console.log('IslandRenderer initialized and listening for events');
   }
   
   /**
@@ -40,9 +58,14 @@ class IslandRenderer {
       return;
     }
     
-    // Apply initial island appearance
-    this.updateIslandAppearance();
-    this.initialized = true;
+    console.log('Initializing IslandRenderer...');
+    
+    // Apply initial island appearance - delayed to ensure grid is ready
+    setTimeout(() => {
+      this.updateIslandAppearance();
+      this.initialized = true;
+      console.log('Initial island appearance applied.');
+    }, 500);
   }
   
   /**
@@ -56,6 +79,8 @@ class IslandRenderer {
       return;
     }
     
+    console.log(`Updating island appearance for ${cells.length} cells...`);
+    
     // First pass: clear existing island edge classes
     cells.forEach(cellElement => {
       cellElement.classList.remove(
@@ -67,26 +92,41 @@ class IslandRenderer {
       );
     });
     
-    // Second pass: process each cell
+    // Create a map of cell positions for faster lookup
+    const cellMap = new Map();
     cells.forEach(cellElement => {
-      // Get cell coordinates
       const x = parseInt(cellElement.dataset.gridX, 10);
       const y = parseInt(cellElement.dataset.gridY, 10);
+      if (!isNaN(x) && !isNaN(y)) {
+        cellMap.set(`${x},${y}`, {
+          element: cellElement,
+          x: x,
+          y: y,
+          isPath: this.isCellPath(x, y),
+          isSelected: this.isCellSelected(x, y),
+          isStart: this.isStartCell(x, y),
+          isRevealed: this.isCellRevealed(x, y),
+          isCompleted: this.isCellCompleted(x, y)
+        });
+      }
+    });
+    
+    // Second pass: process each cell
+    cellMap.forEach((cellInfo, key) => {
+      const { element, x, y, isPath } = cellInfo;
       
-      // Skip if coordinates are invalid
-      if (isNaN(x) || isNaN(y)) return;
-      
-      // Get cell data
-      const cell = this.getCellData(x, y);
-      if (!cell) return;
+      // Skip processing for selected, start, or completed cells
+      if (cellInfo.isSelected || cellInfo.isStart || cellInfo.isCompleted) {
+        return;
+      }
       
       // Is this a path cell (letter cell)?
-      if (cell.isPath) {
-        // Check each direction for edges
-        this.checkIslandEdges(cellElement, x, y);
+      if (isPath) {
+        // Process island cell
+        this.processIslandCell(element, x, y, cellMap);
       } else {
-        // Non-path cell (sea) - check if adjacent to any letter cell
-        this.checkSeaAdjacent(cellElement, x, y);
+        // Process sea cell
+        this.processSeaCell(element, x, y, cellMap);
       }
     });
     
@@ -94,84 +134,140 @@ class IslandRenderer {
   }
   
   /**
-   * Get cell data from grid renderer
+   * Process an island cell, adding edge classes as needed
+   * @param {HTMLElement} element - The cell element
    * @param {number} x - X coordinate
    * @param {number} y - Y coordinate
-   * @return {Object|null} Cell data or null if invalid
+   * @param {Map} cellMap - Map of all cell positions
    */
-  getCellData(x, y) {
-    if (!this.gridRenderer || !this.gridRenderer.grid) return null;
+  processIslandCell(element, x, y, cellMap) {
+    // Define directions to check
+    const directions = [
+      { dx: 0, dy: -1, edge: 'island-edge-top' },
+      { dx: 1, dy: 0, edge: 'island-edge-right' },
+      { dx: 0, dy: 1, edge: 'island-edge-bottom' },
+      { dx: -1, dy: 0, edge: 'island-edge-left' }
+    ];
+    
+    // Check each direction
+    directions.forEach(dir => {
+      const nx = x + dir.dx;
+      const ny = y + dir.dy;
+      const neighbor = cellMap.get(`${nx},${ny}`);
+      
+      // If no neighbor, or neighbor is not a path cell, add edge class
+      if (!neighbor || !neighbor.isPath) {
+        element.classList.add(dir.edge);
+      }
+    });
+  }
+  
+  /**
+   * Process a sea cell, adding adjacent class if next to an island
+   * @param {HTMLElement} element - The cell element
+   * @param {number} x - X coordinate
+   * @param {number} y - Y coordinate
+   * @param {Map} cellMap - Map of all cell positions
+   */
+  processSeaCell(element, x, y, cellMap) {
+    // Define directions to check
+    const directions = [
+      { dx: 0, dy: -1 },
+      { dx: 1, dy: 0 },
+      { dx: 0, dy: 1 },
+      { dx: -1, dy: 0 }
+    ];
+    
+    // Check each direction
+    for (const dir of directions) {
+      const nx = x + dir.dx;
+      const ny = y + dir.dy;
+      const neighbor = cellMap.get(`${nx},${ny}`);
+      
+      // If neighbor is a path cell (island), mark this cell as adjacent
+      if (neighbor && neighbor.isPath) {
+        element.classList.add('sea-adjacent');
+        break; // One adjacent island is enough
+      }
+    }
+  }
+  
+  /**
+   * Check if a cell is a path cell
+   * @param {number} x - X coordinate
+   * @param {number} y - Y coordinate
+   * @return {boolean} True if the cell is a path cell
+   */
+  isCellPath(x, y) {
+    if (!this.gridRenderer || !this.gridRenderer.grid) return false;
     
     // Check if coordinates are within grid bounds
     if (y < 0 || y >= this.gridRenderer.grid.length || 
         x < 0 || x >= this.gridRenderer.grid[0].length) {
-      return null;
+      return false;
     }
     
-    return this.gridRenderer.grid[y][x];
+    return this.gridRenderer.grid[y][x].isPath;
   }
   
   /**
-   * Check if a non-path cell (sea) is adjacent to any letter cells
-   * @param {HTMLElement} cellElement - DOM element for the cell
-   * @param {number} x - X coordinate
-   * @param {number} y - Y coordinate
+   * Check if a cell is selected
    */
-  checkSeaAdjacent(cellElement, x, y) {
-    // Check all four directions
-    const directions = [
-      [0, -1], // top
-      [1, 0],  // right
-      [0, 1],  // bottom
-      [-1, 0]  // left
-    ];
+  isCellSelected(x, y) {
+    if (!this.gridRenderer || !this.gridRenderer.grid) return false;
     
-    // Check each direction
-    for (const [dx, dy] of directions) {
-      const adjacentX = x + dx;
-      const adjacentY = y + dy;
-      
-      // Get adjacent cell
-      const adjacentCell = this.getCellData(adjacentX, adjacentY);
-      
-      // If adjacent cell is a path cell (letter cell)
-      if (adjacentCell && adjacentCell.isPath) {
-        // Mark this sea cell as adjacent to an island
-        cellElement.classList.add('sea-adjacent');
-        break; // One adjacency is enough
-      }
+    // Check if coordinates are within grid bounds
+    if (y < 0 || y >= this.gridRenderer.grid.length || 
+        x < 0 || x >= this.gridRenderer.grid[0].length) {
+      return false;
     }
+    
+    return this.gridRenderer.grid[y][x].isSelected;
   }
   
   /**
-   * Check island edges for a path cell (letter cell)
-   * @param {HTMLElement} cellElement - DOM element for the cell
-   * @param {number} x - X coordinate
-   * @param {number} y - Y coordinate
+   * Check if a cell is the start cell
    */
-  checkIslandEdges(cellElement, x, y) {
-    // Define directions and corresponding edge classes
-    const edgeDirections = [
-      { dx: 0, dy: -1, edge: 'island-edge-top' },    // top
-      { dx: 1, dy: 0, edge: 'island-edge-right' },   // right
-      { dx: 0, dy: 1, edge: 'island-edge-bottom' },  // bottom
-      { dx: -1, dy: 0, edge: 'island-edge-left' }    // left
-    ];
+  isStartCell(x, y) {
+    if (!this.gridRenderer || !this.gridRenderer.grid) return false;
     
-    // Check each direction
-    edgeDirections.forEach(direction => {
-      const adjacentX = x + direction.dx;
-      const adjacentY = y + direction.dy;
-      
-      // Get adjacent cell
-      const adjacentCell = this.getCellData(adjacentX, adjacentY);
-      
-      // If adjacent cell is not a path cell (is sea) or is out of bounds
-      if (!adjacentCell || !adjacentCell.isPath) {
-        // Add edge class for this direction
-        cellElement.classList.add(direction.edge);
-      }
-    });
+    // Check if coordinates are within grid bounds
+    if (y < 0 || y >= this.gridRenderer.grid.length || 
+        x < 0 || x >= this.gridRenderer.grid[0].length) {
+      return false;
+    }
+    
+    return this.gridRenderer.grid[y][x].isStart;
+  }
+  
+  /**
+   * Check if a cell is revealed
+   */
+  isCellRevealed(x, y) {
+    if (!this.gridRenderer || !this.gridRenderer.grid) return false;
+    
+    // Check if coordinates are within grid bounds
+    if (y < 0 || y >= this.gridRenderer.grid.length || 
+        x < 0 || x >= this.gridRenderer.grid[0].length) {
+      return false;
+    }
+    
+    return this.gridRenderer.grid[y][x].isRevealed;
+  }
+  
+  /**
+   * Check if a cell is completed
+   */
+  isCellCompleted(x, y) {
+    if (!this.gridRenderer || !this.gridRenderer.grid) return false;
+    
+    // Check if coordinates are within grid bounds
+    if (y < 0 || y >= this.gridRenderer.grid.length || 
+        x < 0 || x >= this.gridRenderer.grid[0].length) {
+      return false;
+    }
+    
+    return this.gridRenderer.grid[y][x].isCompleted;
   }
 }
 
