@@ -1582,13 +1582,16 @@ setPath(path) {
     }
   }));
   
-  // After the path is set and random letters are applied, call revealPathLetters
-  // Add this right before returning from the method:
   if (allCellsPlaced) {
     // Clear any previous revealed cells
     this.revealedCells = [];
-    // Set new revealed cells based on hint level
-    this.revealPathLetters();
+    
+    // Pre-generate hint indices first
+    console.log("Generating hint indices for new path with length:", path.length);
+    this.preGenerateHintIndices();
+    
+    // Then apply based on current hint level
+    this.applyStoredHintLetters();
   }
   
   // Return success flag so caller knows if generation succeeded
