@@ -675,6 +675,11 @@ if (generationSuccessful && this.options.randomFillPercentage > 0) {
   this.highestIslandReductionLevelUsed = 0;
   this.gridRenderer.islandReductionLevel = 0;
   this.gridRenderer.highestIslandReductionLevelUsed = 0;
+
+// Update the button styles
+this.updateIslandReductionButtonStyles();
+
+console.log('Island reduction level reset to 0 for new phrase');
   
   // Apply default level (0)
   this.gridRenderer.applyIslandReductionLetters(this.pathGenerator);
