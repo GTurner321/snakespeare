@@ -87,7 +87,16 @@ class GameController {
     onCellClick: (x, y, cell) => this.handleCellClick(x, y, cell),
     onSelectionChange: () => this.handleSelectionChange()
   });
-  
+
+  // Add this event listener for pathSet events
+  document.addEventListener('pathSet', (e) => {
+    if (e.detail.success) {
+      // If path was successfully set, generate hint indices
+      this.gridRenderer.preGenerateHintIndices();
+      console.log("Hint indices generated after pathSet event");
+    }
+  });
+    
   // Initialize scroll areas AFTER grid renderer is fully created
   // This ensures the grid element exists for proper positioning
   this.scrollHandler = new ArrowButtons(this.gridRenderer, {
@@ -564,9 +573,11 @@ loadPhrase(phraseData) {
     }, 50);
   } else {
     // If no random letters or generation failed, reveal hints immediately
-    if (generationSuccessful) {
-      this.gridRenderer.revealPathLetters();
-    }
+if (generationSuccessful) {
+  // After the path is set, explicitly regenerate hint indices
+  this.gridRenderer.preGenerateHintIndices();
+  console.log("Hint indices generated after path was set");
+}
   }
   
   // Center the grid on the start cell
