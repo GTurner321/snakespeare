@@ -681,16 +681,28 @@ if (this.gridRenderer) {
   }
   
   // NEW: Generate and apply adjacent random letters
-  if (generationSuccessful && this.options.randomFillPercentage > 0) {
-    const randomLetters = this.pathGenerator.generateAdjacentRandomLetters();
-    this.gridRenderer.applyAdjacentRandomLetters(randomLetters);
-    console.log(`Applied ${randomLetters.length} adjacent random letters based on path`);
-    
-    // NEW: Apply hints after random letters are added
-    // A slight delay to ensure random letters are fully applied
-    setTimeout(() => {
-      this.gridRenderer.revealPathLetters();
-    }, 50);
+// Pre-generate random letter cells for all island reduction levels
+if (generationSuccessful && this.options.randomFillPercentage > 0) {
+  // Pre-generate cells for all levels
+  this.pathGenerator.preGenerateRandomLetterCells();
+  
+  // Reset the island reduction level to 0 (default)
+  this.highestIslandReductionLevelUsed = 0;
+  this.gridRenderer.islandReductionLevel = 0;
+  this.gridRenderer.highestIslandReductionLevelUsed = 0;
+  
+  // Apply default level (0)
+  this.gridRenderer.applyIslandReductionLetters(this.pathGenerator);
+  console.log(`Applied random letters for default island reduction level 0`);
+  
+  // Update the button styles
+  this.updateIslandReductionButtonStyles();
+  
+  // Apply hints after random letters are added
+  setTimeout(() => {
+    this.gridRenderer.revealPathLetters();
+  }, 50);
+}
   } else {
     // If no random letters or generation failed, reveal hints immediately
 if (generationSuccessful) {
