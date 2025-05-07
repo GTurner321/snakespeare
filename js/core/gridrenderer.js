@@ -773,6 +773,23 @@ this.highestIslandReductionLevelUsed = 0;      // Track highest level used
     console.log(`Applied ${randomLetterCells.length} adjacent random letters to grid`);
   }
 
+/**
+ * Clear all random letters from the grid (non-path cells)
+ */
+clearRandomLetters() {
+  // For each cell in the grid
+  for (let y = 0; y < this.grid.length; y++) {
+    for (let x = 0; x < this.grid[0].length; x++) {
+      // If this cell is not part of the path, clear the letter
+      if (!this.grid[y][x].isPath) {
+        this.grid[y][x].letter = '';
+      }
+    }
+  }
+  
+  console.log('Cleared all random letters from grid');
+}
+  
   /**
    * Handles automatic scrolling when the last selected cell is too close to an edge
    * Should be called after each successful cell selection
@@ -1374,6 +1391,26 @@ setIslandReductionLevel(level) {
     }
   }));
 }
+
+/**
+ * Apply random letters based on the current island reduction level
+ * @param {PathGenerator} pathGenerator - The path generator with pre-generated cells
+ */
+applyIslandReductionLetters(pathGenerator) {
+  // First, clear all existing random letters
+  this.clearRandomLetters();
+  
+  // Get random letters for the current level
+  const randomLetters = pathGenerator.getRandomLettersForLevel(this.islandReductionLevel);
+  
+  // Apply these letters to the grid
+  this.applyAdjacentRandomLetters(randomLetters);
+  
+  // Re-render the grid to show changes
+  this.renderVisibleGrid();
+  
+  console.log(`Applied ${randomLetters.length} random letters for island reduction level ${this.islandReductionLevel}`);
+}  
 
 // Add this method to apply random letters based on the current island reduction level
 /**
