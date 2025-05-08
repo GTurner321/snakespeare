@@ -11,31 +11,36 @@ class IslandRenderer {
     // Make this instance available globally for direct access
     window.islandRenderer = this;
     
-    // Initialize when grid renderer is ready
+    // Initialize with a slight delay to ensure grid is fully rendered
     setTimeout(() => this.updateIslandAppearance(), 500);
     
-    // Set up event listeners for game state changes
+    // Set up event listeners for game state changes that require updating island appearance
     const events = [
-      'pathSet', 'gridRebuilt', 'selectionsCleared', 
-      'gridScrolled', 'gridCompletionChanged', 'revealedLettersUpdated'
+      'pathSet',            // When a new path is set
+      'gridRebuilt',        // When grid is rebuilt
+      'selectionsCleared',  // When selections are cleared
+      'gridScrolled',       // When grid is scrolled (new cells become visible)
+      'gridCompletionChanged', // When phrase is completed
+      'revealedLettersUpdated', // When hint letters are revealed
+      'islandLettersUpdated'    // When island reduction happens
     ];
     
     events.forEach(eventName => {
       document.addEventListener(eventName, () => {
+        // Use a short timeout to ensure grid state is settled
         setTimeout(() => this.updateIslandAppearance(), 200);
       });
     });
     
-    // NEW: Listen for island letters updated event
-    document.addEventListener('islandLettersUpdated', () => {
-      console.log('Island letters updated, updating island appearance');
-      setTimeout(() => this.updateIslandAppearance(), 200);
-    });
-    
-    // NEW: Listen for explicit update request
+    // Listen for explicit update request
     document.addEventListener('updateIslandStyling', () => {
       console.log('Explicit request to update island styling received');
       setTimeout(() => this.updateIslandAppearance(), 100);
+    });
+    
+    // Also update on window resize
+    window.addEventListener('resize', () => {
+      setTimeout(() => this.updateIslandAppearance(), 300);
     });
     
     console.log('IslandRenderer initialized and listening for events');
@@ -116,12 +121,6 @@ class IslandRenderer {
    * Process island edges to add yellow borders where needed
    */
   processIslandEdges(element, x, y, cellMap) {
-    // Skip processing for special cells that have their own styling
-    const cell = cellMap.get(`${x},${y}`);
-    if (cell.isSelected || cell.isCompleted) {
-      return;
-    }
-    
     // Check each direction for sea cells
     if (!this.hasNeighborPath(x, y-1, cellMap)) {
       element.classList.add('island-edge-top');
@@ -237,5 +236,4 @@ class IslandRenderer {
   }
 }
 
-// Export for use in other modules
 export default IslandRenderer;
