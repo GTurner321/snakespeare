@@ -274,29 +274,29 @@ if (item.hintLevel) {
   console.log('Menu handlers setup complete');
 }
   
-  /**
-   * Handle cell click events
-   * @param {number} x - X coordinate of clicked cell
-   * @param {number} y - Y coordinate of clicked cell
-   * @param {Object} cell - Cell data
-   */
-  handleCellClick(x, y, cell) {
-    // Cell click is handled by GridRenderer.toggleCellSelection
-    // This method is called after the cell state has been updated
-    
-    // Update UI based on current selections
-    this.handleSelectionChange();
-  }
+/**
+ * Handle cell click events
+ * @param {number} x - X coordinate of clicked cell
+ * @param {number} y - Y coordinate of clicked cell
+ * @param {Object} cell - Cell data
+ */
+handleCellClick(x, y, cell) {
+  // Cell click is handled by GridRenderer.toggleCellSelection
+  // This method is called after the cell state has been updated
+  
+  // Update UI based on current selections
+  this.handleSelectionChange();
+}
   
 /**
  * Handle changes to the selected cells
+ * Modified to check for the correct phrase
  */
 handleSelectionChange() {
   // Get selected letters
   const selectedLetters = this.gridRenderer.getSelectedLetters();
   
   // Update phrase display with currently selected letters
-  // CHANGED: Use the new method instead of updatePhraseFromSelections
   this.updatePhraseWithHints();
   
   // Update scroll area states
@@ -313,19 +313,101 @@ handleSelectionChange() {
   
   // Check if the phrase is completed
   if (!this.gridRenderer.isCompleted && this.checkPhraseCompleted()) {
-    console.log('Phrase completed!');
-    this.gridRenderer.setCompleted(true);
+    console.log('Phrase completed! Checking if it is correct...');
     
-    // Optional: Add a visual or audio indicator of completion
-    // For example, flash the phrase display or show a congratulations message
+    // Check if the completed phrase is correct
+    const isCorrectPhrase = this.isCorrectPhrase();
+    
+    // Set completed state with correctness flag
+    this.gridRenderer.setCompleted(true, isCorrectPhrase);
+    
+    if (isCorrectPhrase) {
+      console.log('Correct phrase! Turning path green.');
+      // Show success message
+      this.showSuccessMessage();
+    } else {
+      console.log('Phrase length complete but incorrect. Path will not turn green.');
+      this.showIncorrectMessage();
+    }
   }
 }
+
+/**
+ * New method to check if the selected phrase is correct
+ * Compares the selected letters against the expected phrase
+ * @return {boolean} True if the phrase is correct
+ */
+isCorrectPhrase() {
+  if (!this.currentPhrase) return false;
   
-  createPhraseTemplate(phrase) {
-    // Only replace alphanumeric characters with underscores
-    // Keep spaces, punctuation and other special characters as is
-    return phrase.replace(/[a-zA-Z0-9]/g, '_');
+  // Get the expected phrase letters (excluding spaces and punctuation)
+  const expectedLetters = this.parseExpectedLetters();
+  
+  // Get the selected letters
+  const selectedLetters = this.gridRenderer.getSelectedLetters();
+  
+  // If the counts don't match, it cannot be correct
+  if (selectedLetters.length !== expectedLetters.length) {
+    console.log(`Letter count mismatch: selected ${selectedLetters.length}, expected ${expectedLetters.length}`);
+    return false;
   }
+  
+  // Check against pre-defined path
+  // This is a stricter check that requires following the exact path
+  const allOnCorrectPath = this.checkIfSelectionFollowsPath(selectedLetters);
+  
+  // For debugging
+  console.log(`Phrase check - all on correct path: ${allOnCorrectPath}`);
+  
+  return allOnCorrectPath;
+}
+
+/**
+ * Extract expected letters from the phrase (excluding spaces and punctuation)
+ * @return {Array} Array of expected letters
+ */
+parseExpectedLetters() {
+  if (!this.currentPhrase) return [];
+  
+  // Use letterlist as the source of expected letters
+  const letterList = this.currentPhrase.letterlist;
+  
+  // Filter out only alphanumeric characters
+  return letterList.split('')
+    .filter(char => /[a-zA-Z0-9]/i.test(char))
+    .map(char => char.toUpperCase());
+}
+
+/**
+ * Check if the selection follows the predefined path
+ * @param {Array} selectedLetters - Array of selected letter objects
+ * @return {boolean} True if all selected letters follow the path
+ */
+checkIfSelectionFollowsPath(selectedLetters) {
+  // Easy case - no letters selected
+  if (!selectedLetters.length) return false;
+  
+  // Check if each selected letter is on the path
+  // Note: First check if there's at least one path cell, otherwise it would be impossible
+  // to find the correct path
+  const hasPathCells = selectedLetters.some(cell => cell.isPathCell);
+  if (!hasPathCells) {
+    console.log('None of the selected cells are on the path');
+    return false;
+  }
+  
+  // Check if each selected letter is on the path
+  // A stricter check would be to verify they're in the right order too
+  const allOnPath = selectedLetters.every(cell => cell.isPathCell);
+  
+  return allOnPath;
+}
+  
+createPhraseTemplate(phrase) {
+  // Only replace alphanumeric characters with underscores
+  // Keep spaces, punctuation and other special characters as is
+  return phrase.replace(/[a-zA-Z0-9]/g, '_');
+}
   
 fillPhraseTemplate(template, phrase, selectedLetters) {
   // Check if we have empty input
@@ -464,39 +546,42 @@ fillPhraseTemplateWithHints(template, phrase, revealedLetters) {
   return templateArray.join('');
 }
   
-  updatePhraseFromSelections(selectedLetters) {
-    const displayElement = document.getElementById('phrase-text');
-    if (!displayElement || !this.currentPhrase) return;
-    
-    // Debug: log the selected letters
-    console.log('Updating phrase from selections:');
-    console.log('- Selected letters:', selectedLetters.map(l => `${l.letter || '[empty]'}`).join(', '));
-    
-    // If we have a phrase and template
-    if (this.phraseTemplate) {
-// Fill in the template with selected letters using letterlist instead of phrase
-      const updatedDisplay = this.fillPhraseTemplate(
-        this.phraseTemplate,
-        this.currentPhrase.letterlist, // Changed from phrase to letterlist
-        selectedLetters
-      );
-      
-      // Display the updated template
-      displayElement.textContent = updatedDisplay;
-      
-      // Adjust phrase display height
-      if (this.scrollHandler && this.scrollHandler.adjustPhraseDisplayHeight) {
-        this.scrollHandler.adjustPhraseDisplayHeight();
-      }
-    } else {
-      // Fallback if no template (shouldn't happen)
-      const selectedString = selectedLetters.map(cell => cell.letter).join('');
-      displayElement.textContent = selectedString || "Select letters to form a phrase";
-    }
-  }
+updatePhraseFromSelections(selectedLetters) {
+  const displayElement = document.getElementById('phrase-text');
+  if (!displayElement || !this.currentPhrase) return;
   
-  // Fixed checkPhraseCompleted method in GameController.js
- checkPhraseCompleted() {
+  // Debug: log the selected letters
+  console.log('Updating phrase from selections:');
+  console.log('- Selected letters:', selectedLetters.map(l => `${l.letter || '[empty]'}`).join(', '));
+  
+  // If we have a phrase and template
+  if (this.phraseTemplate) {
+    // Fill in the template with selected letters using letterlist instead of phrase
+    const updatedDisplay = this.fillPhraseTemplate(
+      this.phraseTemplate,
+      this.currentPhrase.letterlist, // Changed from phrase to letterlist
+      selectedLetters
+    );
+    
+    // Display the updated template
+    displayElement.textContent = updatedDisplay;
+    
+    // Adjust phrase display height
+    if (this.scrollHandler && this.scrollHandler.adjustPhraseDisplayHeight) {
+      this.scrollHandler.adjustPhraseDisplayHeight();
+    }
+  } else {
+    // Fallback if no template (shouldn't happen)
+    const selectedString = selectedLetters.map(cell => cell.letter).join('');
+    displayElement.textContent = selectedString || "Select letters to form a phrase";
+  }
+}
+  
+/**
+ * Fixed checkPhraseCompleted method
+ * We'll determine if the phrase is correct using isCorrectPhrase()
+ */
+checkPhraseCompleted() {
   if (!this.currentPhrase) return false;
   
   // Get selected letters (which already excludes the start cell)
@@ -517,39 +602,112 @@ fillPhraseTemplateWithHints(template, phrase, revealedLetters) {
   });
   
   // Check if we've selected exactly the right number of letters (excluding start cell)
-  const isCompleted = validSelectedLetters.length === targetLetterCount;
+  return validSelectedLetters.length === targetLetterCount;
+}
+
+/**
+ * Display a success message when the correct phrase is found
+ */
+showSuccessMessage() {
+  // Find or create message container
+  let messageContainer = document.getElementById('message-container');
+  if (!messageContainer) {
+    messageContainer = document.createElement('div');
+    messageContainer.id = 'message-container';
+    messageContainer.style.position = 'absolute';
+    messageContainer.style.top = '10px';
+    messageContainer.style.left = '50%';
+    messageContainer.style.transform = 'translateX(-50%)';
+    messageContainer.style.padding = '10px 20px';
+    messageContainer.style.backgroundColor = 'rgba(0, 180, 0, 0.8)';
+    messageContainer.style.color = 'white';
+    messageContainer.style.borderRadius = '5px';
+    messageContainer.style.fontWeight = 'bold';
+    messageContainer.style.zIndex = '1000';
+    messageContainer.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+    document.getElementById(this.options.gameContainerId).appendChild(messageContainer);
+  }
+
+  // Set success message
+  messageContainer.textContent = 'Correct! You found the phrase!';
   
-  // If newly completed, dispatch an event
-  if (isCompleted && !this.gridRenderer.isCompleted) {
-    console.log('Phrase completed!');
-    this.gridRenderer.setCompleted(true);
+  // Add meaning if available
+  if (this.currentPhrase.meaning) {
+    const meaningEl = document.createElement('div');
+    meaningEl.className = 'phrase-meaning';
+    meaningEl.textContent = `Meaning: ${this.currentPhrase.meaning}`;
+    meaningEl.style.marginTop = '5px';
+    meaningEl.style.fontSize = '0.9em';
+    messageContainer.appendChild(meaningEl);
   }
   
-  return isCompleted;
+  // Show message
+  messageContainer.style.display = 'block';
+  
+  // Hide after a delay
+  setTimeout(() => {
+    messageContainer.style.display = 'none';
+  }, 5000);
+}
+
+/**
+ * Display an incorrect message when the wrong phrase is found
+ */
+showIncorrectMessage() {
+  // Find or create message container
+  let messageContainer = document.getElementById('message-container');
+  if (!messageContainer) {
+    messageContainer = document.createElement('div');
+    messageContainer.id = 'message-container';
+    messageContainer.style.position = 'absolute';
+    messageContainer.style.top = '10px';
+    messageContainer.style.left = '50%';
+    messageContainer.style.transform = 'translateX(-50%)';
+    messageContainer.style.padding = '10px 20px';
+    messageContainer.style.backgroundColor = 'rgba(180, 0, 0, 0.8)';
+    messageContainer.style.color = 'white';
+    messageContainer.style.borderRadius = '5px';
+    messageContainer.style.fontWeight = 'bold';
+    messageContainer.style.zIndex = '1000';
+    messageContainer.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+    document.getElementById(this.options.gameContainerId).appendChild(messageContainer);
+  }
+
+  // Set incorrect message
+  messageContainer.textContent = 'Try again! Follow the hidden path.';
+  messageContainer.style.backgroundColor = 'rgba(180, 0, 0, 0.8)';
+  
+  // Show message
+  messageContainer.style.display = 'block';
+  
+  // Hide after a delay
+  setTimeout(() => {
+    messageContainer.style.display = 'none';
+  }, 3000);
 }
   
-  // New method to initialize ShakespeareResponse component with correct GitHub URL
-  initShakespeareComponent() {
-    // Import the ShakespeareResponse module
-    import('./shakespeareresponse.js')
-      .then(module => {
-        const ShakespeareResponse = module.default;
-        
-        // Create instance with the correct GitHub URL
-        this.shakespeareComponent = new ShakespeareResponse({
-          containerId: this.options.gameContainerId,
-          imagePath: 'https://raw.githubusercontent.com/GTurner321/snakespeare/main/assets/shakespeare.png'
-        });
-        
-        console.log('Shakespeare component initialized with GitHub image URL');
-        
-        // Make game controller accessible to the Shakespeare component
-        window.gameController = this;
-      })
-      .catch(error => {
-        console.error('Failed to load Shakespeare component:', error);
+// New method to initialize ShakespeareResponse component with correct GitHub URL
+initShakespeareComponent() {
+  // Import the ShakespeareResponse module
+  import('./shakespeareresponse.js')
+    .then(module => {
+      const ShakespeareResponse = module.default;
+      
+      // Create instance with the correct GitHub URL
+      this.shakespeareComponent = new ShakespeareResponse({
+        containerId: this.options.gameContainerId,
+        imagePath: 'https://raw.githubusercontent.com/GTurner321/snakespeare/main/assets/shakespeare.png'
       });
-  }
+      
+      console.log('Shakespeare component initialized with GitHub image URL');
+      
+      // Make game controller accessible to the Shakespeare component
+      window.gameController = this;
+    })
+    .catch(error => {
+      console.error('Failed to load Shakespeare component:', error);
+    });
+}
 
 updateIslandReductionButtonStyles() {
   // Get all island reduction buttons by ID pattern
@@ -577,8 +735,6 @@ updateIslandReductionButtonStyles() {
     }
   });
 }
-
-// Updated setIslandReductionLevel method for GameController.js
 
 /**
  * Modified setIslandReductionLevel method with enhanced updating
@@ -658,11 +814,11 @@ loadPhrase(phraseData) {
   // Create the phrase template with underscores using letterlist
   this.phraseTemplate = this.createPhraseTemplate(letterList);
 
-this.highestHintLevelUsed = 0;
-if (this.gridRenderer) {
-  this.gridRenderer.setHintLevel(0);
-  this.updateHintButtonStyles(); // Update button styles
-}
+  this.highestHintLevelUsed = 0;
+  if (this.gridRenderer) {
+    this.gridRenderer.setHintLevel(0);
+    this.updateHintButtonStyles(); // Update button styles
+  }
   
   // Track generation attempts
   let generationSuccessful = false;
@@ -698,39 +854,39 @@ if (this.gridRenderer) {
   }
   
   // NEW: Generate and apply adjacent random letters
-// Pre-generate random letter cells for all island reduction levels
-if (generationSuccessful && this.options.randomFillPercentage > 0) {
-  // Pre-generate cells for all levels
-  this.pathGenerator.preGenerateRandomLetterCells();
-  
-  // Reset the island reduction level to 0 (default)
-  this.highestIslandReductionLevelUsed = 0;
-  this.gridRenderer.islandReductionLevel = 0;
-  this.gridRenderer.highestIslandReductionLevelUsed = 0;
+  // Pre-generate random letter cells for all island reduction levels
+  if (generationSuccessful && this.options.randomFillPercentage > 0) {
+    // Pre-generate cells for all levels
+    this.pathGenerator.preGenerateRandomLetterCells();
+    
+    // Reset the island reduction level to 0 (default)
+    this.highestIslandReductionLevelUsed = 0;
+    this.gridRenderer.islandReductionLevel = 0;
+    this.gridRenderer.highestIslandReductionLevelUsed = 0;
 
-// Update the button styles
-this.updateIslandReductionButtonStyles();
+    // Update the button styles
+    this.updateIslandReductionButtonStyles();
 
-console.log('Island reduction level reset to 0 for new phrase');
-  
-  // Apply default level (0)
-  this.gridRenderer.applyIslandReductionLetters(this.pathGenerator);
-  console.log(`Applied random letters for default island reduction level 0`);
-  
-  // Update the button styles
-  this.updateIslandReductionButtonStyles();
-  
-  // Apply hints after random letters are added
-  setTimeout(() => {
-    this.gridRenderer.revealPathLetters();
-  }, 50);
+    console.log('Island reduction level reset to 0 for new phrase');
+    
+    // Apply default level (0)
+    this.gridRenderer.applyIslandReductionLetters(this.pathGenerator);
+    console.log(`Applied random letters for default island reduction level 0`);
+    
+    // Update the button styles
+    this.updateIslandReductionButtonStyles();
+    
+    // Apply hints after random letters are added
+    setTimeout(() => {
+      this.gridRenderer.revealPathLetters();
+    }, 50);
   } else {
     // If no random letters or generation failed, reveal hints immediately
-if (generationSuccessful) {
-  // After the path is set, explicitly regenerate hint indices
-  this.gridRenderer.preGenerateHintIndices();
-  console.log("Hint indices generated after path was set");
-}
+    if (generationSuccessful) {
+      // After the path is set, explicitly regenerate hint indices
+      this.gridRenderer.preGenerateHintIndices();
+      console.log("Hint indices generated after path was set");
+    }
   }
   
   // Center the grid on the start cell
@@ -767,172 +923,172 @@ if (generationSuccessful) {
   }
 }
   
-  /**
-   * Handle window resize events
-   */
-  handleResize() {
-    // Let gridRenderer handle it
-    this.gridRenderer.handleResponsive();
+/**
+ * Handle window resize events
+ */
+handleResize() {
+  // Let gridRenderer handle it
+  this.gridRenderer.handleResponsive();
+  
+  // Adjust scroll areas and phrase display
+  if (this.scrollHandler) {
+    if (this.scrollHandler.updateScrollAreaStates) {
+      this.scrollHandler.updateScrollAreaStates();
+    }
     
-    // Adjust scroll areas and phrase display
-    if (this.scrollHandler) {
-      if (this.scrollHandler.updateScrollAreaStates) {
-        this.scrollHandler.updateScrollAreaStates();
-      }
-      
-      if (this.scrollHandler.adjustPhraseDisplayWidth) {
-        this.scrollHandler.adjustPhraseDisplayWidth();
-      }
+    if (this.scrollHandler.adjustPhraseDisplayWidth) {
+      this.scrollHandler.adjustPhraseDisplayWidth();
     }
   }
+}
   
-  /**
-   * Load sample data for testing
-   */
-  loadSampleData() {
-    // Sample phrase data for testing when CSV isn't available
-    const samplePhrase = {
-      id: 1,
-      phrase: "TIME FLIES LIKE AN ARROW",
-      letterlist: "TIME FLIES LIKE AN ARROW", // Now with spaces
-      lettercount: 23,
-      wordcount: 5,
-      meaning: "Time passes quickly",
-      info: "Common English expression",
-      source: "Unknown",
-      sourcetype: "Phrase",
-      date: "",
-      era: "Modern",
-      author: "",
-      phrasetags: "time,idiom",
-      usagetype: "Common"
-    };
+/**
+ * Load sample data for testing
+ */
+loadSampleData() {
+  // Sample phrase data for testing when CSV isn't available
+  const samplePhrase = {
+    id: 1,
+    phrase: "TIME FLIES LIKE AN ARROW",
+    letterlist: "TIME FLIES LIKE AN ARROW", // Now with spaces
+    lettercount: 23,
+    wordcount: 5,
+    meaning: "Time passes quickly",
+    info: "Common English expression",
+    source: "Unknown",
+    sourcetype: "Phrase",
+    date: "",
+    era: "Modern",
+    author: "",
+    phrasetags: "time,idiom",
+    usagetype: "Common"
+  };
+  
+  this.loadPhrase(samplePhrase);
+}
+  
+async loadPhraseData(csvUrl) {
+  try {
+    // Fetch CSV file
+    const response = await fetch(csvUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch CSV: ${response.status} ${response.statusText}`);
+    }
     
-    this.loadPhrase(samplePhrase);
-  }
-  
-  async loadPhraseData(csvUrl) {
-    try {
-      // Fetch CSV file
-      const response = await fetch(csvUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch CSV: ${response.status} ${response.statusText}`);
-      }
+    const csvData = await response.text();
+    
+    // Check if we have data
+    if (!csvData || csvData.trim() === '') {
+      throw new Error('CSV file is empty');
+    }
+    
+    // Parse CSV using PapaParse
+    const allPhrases = this.parseCSV(csvData);
+    
+    // In loadPhraseData(), after parsing CSV:
+    console.log('First few phrases and their IDs:');
+    allPhrases.slice(0, 10).forEach(phrase => {
+      console.log(`Phrase: "${phrase.phrase}", ID: ${phrase.id}, Type: ${typeof phrase.id}`);
+    });
+    
+    // In gamecontroller.js, update the filtering logic in loadPhraseData:
+    // Filter phrases to only those with IDs between 3001-3050
+    const shakespearePhrases = allPhrases.filter(phrase => {
+      // Parse the id as an integer
+      const id = parseInt(phrase.id, 10);
       
-      const csvData = await response.text();
+      // Debug: Log each ID check
+      console.log(`Checking phrase ID: ${phrase.id}, parsed as: ${id}, valid ID: ${!isNaN(id)}, in range: ${id >= 3001 && id <= 3050}`);
       
-      // Check if we have data
-      if (!csvData || csvData.trim() === '') {
-        throw new Error('CSV file is empty');
-      }
+      // Make sure id is a valid number and within range
+      return !isNaN(id) && id >= 3001 && id <= 3050;
+    });
+    
+    console.log(`Loaded ${shakespearePhrases.length} Shakespeare phrases from CSV`);
+    
+    // Debug: Show which phrases were selected
+    shakespearePhrases.forEach(phrase => {
+      console.log(`Selected Shakespeare phrase ID ${phrase.id}: "${phrase.phrase}"`);
+    });
+    
+    // Rest of the code remains the same...
+    // If no phrases in range, fall back to all phrases
+    if (shakespearePhrases.length === 0) {
+      console.warn('No phrases found in ID range 3001-3050, using all phrases');
+      this.phrases = allPhrases;
+    } else {
+      this.phrases = shakespearePhrases;
+    }
+    
+    // Load a random phrase
+    if (this.phrases.length > 0) {
+      const randomIndex = Math.floor(Math.random() * this.phrases.length);
+      const randomPhrase = this.phrases[randomIndex];
       
-      // Parse CSV using PapaParse
-      const allPhrases = this.parseCSV(csvData);
-      
-      // In loadPhraseData(), after parsing CSV:
-      console.log('First few phrases and their IDs:');
-      allPhrases.slice(0, 10).forEach(phrase => {
-        console.log(`Phrase: "${phrase.phrase}", ID: ${phrase.id}, Type: ${typeof phrase.id}`);
-      });
-      
-      // In gamecontroller.js, update the filtering logic in loadPhraseData:
-      // Filter phrases to only those with IDs between 3001-3050
-      const shakespearePhrases = allPhrases.filter(phrase => {
-        // Parse the id as an integer
-        const id = parseInt(phrase.id, 10);
-        
-        // Debug: Log each ID check
-        console.log(`Checking phrase ID: ${phrase.id}, parsed as: ${id}, valid ID: ${!isNaN(id)}, in range: ${id >= 3001 && id <= 3050}`);
-        
-        // Make sure id is a valid number and within range
-        return !isNaN(id) && id >= 3001 && id <= 3050;
-      });
-      
-      console.log(`Loaded ${shakespearePhrases.length} Shakespeare phrases from CSV`);
-      
-      // Debug: Show which phrases were selected
-      shakespearePhrases.forEach(phrase => {
-        console.log(`Selected Shakespeare phrase ID ${phrase.id}: "${phrase.phrase}"`);
-      });
-      
-      // Rest of the code remains the same...
-      // If no phrases in range, fall back to all phrases
-      if (shakespearePhrases.length === 0) {
-        console.warn('No phrases found in ID range 3001-3050, using all phrases');
-        this.phrases = allPhrases;
-      } else {
-        this.phrases = shakespearePhrases;
-      }
-      
-      // Load a random phrase
-      if (this.phrases.length > 0) {
-        const randomIndex = Math.floor(Math.random() * this.phrases.length);
-        const randomPhrase = this.phrases[randomIndex];
-        
-        console.log('Loading random Shakespeare phrase ID:', randomPhrase.id);
-        this.loadPhrase(randomPhrase);
-      } else {
-        console.warn('No phrases found in CSV');
-        this.loadSampleData();
-      }
-      
-      return this.phrases;
-    } catch (error) {
-      console.error('Error loading phrase data:', error);
+      console.log('Loading random Shakespeare phrase ID:', randomPhrase.id);
+      this.loadPhrase(randomPhrase);
+    } else {
+      console.warn('No phrases found in CSV');
       this.loadSampleData();
-      return [];
     }
+    
+    return this.phrases;
+  } catch (error) {
+    console.error('Error loading phrase data:', error);
+    this.loadSampleData();
+    return [];
   }
+}
   
-  /**
-   * Parse CSV data into an array of phrase objects using PapaParse
-   * @param {string} csvData - CSV data string
-   * @return {Array} Array of phrase objects
-   */
-  parseCSV(csvData) {
-    try {
-      const result = Papa.parse(csvData, {
-        header: true,
-        skipEmptyLines: true,
-        dynamicTyping: true,
-        transform: (value, field) => {
-          return typeof value === 'string' ? value.trim() : value;
-        }
-      });
-      
-      // Debug: Check headers
-      console.log('CSV headers:', result.meta.fields);
-      
-      if (result.errors && result.errors.length > 0) {
-        console.warn('CSV parsing had errors:', result.errors);
+/**
+ * Parse CSV data into an array of phrase objects using PapaParse
+ * @param {string} csvData - CSV data string
+ * @return {Array} Array of phrase objects
+ */
+parseCSV(csvData) {
+  try {
+    const result = Papa.parse(csvData, {
+      header: true,
+      skipEmptyLines: true,
+      dynamicTyping: true,
+      transform: (value, field) => {
+        return typeof value === 'string' ? value.trim() : value;
       }
-      
-      return result.data || [];
-    } catch (error) {
-      console.error('Error parsing CSV:', error);
-      return [];
+    });
+    
+    // Debug: Check headers
+    console.log('CSV headers:', result.meta.fields);
+    
+    if (result.errors && result.errors.length > 0) {
+      console.warn('CSV parsing had errors:', result.errors);
     }
+    
+    return result.data || [];
+  } catch (error) {
+    console.error('Error parsing CSV:', error);
+    return [];
+  }
+}
+  
+/**
+ * Load a random phrase from the loaded phrases
+ */
+loadRandomPhrase() {
+  if (!this.phrases || this.phrases.length === 0) {
+    console.warn('No phrases available to load randomly');
+    this.loadSampleData();
+    return;
   }
   
-  /**
-   * Load a random phrase from the loaded phrases
-   */
-  loadRandomPhrase() {
-    if (!this.phrases || this.phrases.length === 0) {
-      console.warn('No phrases available to load randomly');
-      this.loadSampleData();
-      return;
-    }
-    
-    // Pick a random phrase
-    const randomIndex = Math.floor(Math.random() * this.phrases.length);
-    const randomPhrase = this.phrases[randomIndex];
-    
-    console.log(`Loading random phrase: "${randomPhrase.phrase}"`);
-    
-    // Load the phrase
-    this.loadPhrase(randomPhrase);
-  }
+  // Pick a random phrase
+  const randomIndex = Math.floor(Math.random() * this.phrases.length);
+  const randomPhrase = this.phrases[randomIndex];
+  
+  console.log(`Loading random phrase: "${randomPhrase.phrase}"`);
+  
+  // Load the phrase
+  this.loadPhrase(randomPhrase);
+}
 
 setHintLevel(level) {
   if (this.gridRenderer) {
@@ -985,92 +1141,92 @@ updateHintButtonStyles() {
   });
 }
   
-  /**
-   * Reset all selections
-   */
-  resetSelections() {
-    this.gridRenderer.clearSelections();
-    this.handleSelectionChange();
-    
-    // Reset the phrase display to show just the template
-    if (this.phraseTemplate) {
-      const displayElement = document.getElementById('phrase-text');
-      if (displayElement) {
-        displayElement.textContent = this.phraseTemplate;
-        
-        // Adjust phrase display height
-        if (this.scrollHandler && this.scrollHandler.adjustPhraseDisplayHeight) {
-          setTimeout(() => {
-            this.scrollHandler.adjustPhraseDisplayHeight();
-          }, 50);
-        }
+/**
+ * Reset all selections
+ */
+resetSelections() {
+  this.gridRenderer.clearSelections();
+  this.handleSelectionChange();
+  
+  // Reset the phrase display to show just the template
+  if (this.phraseTemplate) {
+    const displayElement = document.getElementById('phrase-text');
+    if (displayElement) {
+      displayElement.textContent = this.phraseTemplate;
+      
+      // Adjust phrase display height
+      if (this.scrollHandler && this.scrollHandler.adjustPhraseDisplayHeight) {
+        setTimeout(() => {
+          this.scrollHandler.adjustPhraseDisplayHeight();
+        }, 50);
       }
-    }
-    
-    // Force island appearance update after reset
-    if (window.islandRenderer && typeof window.islandRenderer.updateIslandAppearance === 'function') {
-      setTimeout(() => {
-        window.islandRenderer.updateIslandAppearance();
-      }, 100);
     }
   }
   
-  /**
-   * Modified setIslandReductionLevel method with forced island updates
-   */
-  setIslandReductionLevel(level) {
-    if (this.gridRenderer) {
-      // Don't allow going back to a lower level
-      if (level < this.highestIslandReductionLevelUsed) {
-        console.log(`Cannot go back to island reduction level ${level} after using level ${this.highestIslandReductionLevelUsed}`);
-        return;
-      }
-      
-      console.log(`Setting island reduction level to ${level} from ${this.gridRenderer.islandReductionLevel}`);
-      
-      // Set the level in the grid renderer
-      this.gridRenderer.setIslandReductionLevel(level);
-      
-      // Apply island reduction letters with the pathGenerator
-      this.gridRenderer.applyIslandReductionLetters(this.pathGenerator);
-      
-      // Update the highest level used
-      this.highestIslandReductionLevelUsed = Math.max(this.highestIslandReductionLevelUsed, level);
-      this.gridRenderer.highestIslandReductionLevelUsed = this.highestIslandReductionLevelUsed;
-      
-      // Update button styles
-      this.updateIslandReductionButtonStyles();
-      
-      // Force a grid re-render immediately
-      this.gridRenderer.renderVisibleGrid();
-      
-      // Explicitly trigger the ScrollHandler to update scroll areas
-      if (this.scrollHandler && this.scrollHandler.updateScrollAreaStates) {
-        this.scrollHandler.updateScrollAreaStates();
-      }
-      
-      // Explicitly refresh island appearance
-      if (window.islandRenderer && typeof window.islandRenderer.updateIslandAppearance === 'function') {
-        console.log('Forcing island appearance update after reduction level change');
-        window.islandRenderer.updateIslandAppearance();
-        
-        // Another update after a delay to ensure all changes are applied
-        setTimeout(() => {
-          window.islandRenderer.updateIslandAppearance();
-        }, 200);
-      }
-      
-      // Close the menu to show the changes
-      const menuDropdown = document.getElementById('menu-dropdown');
-      const menuToggle = document.getElementById('menu-toggle');
-      if (menuDropdown && menuToggle) {
-        menuDropdown.classList.remove('active');
-        menuToggle.classList.remove('active');
-      }
-      
-      console.log(`Island reduction level set to ${level}`);
-    }
+  // Force island appearance update after reset
+  if (window.islandRenderer && typeof window.islandRenderer.updateIslandAppearance === 'function') {
+    setTimeout(() => {
+      window.islandRenderer.updateIslandAppearance();
+    }, 100);
   }
+}
+  
+/**
+ * Modified setIslandReductionLevel method with forced island updates
+ */
+setIslandReductionLevel(level) {
+  if (this.gridRenderer) {
+    // Don't allow going back to a lower level
+    if (level < this.highestIslandReductionLevelUsed) {
+      console.log(`Cannot go back to island reduction level ${level} after using level ${this.highestIslandReductionLevelUsed}`);
+      return;
+    }
+    
+    console.log(`Setting island reduction level to ${level} from ${this.gridRenderer.islandReductionLevel}`);
+    
+    // Set the level in the grid renderer
+    this.gridRenderer.setIslandReductionLevel(level);
+    
+    // Apply island reduction letters with the pathGenerator
+    this.gridRenderer.applyIslandReductionLetters(this.pathGenerator);
+    
+    // Update the highest level used
+    this.highestIslandReductionLevelUsed = Math.max(this.highestIslandReductionLevelUsed, level);
+    this.gridRenderer.highestIslandReductionLevelUsed = this.highestIslandReductionLevelUsed;
+    
+    // Update button styles
+    this.updateIslandReductionButtonStyles();
+    
+    // Force a grid re-render immediately
+    this.gridRenderer.renderVisibleGrid();
+    
+    // Explicitly trigger the ScrollHandler to update scroll areas
+    if (this.scrollHandler && this.scrollHandler.updateScrollAreaStates) {
+      this.scrollHandler.updateScrollAreaStates();
+    }
+    
+    // Explicitly refresh island appearance
+    if (window.islandRenderer && typeof window.islandRenderer.updateIslandAppearance === 'function') {
+      console.log('Forcing island appearance update after reduction level change');
+      window.islandRenderer.updateIslandAppearance();
+      
+      // Another update after a delay to ensure all changes are applied
+      setTimeout(() => {
+        window.islandRenderer.updateIslandAppearance();
+      }, 200);
+    }
+    
+    // Close the menu to show the changes
+    const menuDropdown = document.getElementById('menu-dropdown');
+    const menuToggle = document.getElementById('menu-toggle');
+    if (menuDropdown && menuToggle) {
+      menuDropdown.classList.remove('active');
+      menuToggle.classList.remove('active');
+    }
+    
+    console.log(`Island reduction level set to ${level}`);
+  }
+}
 }
 
 // Initialize IslandRenderer on document ready
