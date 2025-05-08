@@ -44,12 +44,15 @@ class PathGenerator {
       'Z'
     ];
     
-    // NEW: Store pre-generated random cell selections for each level
+    // Store pre-generated random cell selections for each level
     this.preGeneratedCells = {
       0: [], // Level 0: 100% selection
       1: [], // Level 1: 40% initial + 70% secondary
       2: []  // Level 2: 30% initial + 60% secondary
     };
+    
+    // NEW: Store cells with 3 adjacent edges to path
+    this.highPriorityCornerCells = [];
   }
   
   /**
@@ -68,6 +71,9 @@ class PathGenerator {
       1: [],
       2: []
     };
+    
+    // Reset high priority corner cells
+    this.highPriorityCornerCells = [];
     
     // Parse letter list to ensure it's in the right format (skipping spaces)
     const letters = this.parseLetterList(letterList);
@@ -282,12 +288,34 @@ class PathGenerator {
   }
 
   /**
-   * Find cells adjacent to the path, excluding congested areas
-   * @return {Array} Array of {x, y} objects representing cells adjacent to the path
+   * NEW: Check if a cell has 3 adjacent edges to the path
+   * @param {number} x - X coordinate to check
+   * @param {number} y - Y coordinate to check
+   * @param {Map} pathCellMap - Map of path cells for lookup
+   * @return {boolean} True if the cell has 3 adjacent edges to the path
+   */
+  hasThreeAdjacentEdges(x, y, pathCellMap) {
+    // Count adjacent path cells
+    let adjacentCount = 0;
+    
+    // Check all four directions
+    if (pathCellMap.has(`${x-1},${y}`)) adjacentCount++;
+    if (pathCellMap.has(`${x+1},${y}`)) adjacentCount++;
+    if (pathCellMap.has(`${x},${y-1}`)) adjacentCount++;
+    if (pathCellMap.has(`${x},${y+1}`)) adjacentCount++;
+    
+    // Return true if exactly 3 adjacent edges
+    return adjacentCount === 3;
+  }
+
+  /**
+   * Find cells adjacent to the path, excluding congested areas and marking high-priority corner cells
+   * @return {Object} Object with adjacentCells array and highPriorityCornerCells array
    */
   findAdjacentCells() {
     const adjacentCells = new Set();
     const excludedCells = new Set();
+    this.highPriorityCornerCells = []; // Reset the corner cells
     
     // First, build a map of all path cells for quick lookup
     const pathCellMap = new Map();
@@ -313,6 +341,15 @@ class PathGenerator {
           continue;
         }
         
+        // Check if this cell has 3 adjacent edges to the path (corner/turn case)
+        if (this.hasThreeAdjacentEdges(newX, newY, pathCellMap)) {
+          // This is a high-priority corner cell - add to special list
+          this.highPriorityCornerCells.push({ x: newX, y: newY });
+          // Also add to adjacent cells
+          adjacentCells.add(key);
+          continue;
+        }
+        
         // Check if this adjacent cell would create congestion
         if (this.isCellCongested(newX, newY, pathCellMap)) {
           // This cell is between two path cells - exclude it
@@ -331,10 +368,14 @@ class PathGenerator {
     }
     
     // Convert adjacentCells Set to array of {x, y} objects
-    return Array.from(adjacentCells).map(key => {
+    const adjacentCellsList = Array.from(adjacentCells).map(key => {
       const [x, y] = key.split(',').map(Number);
       return { x, y };
     });
+    
+    console.log(`Found ${this.highPriorityCornerCells.length} high-priority corner cells (3 adjacent edges)`);
+    
+    return adjacentCellsList;
   }
 
   /**
@@ -351,6 +392,7 @@ class PathGenerator {
     // Step 1: Find all cells adjacent to the path (excluding congested areas)
     const adjacentCellList = this.findAdjacentCells();
     console.log(`Found ${adjacentCellList.length} valid cells adjacent to the path (excluding congested areas)`);
+    console.log(`Including ${this.highPriorityCornerCells.length} high-priority corner cells`);
     
     // Generate cells for Level 0 (100% selection)
     this.preGeneratedCells[0] = this.generateLevel0Cells(adjacentCellList);
@@ -366,20 +408,20 @@ class PathGenerator {
     console.log(`Level 1: ${this.preGeneratedCells[1].length} cells`);
     console.log(`Level 2: ${this.preGeneratedCells[2].length} cells`);
 
-console.log('Details of pre-generated cells:');
-console.log(`Level 0: ${JSON.stringify(this.preGeneratedCells[0].slice(0, 3))}... (total: ${this.preGeneratedCells[0].length})`);
-console.log(`Level 1: ${JSON.stringify(this.preGeneratedCells[1].slice(0, 3))}... (total: ${this.preGeneratedCells[1].length})`);
-console.log(`Level 2: ${JSON.stringify(this.preGeneratedCells[2].slice(0, 3))}... (total: ${this.preGeneratedCells[2].length})`);
-
-// Make sure Level 1 is more than Level 2
-if (this.preGeneratedCells[1].length <= this.preGeneratedCells[2].length) {
-  console.error('Error: Level 1 should have more cells than Level 2!');
-}
-
-// Make sure Level 0 is more than Level 1
-if (this.preGeneratedCells[0].length <= this.preGeneratedCells[1].length) {
-  console.error('Error: Level 0 should have more cells than Level 1!');
-}
+    console.log('Details of pre-generated cells:');
+    console.log(`Level 0: ${JSON.stringify(this.preGeneratedCells[0].slice(0, 3))}... (total: ${this.preGeneratedCells[0].length})`);
+    console.log(`Level 1: ${JSON.stringify(this.preGeneratedCells[1].slice(0, 3))}... (total: ${this.preGeneratedCells[1].length})`);
+    console.log(`Level 2: ${JSON.stringify(this.preGeneratedCells[2].slice(0, 3))}... (total: ${this.preGeneratedCells[2].length})`);
+    
+    // Make sure Level 1 is more than Level 2
+    if (this.preGeneratedCells[1].length <= this.preGeneratedCells[2].length) {
+      console.error('Error: Level 1 should have more cells than Level 2!');
+    }
+    
+    // Make sure Level 0 is more than Level 1
+    if (this.preGeneratedCells[0].length <= this.preGeneratedCells[1].length) {
+      console.error('Error: Level 0 should have more cells than Level 1!');
+    }
     
     return true;
   }
@@ -405,9 +447,21 @@ if (this.preGeneratedCells[0].length <= this.preGeneratedCells[1].length) {
    * @return {Array} Array of {x, y, letter} objects
    */
   generateLevel1Cells(adjacentCellList, pathCellMap) {
+    // Create a map of high-priority corner cells for fast lookup
+    const cornerCellsMap = new Map();
+    for (const cell of this.highPriorityCornerCells) {
+      cornerCellsMap.set(`${cell.x},${cell.y}`, cell);
+    }
+    
+    // Filter out high-priority corner cells from the adjacent cells list
+    // They'll be added separately to ensure they're always included
+    const regularAdjacentCells = adjacentCellList.filter(cell => 
+      !cornerCellsMap.has(`${cell.x},${cell.y}`)
+    );
+    
     // Step 1: Randomly select 40% of adjacent cells
-    const selectedCount = Math.max(1, Math.ceil(adjacentCellList.length * 0.4));
-    const shuffledAdjacentCells = this.shuffleArray([...adjacentCellList]);
+    const selectedCount = Math.max(1, Math.ceil(regularAdjacentCells.length * 0.4));
+    const shuffledAdjacentCells = this.shuffleArray([...regularAdjacentCells]);
     const primarySelectedCells = shuffledAdjacentCells.slice(0, selectedCount);
     
     // Create a set for fast lookups of selected cells
@@ -418,7 +472,7 @@ if (this.preGeneratedCells[0].length <= this.preGeneratedCells[1].length) {
     // Step 2: Find cells adjacent to the 40% selected cells but still adjacent to the path
     const adjacentToSelected = [];
     
-    for (const cell of adjacentCellList) {
+    for (const cell of regularAdjacentCells) {
       const cellKey = `${cell.x},${cell.y}`;
       
       // Skip if this cell is already in the 40% selected
@@ -459,7 +513,8 @@ if (this.preGeneratedCells[0].length <= this.preGeneratedCells[1].length) {
     // Step 4: Combine both lists and assign random letters
     const allSelectedCells = [
       ...primarySelectedCells,
-      ...secondarySelectedCells
+      ...secondarySelectedCells,
+      ...this.highPriorityCornerCells // Add ALL high-priority corner cells
     ];
     
     return allSelectedCells.map(cell => ({
@@ -477,18 +532,26 @@ if (this.preGeneratedCells[0].length <= this.preGeneratedCells[1].length) {
    * @return {Array} Array of {x, y, letter} objects
    */
   generateLevel2Cells(level1Cells, adjacentCellList, pathCellMap) {
-    // Create a subset of Level 1 cells
-    // We'll ensure Level 2 is a proper subset of Level 1
+    // Create a map of high-priority corner cells for fast lookup
+    const cornerCellsMap = new Map();
+    for (const cell of this.highPriorityCornerCells) {
+      cornerCellsMap.set(`${cell.x},${cell.y}`, cell);
+    }
     
-    // First, create a map of Level 1 cells for fast lookup
+    // Create a map of Level 1 cells for fast lookup
     const level1CellMap = new Map();
     for (const cell of level1Cells) {
       level1CellMap.set(`${cell.x},${cell.y}`, cell);
     }
     
+    // Filter out high-priority corner cells from the adjacent cells list
+    const regularAdjacentCells = adjacentCellList.filter(cell => 
+      !cornerCellsMap.has(`${cell.x},${cell.y}`)
+    );
+    
     // Step 1: Randomly select 30% of adjacent cells
-    const selectedCount = Math.max(1, Math.ceil(adjacentCellList.length * 0.3));
-    const shuffledAdjacentCells = this.shuffleArray([...adjacentCellList]);
+    const selectedCount = Math.max(1, Math.ceil(regularAdjacentCells.length * 0.3));
+    const shuffledAdjacentCells = this.shuffleArray([...regularAdjacentCells]);
     const primarySelectedCells = shuffledAdjacentCells.slice(0, selectedCount);
     
     // Step 2: Find cells adjacent to the 30% selected cells but still adjacent to the path
@@ -497,7 +560,7 @@ if (this.preGeneratedCells[0].length <= this.preGeneratedCells[1].length) {
       primarySelectedCells.map(cell => `${cell.x},${cell.y}`)
     );
     
-    for (const cell of adjacentCellList) {
+    for (const cell of regularAdjacentCells) {
       const cellKey = `${cell.x},${cell.y}`;
       
       // Skip if this cell is already in the 30% selected
@@ -538,13 +601,14 @@ if (this.preGeneratedCells[0].length <= this.preGeneratedCells[1].length) {
     // Step 4: Combine both lists and assign random letters
     const allSelectedCells = [
       ...primarySelectedCells,
-      ...secondarySelectedCells
+      ...secondarySelectedCells,
+      ...this.highPriorityCornerCells // Add ALL high-priority corner cells
     ];
     
     // Step 5: Ensure all selected cells are also in Level 1
     const level2Cells = allSelectedCells.filter(cell => {
       const key = `${cell.x},${cell.y}`;
-      return level1CellMap.has(key);
+      return level1CellMap.has(key) || cornerCellsMap.has(key);
     });
     
     // Map to include letters
@@ -560,18 +624,18 @@ if (this.preGeneratedCells[0].length <= this.preGeneratedCells[1].length) {
     });
   }
   
-getRandomLettersForLevel(level) {
-  if (level < 0 || level > 2) {
-    console.error(`Invalid island reduction level: ${level}. Using level 0.`);
-    level = 0;
+  getRandomLettersForLevel(level) {
+    if (level < 0 || level > 2) {
+      console.error(`Invalid island reduction level: ${level}. Using level 0.`);
+      level = 0;
+    }
+    
+    const cellCount = this.preGeneratedCells[level].length;
+    console.log(`Getting ${cellCount} pre-generated cells for island reduction level ${level}`);
+    
+    // Deep clone the cells to prevent modification of the originals
+    return JSON.parse(JSON.stringify(this.preGeneratedCells[level]));
   }
-  
-  const cellCount = this.preGeneratedCells[level].length;
-  console.log(`Getting ${cellCount} pre-generated cells for island reduction level ${level}`);
-  
-  // Deep clone the cells to prevent modification of the originals
-  return JSON.parse(JSON.stringify(this.preGeneratedCells[level]));
-}
   
   /**
    * Legacy method for backward compatibility
