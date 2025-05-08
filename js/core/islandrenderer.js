@@ -1,6 +1,6 @@
 /**
- * IslandRenderer - Extension to Grid Game
- * Adds island-like appearance to grid game cells
+ * IslandRenderer - Focused fix to ensure proper class application
+ * Ensures letter cells are green and non-letter cells are blue
  */
 
 class IslandRenderer {
@@ -11,164 +11,159 @@ class IslandRenderer {
     // Make this instance available globally for direct access
     window.islandRenderer = this;
     
-    // Initialize with a slight delay to ensure grid is fully rendered
-    setTimeout(() => this.updateIslandAppearance(), 500);
+    // Force immediate update on initialization
+    console.log('IslandRenderer initializing - forcing immediate update');
+    this.updateIslandAppearance();
     
-    // Set up event listeners for game state changes that require updating island appearance
-    const events = [
-      'pathSet',            // When a new path is set
-      'gridRebuilt',        // When grid is rebuilt
-      'selectionsCleared',  // When selections are cleared
-      'gridScrolled',       // When grid is scrolled (new cells become visible)
-      'gridCompletionChanged', // When phrase is completed
-      'revealedLettersUpdated', // When hint letters are revealed
-      'islandLettersUpdated'    // When island reduction happens
+    // Also schedule a delayed update to ensure grid is fully rendered
+    setTimeout(() => {
+      console.log('IslandRenderer delayed update executing');
+      this.updateIslandAppearance();
+    }, 500);
+    
+    // Add specific event listeners focused on when cell content might change
+    const criticalEvents = [
+      'pathSet',              // When a path is newly set
+      'gridRebuilt',          // When grid is rebuilt
+      'islandLettersUpdated', // When island letters are updated 
+      'islandReductionLevelChanged' // When reduction level changes
     ];
     
-    events.forEach(eventName => {
-      document.addEventListener(eventName, () => {
-        // Use a short timeout to ensure grid state is settled
-        setTimeout(() => this.updateIslandAppearance(), 200);
+    criticalEvents.forEach(eventName => {
+      document.addEventListener(eventName, (e) => {
+        console.log(`IslandRenderer: Critical event '${eventName}' received - updating appearance`);
+        // Force update immediately
+        this.updateIslandAppearance();
+        
+        // Also update again after a delay to ensure all changes are processed
+        setTimeout(() => this.updateIslandAppearance(), 100);
       });
     });
-
-  // Add specific listener for island reduction level changes
-  document.addEventListener('islandReductionLevelChanged', (e) => {
-    console.log(`IslandRenderer: Island reduction level changed to ${e.detail.level}, updating appearance`);
-    // Use a short timeout to ensure grid state is settled
-    setTimeout(() => this.updateIslandAppearance(), 200);
-  });
     
-    // Listen for explicit update request
-    document.addEventListener('updateIslandStyling', () => {
-      console.log('Explicit request to update island styling received');
+    // Explicitly handle reduction level changes
+    document.addEventListener('islandReductionLevelChanged', (e) => {
+      console.log(`IslandRenderer: Reduction level changed to ${e.detail.level}`);
+      // Triple-ensure update for reduction level changes
+      this.updateIslandAppearance();
       setTimeout(() => this.updateIslandAppearance(), 100);
-    });
-    
-    // Also update on window resize
-    window.addEventListener('resize', () => {
       setTimeout(() => this.updateIslandAppearance(), 300);
     });
     
-    console.log('IslandRenderer initialized and listening for events');
+    console.log('IslandRenderer initialized with critical event handling');
     this.initialized = true;
   }
   
   /**
-   * Update island appearance for all visible cells
+   * Force update of island appearance - direct grid manipulation approach
    */
   updateIslandAppearance() {
-    console.log('Updating island appearance...');
+    console.log('Updating island appearance with direct cell class manipulation');
     
-    // Get all grid cells
-    const cells = document.querySelectorAll('.grid-cell');
-    if (!cells.length) {
-      console.log('No grid cells found');
+    if (!this.gridRenderer || !this.gridRenderer.grid) {
+      console.warn('Grid renderer or grid not available');
       return;
     }
     
-    console.log(`Updating island appearance for ${cells.length} cells...`);
+    // Step 1: Get all DOM cells that are currently visible
+    const cells = document.querySelectorAll('.grid-cell');
+    if (!cells.length) {
+      console.warn('No grid cells found in DOM');
+      return;
+    }
     
-    // First pass: clear existing island classes
-    cells.forEach(cellElement => {
-      cellElement.classList.remove(
-        'sea-adjacent',
-        'island-edge-top',
-        'island-edge-right',
-        'island-edge-bottom',
-        'island-edge-left'
-      );
-    });
+    console.log(`Processing ${cells.length} visible cells`);
     
-    // Create a cell map for quick lookups
-    const cellMap = new Map();
+    // Step 2: Direct application of core classes
     cells.forEach(cellElement => {
+      // Get cell coordinates
       const x = parseInt(cellElement.dataset.gridX, 10);
       const y = parseInt(cellElement.dataset.gridY, 10);
-      if (!isNaN(x) && !isNaN(y)) {
+      
+      if (isNaN(x) || isNaN(y)) {
+        return;
+      }
+      
+      try {
+        // Critical: Check if the cell is a letter cell (path cell)
         const isPath = this.isCellPath(x, y);
         
-        // Store in map with coordinates as key
-        cellMap.set(`${x},${y}`, {
-          element: cellElement,
-          x: x,
-          y: y,
-          isPath: isPath,
-          // Also store other cell states for proper styling decisions
-          isSelected: this.isCellSelected(x, y),
-          isStart: this.isStartCell(x, y),
-          isRevealed: this.isCellRevealed(x, y),
-          isCompleted: this.isCellCompleted(x, y)
-        });
-        
-        // Force path-cell class if it's a path cell
-        if (isPath && !cellElement.classList.contains('path-cell')) {
-          cellElement.classList.add('path-cell');
+        // IMPORTANT: Force add/remove the path-cell class based on whether it's a letter cell
+        if (isPath) {
+          if (!cellElement.classList.contains('path-cell')) {
+            console.log(`Adding path-cell class to cell at (${x},${y})`);
+            cellElement.classList.add('path-cell');
+          }
+        } else {
+          if (cellElement.classList.contains('path-cell')) {
+            console.log(`Removing path-cell class from cell at (${x},${y})`);
+            cellElement.classList.remove('path-cell');
+          }
         }
+        
+        // Process sea cells adjacent to islands
+        if (!isPath) {
+          const isAdjacent = this.isAdjacentToPath(x, y);
+          if (isAdjacent) {
+            cellElement.classList.add('sea-adjacent');
+          } else {
+            cellElement.classList.remove('sea-adjacent');
+          }
+        }
+        
+        // If it is a path cell, check for island edges
+        if (isPath) {
+          this.processIslandEdges(cellElement, x, y);
+        }
+      } catch (error) {
+        console.error(`Error processing cell at (${x},${y}):`, error);
       }
     });
     
-    // Second pass: process all cells
-    cellMap.forEach((cellInfo, key) => {
-      const { element, x, y, isPath } = cellInfo;
-      
-      if (isPath) {
-        // This is a letter cell (island) - add edge classes where needed
-        this.processIslandEdges(element, x, y, cellMap);
-      } else {
-        // This is a sea cell - add sea-adjacent class if next to an island
-        this.processSeaAdjacency(element, x, y, cellMap);
-      }
-    });
-    
-    console.log('Island appearance updated');
+    console.log('Island appearance update completed');
   }
   
   /**
    * Process island edges to add yellow borders where needed
    */
-  processIslandEdges(element, x, y, cellMap) {
+  processIslandEdges(element, x, y) {
+    // Clear existing edge classes
+    element.classList.remove(
+      'island-edge-top',
+      'island-edge-right',
+      'island-edge-bottom',
+      'island-edge-left'
+    );
+    
     // Check each direction for sea cells
-    if (!this.hasNeighborPath(x, y-1, cellMap)) {
+    if (!this.isCellPath(x, y-1)) {
       element.classList.add('island-edge-top');
     }
     
-    if (!this.hasNeighborPath(x+1, y, cellMap)) {
+    if (!this.isCellPath(x+1, y)) {
       element.classList.add('island-edge-right');
     }
     
-    if (!this.hasNeighborPath(x, y+1, cellMap)) {
+    if (!this.isCellPath(x, y+1)) {
       element.classList.add('island-edge-bottom');
     }
     
-    if (!this.hasNeighborPath(x-1, y, cellMap)) {
+    if (!this.isCellPath(x-1, y)) {
       element.classList.add('island-edge-left');
     }
   }
   
   /**
-   * Process sea cells to add lighter blue adjacent to islands
+   * Check if a cell is adjacent to any path cell
    */
-  processSeaAdjacency(element, x, y, cellMap) {
-    // Check if this sea cell is adjacent to any island cell
-    if (this.hasNeighborPath(x, y-1, cellMap) || 
-        this.hasNeighborPath(x+1, y, cellMap) || 
-        this.hasNeighborPath(x, y+1, cellMap) || 
-        this.hasNeighborPath(x-1, y, cellMap)) {
-      element.classList.add('sea-adjacent');
-    }
+  isAdjacentToPath(x, y) {
+    return this.isCellPath(x, y-1) || 
+           this.isCellPath(x+1, y) || 
+           this.isCellPath(x, y+1) || 
+           this.isCellPath(x-1, y);
   }
   
   /**
-   * Check if a cell at the given coordinates is a path cell
-   */
-  hasNeighborPath(x, y, cellMap) {
-    const neighbor = cellMap.get(`${x},${y}`);
-    return neighbor && neighbor.isPath;
-  }
-  
-  /**
-   * Check if a cell is a path cell
+   * Check if a cell is a path cell - robust implementation
    */
   isCellPath(x, y) {
     if (!this.gridRenderer || !this.gridRenderer.grid) return false;
@@ -179,67 +174,8 @@ class IslandRenderer {
       return false;
     }
     
+    // Check if this cell is part of the path (has a letter)
     return this.gridRenderer.grid[y][x].isPath;
-  }
-  
-  /**
-   * Check if a cell is selected
-   */
-  isCellSelected(x, y) {
-    if (!this.gridRenderer || !this.gridRenderer.grid) return false;
-    
-    // Check if coordinates are within grid bounds
-    if (y < 0 || y >= this.gridRenderer.grid.length || 
-        x < 0 || x >= this.gridRenderer.grid[0].length) {
-      return false;
-    }
-    
-    return this.gridRenderer.grid[y][x].isSelected;
-  }
-  
-  /**
-   * Check if a cell is the start cell
-   */
-  isStartCell(x, y) {
-    if (!this.gridRenderer || !this.gridRenderer.grid) return false;
-    
-    // Check if coordinates are within grid bounds
-    if (y < 0 || y >= this.gridRenderer.grid.length || 
-        x < 0 || x >= this.gridRenderer.grid[0].length) {
-      return false;
-    }
-    
-    return this.gridRenderer.grid[y][x].isStart;
-  }
-  
-  /**
-   * Check if a cell is revealed
-   */
-  isCellRevealed(x, y) {
-    if (!this.gridRenderer || !this.gridRenderer.grid) return false;
-    
-    // Check if coordinates are within grid bounds
-    if (y < 0 || y >= this.gridRenderer.grid.length || 
-        x < 0 || x >= this.gridRenderer.grid[0].length) {
-      return false;
-    }
-    
-    return this.gridRenderer.grid[y][x].isRevealed;
-  }
-  
-  /**
-   * Check if a cell is completed
-   */
-  isCellCompleted(x, y) {
-    if (!this.gridRenderer || !this.gridRenderer.grid) return false;
-    
-    // Check if coordinates are within grid bounds
-    if (y < 0 || y >= this.gridRenderer.grid.length || 
-        x < 0 || x >= this.gridRenderer.grid[0].length) {
-      return false;
-    }
-    
-    return this.gridRenderer.grid[y][x].isCompleted;
   }
 }
 
