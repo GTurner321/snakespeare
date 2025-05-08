@@ -409,59 +409,66 @@ createPhraseTemplate(phrase) {
   return phrase.replace(/[a-zA-Z0-9]/g, '_');
 }
   
+/**
+ * Updated fillPhraseTemplate method to show actual selected letters in sequence
+ * @param {string} template - The phrase template with underscores for letters
+ * @param {string} phrase - The correct phrase
+ * @param {Array} selectedLetters - Array of selected cell objects
+ * @return {string} Updated template with selected letters filled in
+ */
 fillPhraseTemplate(template, phrase, selectedLetters) {
   // Check if we have empty input
   if (!template || !phrase || !selectedLetters) {
     return template || '';
   }
   
+  // Create array from template
   const templateArray = template.split('');
-  const phraseArray = phrase.toUpperCase().split('');
   
   // Only use letters that actually have content
   const validSelectedLetters = selectedLetters.filter(cell => 
     cell.letter && cell.letter.trim() !== '');
   
-  // Create a mapping of path indices to phrase positions
-  let alphaIndex = 0;
-  const pathIndexToCharPos = new Map();
-  
-  for (let i = 0; i < phrase.length; i++) {
-    if (/[a-zA-Z0-9]/.test(phrase[i])) {
-      pathIndexToCharPos.set(alphaIndex, i);
-      console.log(`Path index ${alphaIndex} maps to phrase position ${i} (letter: ${phrase[i]})`);
-      alphaIndex++;
-    }
-  }
-  
   // Check if the start cell is selected
-  // Note: GridRenderer.getSelectedLetters() excludes the start cell,
-  // so we need to check if it's selected separately
   const startCellIsSelected = this.gridRenderer && 
                              this.gridRenderer.grid[25][25] && 
                              this.gridRenderer.grid[25][25].isSelected;
-                             
-  // If start cell is selected, add its letter to the template
-  if (startCellIsSelected && this.currentPath && this.currentPath.length > 0) {
-    const startCellPhrasePos = pathIndexToCharPos.get(0);
-    if (startCellPhrasePos !== undefined) {
-      console.log(`Start cell is selected, adding letter at phrase position ${startCellPhrasePos}`);
-      templateArray[startCellPhrasePos] = phraseArray[startCellPhrasePos];
+  
+  // Count positions that need letters (underscores)
+  const letterPositions = [];
+  for (let i = 0; i < templateArray.length; i++) {
+    if (templateArray[i] === '_') {
+      letterPositions.push(i);
     }
   }
   
-  // For each selected letter, find its position in the phrase using pathIndex
-  validSelectedLetters.forEach(cell => {
-    const phrasePos = pathIndexToCharPos.get(cell.pathIndex);
-    if (phrasePos !== undefined) {
-      // Use the actual letter from the phrase at this position
-      templateArray[phrasePos] = phraseArray[phrasePos];
+  // Start filling in the template with the actual selected letters in sequence
+  let letterIndex = 0;
+  
+  // If start cell is selected and has a letter, use it first
+  if (startCellIsSelected && this.currentPath && this.currentPath.length > 0) {
+    const startCellLetter = this.currentPath[0].letter.toUpperCase();
+    if (startCellLetter && startCellLetter.trim() !== '' && letterPositions.length > 0) {
+      templateArray[letterPositions[0]] = startCellLetter;
+      letterIndex = 1; // Start with the next position
     }
-  });
+  }
+  
+  // Fill remaining positions with selected letters in sequence
+  for (let i = 0; i < validSelectedLetters.length && letterIndex < letterPositions.length; i++) {
+    const letter = validSelectedLetters[i].letter.toUpperCase();
+    if (letter && letter.trim() !== '') {
+      templateArray[letterPositions[letterIndex]] = letter;
+      letterIndex++;
+    }
+  }
   
   return templateArray.join('');
-}
-  
+}  
+
+  /**
+ * Updated updatePhraseWithHints method to show actual selected letters in sequence
+ */
 updatePhraseWithHints() {
   if (!this.gridRenderer || !this.currentPhrase || !this.phraseTemplate) {
     return;
@@ -474,11 +481,11 @@ updatePhraseWithHints() {
   // Create copy of the template
   let updatedTemplate = this.phraseTemplate;
   
-  // Get revealed letters from grid renderer
+  // Get revealed letters from grid renderer (for hints)
   const revealedLetters = this.gridRenderer.getRevealedLetters();
   console.log('Revealed letters count for phrase display:', revealedLetters.length);
   
-  // Fill in revealed letters directly into the phrase template
+  // Apply revealed hint letters to template
   if (revealedLetters.length > 0) {
     updatedTemplate = this.fillPhraseTemplateWithHints(
       this.phraseTemplate,
@@ -487,13 +494,16 @@ updatePhraseWithHints() {
     );
   }
   
-  // Now update with any user-selected letters
+  // Now update with user-selected letters - these will override any hint letters
+  // as the user actively builds their own path
   const selectedLetters = this.gridRenderer.getSelectedLetters();
-  updatedTemplate = this.fillPhraseTemplate(
-    updatedTemplate,
-    this.currentPhrase.letterlist,
-    selectedLetters
-  );
+  if (selectedLetters.length > 0) {
+    updatedTemplate = this.fillPhraseTemplate(
+      updatedTemplate,
+      this.currentPhrase.letterlist,
+      selectedLetters
+    );
+  }
   
   // Display the updated template
   displayElement.textContent = updatedTemplate;
@@ -578,8 +588,8 @@ updatePhraseFromSelections(selectedLetters) {
 }
   
 /**
- * Fixed checkPhraseCompleted method
- * We'll determine if the phrase is correct using isCorrectPhrase()
+ * Updated checkPhraseCompleted method to work with any selection
+ * Checks if we've selected enough letters to fill all positions
  */
 checkPhraseCompleted() {
   if (!this.currentPhrase) return false;
@@ -588,23 +598,23 @@ checkPhraseCompleted() {
   const selectedLetters = this.gridRenderer.getSelectedLetters();
   const validSelectedLetters = selectedLetters.filter(cell => cell.letter.trim() !== '');
   
-  // Count non-space characters in the letterlist that would be part of the path
+  // Count non-space/non-punctuation characters in the letterlist that need to be filled
   const letterListArray = this.currentPhrase.letterlist.split('');
-  const totalLetterCount = letterListArray.filter(char => /[a-zA-Z0-9]/.test(char)).length;
+  const letterPositions = letterListArray.filter(char => /[a-zA-Z0-9]/.test(char)).length;
   
   // Subtract 1 from the total count to account for the start cell which is excluded
-  const targetLetterCount = totalLetterCount - 1;
+  const targetLetterCount = letterPositions - 1;
   
   console.log('Letter count check:', {
     validSelectedCount: validSelectedLetters.length,
-    totalLetterCount,
+    totalLetterPositions: letterPositions,
     targetLetterCount
   });
   
   // Check if we've selected exactly the right number of letters (excluding start cell)
   return validSelectedLetters.length === targetLetterCount;
 }
-
+  
 /**
  * Display a success message when the correct phrase is found
  */
