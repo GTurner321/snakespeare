@@ -1381,6 +1381,14 @@ setIslandReductionLevel(level) {
   // Update the level
   this.islandReductionLevel = level;
   this.highestIslandReductionLevelUsed = Math.max(this.highestIslandReductionLevelUsed, level);
+
+document.dispatchEvent(new CustomEvent('islandReductionLevelChanged', { 
+  detail: { 
+    level: this.islandReductionLevel,
+    previousLevel: previousLevel,
+    gridRenderer: this 
+  }
+}));
   
   console.log(`Grid renderer island reduction level set to ${level} from ${previousLevel}`);
   
