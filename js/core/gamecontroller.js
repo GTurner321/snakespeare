@@ -1000,8 +1000,94 @@ updateHintButtonStyles() {
         }
       }
     }
+    
+    // Force island appearance update after reset
+    if (window.islandRenderer && typeof window.islandRenderer.updateIslandAppearance === 'function') {
+      setTimeout(() => {
+        window.islandRenderer.updateIslandAppearance();
+      }, 100);
+    }
+  }
+  
+  /**
+   * Modified setIslandReductionLevel method with forced island updates
+   */
+  setIslandReductionLevel(level) {
+    if (this.gridRenderer) {
+      // Don't allow going back to a lower level
+      if (level < this.highestIslandReductionLevelUsed) {
+        console.log(`Cannot go back to island reduction level ${level} after using level ${this.highestIslandReductionLevelUsed}`);
+        return;
+      }
+      
+      console.log(`Setting island reduction level to ${level} from ${this.gridRenderer.islandReductionLevel}`);
+      
+      // Set the level in the grid renderer
+      this.gridRenderer.setIslandReductionLevel(level);
+      
+      // Apply island reduction letters with the pathGenerator
+      this.gridRenderer.applyIslandReductionLetters(this.pathGenerator);
+      
+      // Update the highest level used
+      this.highestIslandReductionLevelUsed = Math.max(this.highestIslandReductionLevelUsed, level);
+      this.gridRenderer.highestIslandReductionLevelUsed = this.highestIslandReductionLevelUsed;
+      
+      // Update button styles
+      this.updateIslandReductionButtonStyles();
+      
+      // Force a grid re-render immediately
+      this.gridRenderer.renderVisibleGrid();
+      
+      // Explicitly trigger the ScrollHandler to update scroll areas
+      if (this.scrollHandler && this.scrollHandler.updateScrollAreaStates) {
+        this.scrollHandler.updateScrollAreaStates();
+      }
+      
+      // Explicitly refresh island appearance
+      if (window.islandRenderer && typeof window.islandRenderer.updateIslandAppearance === 'function') {
+        console.log('Forcing island appearance update after reduction level change');
+        window.islandRenderer.updateIslandAppearance();
+        
+        // Another update after a delay to ensure all changes are applied
+        setTimeout(() => {
+          window.islandRenderer.updateIslandAppearance();
+        }, 200);
+      }
+      
+      // Close the menu to show the changes
+      const menuDropdown = document.getElementById('menu-dropdown');
+      const menuToggle = document.getElementById('menu-toggle');
+      if (menuDropdown && menuToggle) {
+        menuDropdown.classList.remove('active');
+        menuToggle.classList.remove('active');
+      }
+      
+      console.log(`Island reduction level set to ${level}`);
+    }
   }
 }
+
+// Initialize IslandRenderer on document ready
+document.addEventListener('DOMContentLoaded', () => {
+  // Ensure IslandRenderer is initialized when the grid is ready
+  document.addEventListener('gridRendererInitialized', (e) => {
+    console.log('Grid renderer initialized, initializing IslandRenderer');
+    if (!window.islandRenderer) {
+      import('./islandrenderer.js')
+        .then(module => {
+          const IslandRenderer = module.default;
+          const islandRenderer = new IslandRenderer(e.detail.gridRenderer);
+          console.log('IslandRenderer initialized via import');
+        })
+        .catch(error => {
+          console.error('Failed to import IslandRenderer:', error);
+        });
+    }
+  });
+});
+
+// Make GameController accessible globally for debugging
+window.GameController = GameController;
 
 // Export class for use in other modules
 export default GameController;
