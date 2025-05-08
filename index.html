@@ -10,7 +10,7 @@
     <!-- Google Fonts - Black Ops One for the metallic buttons -->
     <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&display=swap" rel="stylesheet">
     <style>
-        /* Additional menu styles */
+        /* Additional menu styles - Keep these minimal */
         .menu-item.active-hint {
             font-weight: bold;
             background-color: rgba(0, 0, 0, 0.1);
@@ -65,6 +65,24 @@
                 const gridRenderer = e.detail.gridRenderer;
                 console.log('Grid renderer initialized, applying island theme...');
                 const islandRenderer = new IslandRenderer(gridRenderer);
+                
+                // Create custom event to trigger initial island styling
+                setTimeout(() => {
+                    document.dispatchEvent(new CustomEvent('updateIslandStyling', { 
+                        detail: { 
+                            level: gridRenderer.islandReductionLevel || 0,
+                            gridRenderer: gridRenderer 
+                        }
+                    }));
+                }, 1000);
+            });
+            
+            // Additional event listener for when "Reduce Islands" buttons are clicked
+            document.addEventListener('islandReductionLevelChanged', (e) => {
+                console.log(`Island reduction level changed to ${e.detail.level}`);
+                setTimeout(() => {
+                    document.dispatchEvent(new CustomEvent('updateIslandStyling'));
+                }, 300);
             });
             
             // Attempt to load phrase data from CSV
