@@ -1546,11 +1546,11 @@ updatePhraseWithRevealedLetters() {
   }
   
 /**
- * Update cell element classes with proper precedence
- * @param {HTMLElement} cellElement - DOM element for the cell
- * @param {number} x - X coordinate
- * @param {number} y - Y coordinate
+ * Targeted fix for GridRenderer's updateCellElementClasses method
+ * This ensures cluster cells with letters stay green when other cells are selected
  */
+
+// Find this method in your GridRenderer.js file and replace it with this version:
 updateCellElementClasses(cellElement, x, y) {
   // Clear existing state classes
   cellElement.classList.remove('start-cell', 'selected-cell', 'path-cell', 'highlight-enabled', 'completed-cell', 'revealed-cell');
@@ -1559,11 +1559,20 @@ updateCellElementClasses(cellElement, x, y) {
   if (y >= 0 && y < this.grid.length && x >= 0 && x < this.grid[0].length) {
     const cell = this.grid[y][x];
     
-    // FIXED CLASS PRECEDENCE:
+    // FIX: First check if the cell has a letter, regardless of isPath
+    // This ensures any cell with a letter gets the path-cell class for green styling
+    if (cell.letter && cell.letter.trim() !== '') {
+      cellElement.classList.add('path-cell');
+    }
+    
+    // Apply additional special states in priority order
     
     // 1. Path cell class is applied first as a base state
     if (cell.isPath) {
-      cellElement.classList.add('path-cell');
+      // Don't add path-cell class again if already added above
+      if (!cellElement.classList.contains('path-cell')) {
+        cellElement.classList.add('path-cell');
+      }
       
       // Add highlight-enabled class only if path highlighting is turned on
       if (this.options.highlightPath) {
@@ -1582,7 +1591,7 @@ updateCellElementClasses(cellElement, x, y) {
       return; // No need to check other states when completed
     }
     
-    // 4. IMPORTANT CHANGE: Apply selected state BEFORE start cell state
+    // 4. Apply selected state BEFORE start cell state
     //    This ensures selected state overrides start cell appearance
     if (cell.isSelected) {
       cellElement.classList.add('selected-cell');
@@ -1591,7 +1600,7 @@ updateCellElementClasses(cellElement, x, y) {
     // 5. Apply start cell state last (but will be overridden by selected-cell if present)
     if (cell.isStart) {
       cellElement.classList.add('start-cell');
-    } 
+    }
   }
 }
   
