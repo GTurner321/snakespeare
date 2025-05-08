@@ -580,6 +580,9 @@ updateIslandReductionButtonStyles() {
 
 // Updated setIslandReductionLevel method for GameController.js
 
+/**
+ * Modified setIslandReductionLevel method with enhanced updating
+ */
 setIslandReductionLevel(level) {
   if (this.gridRenderer) {
     // Don't allow going back to a lower level
@@ -606,18 +609,21 @@ setIslandReductionLevel(level) {
     // Force a grid re-render immediately
     this.gridRenderer.renderVisibleGrid();
     
-    // NEW: Explicitly trigger the ScrollHandler to update scroll areas
+    // Additional updates to ensure visual changes take effect
     if (this.scrollHandler && this.scrollHandler.updateScrollAreaStates) {
       this.scrollHandler.updateScrollAreaStates();
     }
     
-    // NEW: Explicitly dispatch an islandLettersUpdated event for IslandRenderer
-    document.dispatchEvent(new CustomEvent('islandLettersUpdated', { 
-      detail: { 
-        level: level,
-        gridRenderer: this.gridRenderer
-      }
-    }));
+    // Explicitly refresh island appearance if the IslandRenderer is available
+    if (window.islandRenderer && typeof window.islandRenderer.updateIslandAppearance === 'function') {
+      console.log('Forcing island appearance update after reduction level change');
+      window.islandRenderer.updateIslandAppearance();
+      
+      // Another update after a delay
+      setTimeout(() => {
+        window.islandRenderer.updateIslandAppearance();
+      }, 200);
+    }
     
     // Close the menu to show the changes
     const menuDropdown = document.getElementById('menu-dropdown');
