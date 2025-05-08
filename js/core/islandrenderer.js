@@ -31,6 +31,13 @@ class IslandRenderer {
         setTimeout(() => this.updateIslandAppearance(), 200);
       });
     });
+
+  // Add specific listener for island reduction level changes
+  document.addEventListener('islandReductionLevelChanged', (e) => {
+    console.log(`IslandRenderer: Island reduction level changed to ${e.detail.level}, updating appearance`);
+    // Use a short timeout to ensure grid state is settled
+    setTimeout(() => this.updateIslandAppearance(), 200);
+  });
     
     // Listen for explicit update request
     document.addEventListener('updateIslandStyling', () => {
