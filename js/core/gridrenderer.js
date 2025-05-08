@@ -252,100 +252,111 @@ this.highestIslandReductionLevelUsed = 0;      // Track highest level used
     return false;
   }
   
-  /**
-   * Handle touch start event - with updated state tracking
-   * @param {TouchEvent} e - Touch event
-   */
-  handleTouchStart(e) {
-    // If the grid is completed, ignore touch events
-    if (this.isCompleted) {
-      e.preventDefault();
-      return;
-    }
-    // Only handle single touches
-    if (e.touches.length !== 1) return;
-    
-    const touch = e.touches[0];
-    const cellInfo = this.getCellFromTouchCoordinates(touch.clientX, touch.clientY);
-    
-    // If no valid cell was touched, exit
-    if (!cellInfo) return;
-    
-    // Prevent default behavior to avoid scrolling
+/**
+ * Modified handleTouchStart to allow selection of any cell with a letter
+ * @param {TouchEvent} e - Touch event
+ */
+handleTouchStart(e) {
+  // If the grid is completed, ignore touch events
+  if (this.isCompleted) {
     e.preventDefault();
-    
-    const { x, y, element, cell } = cellInfo;
-    
-    // Start tracking touch with more data for better tap detection
-    this.touchState = {
-      active: true,
-      lastCellX: x,
-      lastCellY: y,
-      isDragging: false,
-      startTime: Date.now(),
-      startClientX: touch.clientX,
-      startClientY: touch.clientY,
-      startX: x,
-      startY: y,
-      startCellSelected: false,
-      hasAddedCellsDuringDrag: false, // Track if we've added cells during this drag
-      selectionIntent: null // Store the intended selection action
-    };
-    
-    // Add visual indicator that the cell is being touched
-    element.classList.add('touch-active');
-    
-    console.log(`Touch started on cell (${x}, ${y})`);
-    
-    // IMPORTANT: We DO NOT select the cell here, only prepare for potential selection
-    // We'll set the selectionIntent to handle in touchEnd
-    
-    // Case 1: No selections yet - must be the start cell
-    if (this.selectedCells.length === 0) {
-      if (cell.isStart) {
-        // Mark that we intend to select the start cell on touchEnd
-        this.touchState.selectionIntent = 'select-start';
-      } else {
-        // Show invalid feedback - must select start cell first
-        element.classList.add('invalid-selection');
-        setTimeout(() => {
-          element.classList.remove('invalid-selection');
-        }, 300);
-        console.log('Cannot select: must select start cell first');
-        this.touchState.selectionIntent = null;
-      }
-      return;
-    }
-    
-    // Case 2: We have selections already
-    if (this.selectedCells.length > 0) {
-      const lastSelected = this.selectedCells[this.selectedCells.length - 1];
-      
-      // Case 2a: This is the same cell as the last selected (potential deselection)
-      if (x === lastSelected.x && y === lastSelected.y) {
-        this.touchState.selectionIntent = 'deselect-last';
-        console.log('Touch on already selected cell - potential deselection');
-        return;
-      }
-      
-      // Case 2b: Check if this is an adjacent unselected cell that's part of the path
-      if (!cell.isSelected && cell.isPath && 
-          this.areCellsAdjacent(x, y, lastSelected.x, lastSelected.y)) {
-        // Mark that we intend to select this adjacent cell
-        this.touchState.selectionIntent = 'select-adjacent';
-        console.log('Touch on adjacent cell - potential selection');
-        return;
-      }
-      
-      // Case 2c: This is a non-adjacent or non-path cell
-      console.log('Cell is not adjacent or not on path');
+    return;
+  }
+  // Only handle single touches
+  if (e.touches.length !== 1) return;
+  
+  const touch = e.touches[0];
+  const cellInfo = this.getCellFromTouchCoordinates(touch.clientX, touch.clientY);
+  
+  // If no valid cell was touched, exit
+  if (!cellInfo) return;
+  
+  // Prevent default behavior to avoid scrolling
+  e.preventDefault();
+  
+  const { x, y, element, cell } = cellInfo;
+  
+  // CRITICAL CHECK: Only allow cells with letters to be selected
+  if (!cell.letter || cell.letter.trim() === '') {
+    console.log('Cell has no letter, cannot select');
+    element.classList.add('invalid-selection');
+    setTimeout(() => {
+      element.classList.remove('invalid-selection');
+    }, 300);
+    return;
+  }
+  
+  // Start tracking touch with more data for better tap detection
+  this.touchState = {
+    active: true,
+    lastCellX: x,
+    lastCellY: y,
+    isDragging: false,
+    startTime: Date.now(),
+    startClientX: touch.clientX,
+    startClientY: touch.clientY,
+    startX: x,
+    startY: y,
+    startCellSelected: false,
+    hasAddedCellsDuringDrag: false, // Track if we've added cells during this drag
+    selectionIntent: null // Store the intended selection action
+  };
+  
+  // Add visual indicator that the cell is being touched
+  element.classList.add('touch-active');
+  
+  console.log(`Touch started on cell (${x}, ${y})`);
+  
+  // IMPORTANT: We DO NOT select the cell here, only prepare for potential selection
+  // We'll set the selectionIntent to handle in touchEnd
+  
+  // Case 1: No selections yet - must be the start cell
+  if (this.selectedCells.length === 0) {
+    if (cell.isStart) {
+      // Mark that we intend to select the start cell on touchEnd
+      this.touchState.selectionIntent = 'select-start';
+    } else {
+      // Show invalid feedback - must select start cell first
       element.classList.add('invalid-selection');
       setTimeout(() => {
         element.classList.remove('invalid-selection');
       }, 300);
+      console.log('Cannot select: must select start cell first');
       this.touchState.selectionIntent = null;
     }
+    return;
   }
+  
+  // Case 2: We have selections already
+  if (this.selectedCells.length > 0) {
+    const lastSelected = this.selectedCells[this.selectedCells.length - 1];
+    
+    // Case 2a: This is the same cell as the last selected (potential deselection)
+    if (x === lastSelected.x && y === lastSelected.y) {
+      this.touchState.selectionIntent = 'deselect-last';
+      console.log('Touch on already selected cell - potential deselection');
+      return;
+    }
+    
+    // Case 2b: Check if this is an adjacent unselected cell with a letter
+    // CHANGED: Removed cell.isPath check to allow any cell with a letter to be selected
+    if (!cell.isSelected && 
+        this.areCellsAdjacent(x, y, lastSelected.x, lastSelected.y)) {
+      // Mark that we intend to select this adjacent cell
+      this.touchState.selectionIntent = 'select-adjacent';
+      console.log('Touch on adjacent cell - potential selection');
+      return;
+    }
+    
+    // Case 2c: This is a non-adjacent cell
+    console.log('Cell is not adjacent');
+    element.classList.add('invalid-selection');
+    setTimeout(() => {
+      element.classList.remove('invalid-selection');
+    }, 300);
+    this.touchState.selectionIntent = null;
+  }
+}
   
 /**
  * Handle touch move event for swiping - Modified to allow any cell selection
