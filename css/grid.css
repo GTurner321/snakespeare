@@ -139,7 +139,7 @@ body {
     /* Fix for occasional touch events not registering */
     z-index: 1;
     margin: 0; /* No margins between cells */
-    /* Added for snake piece positioning */
+    /* Critical for snake piece positioning */
     position: relative;
     overflow: hidden; /* Keep snake pieces within the cell boundaries */
 }
@@ -175,12 +175,13 @@ body {
     border-left: 4px solid #ffeb3b !important; /* Yellow left border */
 }
 
-/* Preserve the start cell style - green */
+/* Start cell style to match island cells for snake path */
 .grid-cell.start-cell {
-    background-color: #b2dfdb !important; /* Changed to match island cells for snake visualization */
-    color: rgba(0, 77, 64, 0.2) !important; /* Faded text for snake pieces */
-    z-index: 5 !important; /* Higher z-index to stand out */
+    background-color: #b2dfdb !important; /* Green island color */
+    color: #004d40 !important; /* Dark teal for visible text */
+    text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8) !important;
     border: 1px solid #80cbc4 !important; /* Match island cell border */
+    z-index: 5 !important; /* Higher z-index to stand out */
 }
 
 /* Style for revealed hint cells - preserve as red */
@@ -193,21 +194,21 @@ body {
     z-index: 4 !important; /* Higher than regular cells */
 }
 
-/* Selected cell style - changed to match island theme for snake pieces */
+/* Selected cell style - to match island theme for snake pieces */
 .grid-cell.selected-cell {
     background-color: #b2dfdb !important; /* Same as island cells */
-    color: rgba(0, 77, 64, 0.2) !important; /* Faded text to show through snake pieces */
-    text-shadow: none !important;
+    color: #004d40 !important; /* Dark teal for visible text */
+    border: 2px solid #80cbc4 !important; /* Slightly thicker border */
+    text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8) !important;
     z-index: 6 !important; /* Ensure selected is on top */
-    border: 2px solid #80cbc4 !important; /* Lighter teal border */
 }
 
-/* Completed path style - maintain green base but allow for snake pieces */
+/* Completed path style - lighter green with visible text */
 .grid-cell.completed-cell {
     background-color: #c8e6c9 !important; /* Lighter green for completed cells */
-    color: rgba(0, 77, 64, 0.2) !important; /* Faded text for better snake visibility */
-    text-shadow: none !important;
+    color: #004d40 !important; /* Dark teal for text */
     border: 1px solid #81c784 !important; /* Lighter green border */
+    text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8) !important;
     z-index: 7 !important; /* Ensure completed is on top of all other states */
 }
 
@@ -325,9 +326,10 @@ body {
     height: 100%;
     pointer-events: none; /* Allow clicks to pass through to the cell */
     z-index: 10;
-    object-fit: contain;
+    object-fit: contain; /* Ensure image scales to fit while maintaining aspect ratio */
     transform-origin: center;
     transition: transform 0.2s ease; /* Smooth rotation transitions */
+    overflow: hidden; /* Keep pieces contained within cell boundaries */
 }
 
 /* Specific styling for each piece type */
@@ -360,10 +362,22 @@ body {
     animation: snake-completed-pulse 2s infinite;
 }
 
-/* Override visibility for snake pieces in special cell states */
+/* Ensure snake pieces have higher z-index than background but lower than letters */
+.grid-cell.selected-cell .snake-piece {
+    z-index: 7; /* Above the cell background, below the letter */
+}
+
+/* Make letters visible above snake pieces */
+.grid-cell.selected-cell {
+    color: #004d40 !important; /* Dark teal color for letters */
+    font-weight: bold;
+    text-shadow: 0 1px 1px rgba(255, 255, 255, 0.8);
+    position: relative; /* Required for z-index to work */
+}
+
+/* Special styling for special cell states */
 .grid-cell.revealed-cell .snake-piece {
-    /* Make snake pieces semi-transparent on hint cells */
-    opacity: 0.8;
+    opacity: 0.7; /* More transparency on hint cells */
 }
 
 /* Responsive styles for snake pieces */
@@ -379,22 +393,28 @@ body {
     }
 }
 
-/* Special snake combination styles */
+/* Special snake piece styles for start and end of path */
 .grid-cell.start-cell .snake-tail {
-    /* Ensure tail is properly centered and visible */
-    z-index: 12;
+    z-index: 12; /* Ensure tail is properly visible on start cell */
 }
 
 .grid-cell.selected-cell:last-child .snake-head {
-    /* Make the head stand out more when it's the last selected cell */
+    z-index: 12; /* Make the head more visible when it's the last selected cell */
     filter: drop-shadow(0 0 4px rgba(76, 175, 80, 0.5));
 }
 
 /* Hover effects for cells with snake pieces */
 @media (hover: hover) and (pointer: fine) {
     .grid-cell.selected-cell:hover .snake-piece {
-        /* Subtle scale effect on hover */
-        transform: scale(1.05) rotate(var(--rotation, 0deg));
+        filter: drop-shadow(0 0 4px rgba(0, 150, 136, 0.6));
+    }
+}
+
+/* Fix for iOS and Safari */
+@supports (-webkit-touch-callout: none) {
+    .snake-piece {
+        /* Prevent highlight color on tap */
+        -webkit-tap-highlight-color: transparent;
     }
 }
 
