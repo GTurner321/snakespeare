@@ -848,8 +848,27 @@ setIslandReductionLevel(level) {
     // Update button styles
     this.updateIslandReductionButtonStyles();
     
+    // CRITICAL: Force a complete grid rebuild, not just a re-render
+    // Set _lastRenderOffset to null to trigger a full rebuild
+    this.gridRenderer._lastRenderOffset = null;
+    
     // Force a grid re-render immediately
     this.gridRenderer.renderVisibleGrid();
+    
+    // ENHANCED: Add multiple delayed renders to ensure cell content updates properly
+    setTimeout(() => {
+      // Set _lastRenderOffset to null again for second rebuild
+      this.gridRenderer._lastRenderOffset = null;
+      this.gridRenderer.renderVisibleGrid();
+      console.log("Secondary grid rebuild for letter updates");
+    }, 50);
+    
+    // Add a third rebuild with a longer delay
+    setTimeout(() => {
+      this.gridRenderer._lastRenderOffset = null;
+      this.gridRenderer.renderVisibleGrid();
+      console.log("Tertiary grid rebuild for letter updates");
+    }, 150);
     
     // Additional updates to ensure visual changes take effect
     if (this.scrollHandler && this.scrollHandler.updateScrollAreaStates) {
@@ -878,7 +897,7 @@ setIslandReductionLevel(level) {
     console.log(`Island reduction level set to ${level}`);
   }
 }
-
+  
 // 3. Add a method to show the hint mismatch message
 showHintMismatchMessage(conflict) {
   // Find or create message container
