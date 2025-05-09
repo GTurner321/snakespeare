@@ -1222,7 +1222,7 @@ preGenerateHintIndices() {
   this.level2HintIndices = [];
   this.level3HintIndices = [];
   
-  // Create array of available path indices EXCLUDING index 0 (start cell)
+  // Create array of available path indices, starting at index 1 (EXCLUDING start cell)
   const availableIndices = [];
   for (let i = 1; i < this.path.length; i++) {
     availableIndices.push(i);
@@ -1349,6 +1349,11 @@ applyStoredHintLetters() {
   
   // Mark cells as revealed based on stored indices
   for (const index of indicesToReveal) {
+    if (index >= this.path.length) {
+      console.warn(`Invalid path index ${index} - skipping`);
+      continue;
+    }
+    
     const pathCell = this.path[index];
     const gridX = 25 + pathCell.x; // Convert from path coords to grid coords
     const gridY = 25 + pathCell.y;
@@ -1497,8 +1502,8 @@ getRevealedLetters() {
   // Add all revealed cells INCLUDING start cell if it's revealed
   this.revealedCells.forEach(pos => {
     const cell = this.grid[pos.y][pos.x];
-    // Only add if it has a non-empty letter
-    if (cell.letter && cell.letter.trim() !== '') {
+    // Only add if it has a non-empty letter and a valid path index
+    if (cell.letter && cell.letter.trim() !== '' && pos.pathIndex !== undefined && pos.pathIndex >= 0) {
       letters.push({
         x: pos.x,
         y: pos.y,
@@ -1507,6 +1512,9 @@ getRevealedLetters() {
       });
     }
   });
+  
+  // Sort by pathIndex to ensure correct order
+  letters.sort((a, b) => a.pathIndex - b.pathIndex);
   
   console.log('Revealed letters:', letters.map(l => `${l.letter}(${l.pathIndex})`).join(', '));
   return letters;
@@ -2122,7 +2130,8 @@ getSelectedLetters() {
         y: pos.y,
         letter: cell.letter,
         pathIndex: cell.pathIndex,
-        isPathCell: cell.isPath // Added flag to indicate if this is a path cell
+        isPathCell: cell.isPath, // Added flag to indicate if this is a path cell
+        isRevealed: cell.isRevealed // Add flag to indicate if this is a revealed cell
       });
     }
   });
