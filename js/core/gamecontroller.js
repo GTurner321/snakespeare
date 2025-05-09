@@ -291,43 +291,65 @@ handleCellClick(x, y, cell) {
 checkHintLetterConflict(selectedLetters) {
   if (!this.currentPhrase || !this.phraseTemplate) return false;
   
-  // Get the revealed hint letters (important: only hint letters, not selected letters)
+  // Get the revealed hint letters
   const revealedLetters = this.gridRenderer.getRevealedLetters();
   
   // If no revealed hint letters, no conflicts possible
   if (revealedLetters.length === 0) return false;
   
-  // Process the template with revealed hint letters only
-  const templateWithHints = this.fillPhraseTemplateWithHints(
-    this.phraseTemplate,
-    this.currentPhrase.letterlist,
-    revealedLetters
-  );
+  console.log('Checking hint letter conflict with revealed letters:', 
+    revealedLetters.map(l => `${l.letter}(${l.pathIndex})`).join(', '));
   
-  // Create a version of the template with selected letters filled in (without hints)
-  let selectedTemplate = this.createBlankTemplate(this.currentPhrase.letterlist);
-  selectedTemplate = this.fillPhraseTemplate(
-    selectedTemplate,
-    this.currentPhrase.letterlist,
-    selectedLetters
-  );
+  // Map revealed letters to their expected positions in the phrase
+  const letterlistArray = this.currentPhrase.letterlist.split('');
+  const alphaPositions = [];
+  let alphaIndex = 0;
   
-  // Now check for conflicts between the two templates
-  const templateArray = templateWithHints.split('');
-  const selectedArray = selectedTemplate.split('');
+  // Find positions of all alphanumeric characters in the phrase
+  for (let i = 0; i < letterlistArray.length; i++) {
+    if (/[a-zA-Z0-9]/.test(letterlistArray[i])) {
+      alphaPositions[alphaIndex] = i;
+      alphaIndex++;
+    }
+  }
   
-  for (let i = 0; i < templateArray.length; i++) {
+  // Create an array representing the phrase with hint letters
+  const hintArray = this.createBlankTemplate(this.currentPhrase.letterlist).split('');
+  
+  // Fill in hint positions
+  for (const revealedLetter of revealedLetters) {
+    if (revealedLetter.pathIndex >= 0 && revealedLetter.pathIndex < alphaPositions.length) {
+      const phrasePos = alphaPositions[revealedLetter.pathIndex];
+      if (phrasePos !== undefined) {
+        hintArray[phrasePos] = letterlistArray[phrasePos].toUpperCase();
+      }
+    }
+  }
+  
+  // Create an array representing selected letters
+  const selectedArray = this.createBlankTemplate(this.currentPhrase.letterlist).split('');
+  
+  // Fill in selected positions (excluding start cell which is already accounted for)
+  // Important: start with position 1 since position 0 is the start cell
+  for (let i = 0; i < selectedLetters.length; i++) {
+    if (i + 1 < alphaPositions.length) { // +1 to account for start cell
+      const phrasePos = alphaPositions[i + 1];
+      selectedArray[phrasePos] = selectedLetters[i].letter.toUpperCase();
+    }
+  }
+  
+  // Now check for conflicts between hint letters and selected letters
+  for (let i = 0; i < hintArray.length; i++) {
     // If this position has a hint letter
-    if (templateArray[i] !== '_') {
-      // And if user has selected enough letters to reach this position
+    if (hintArray[i] !== '_') {
+      // And if a selected letter has reached this position
       if (selectedArray[i] !== '_') {
-        // Check if the selected letter matches the hint letter
-        if (selectedArray[i] !== templateArray[i]) {
-          console.log(`Hint letter conflict detected at position ${i}. 
-                      Expected ${templateArray[i]}, got ${selectedArray[i]}`);
+        // Check if they match
+        if (selectedArray[i] !== hintArray[i]) {
+          console.log(`Hint letter conflict at position ${i}: Expected ${hintArray[i]}, got ${selectedArray[i]}`);
           return {
             position: i,
-            expectedLetter: templateArray[i],
+            expectedLetter: hintArray[i],
             actualLetter: selectedArray[i]
           };
         }
@@ -335,7 +357,8 @@ checkHintLetterConflict(selectedLetters) {
     }
   }
   
-  return false; // No conflicts
+  // No conflicts found
+  return false;
 }
   
 // 2. Update the handleSelectionChange method to include the conflict check
@@ -347,6 +370,8 @@ handleSelectionChange() {
   const conflict = this.checkHintLetterConflict(selectedLetters);
   
   if (conflict) {
+    console.log('Hint letter conflict detected!', conflict);
+    
     // Show error message
     this.showHintMismatchMessage(conflict);
     
@@ -553,53 +578,82 @@ updatePhraseWithHints() {
   const displayElement = document.getElementById('phrase-text');
   if (!displayElement) return;
   
-  // Get revealed letters from grid renderer (for hints)
+  console.log('Updating phrase with hints');
+  
+  // Start with the original template
+  const templateArray = this.phraseTemplate.split('');
+  
+  // Get revealed hint letters
   const revealedLetters = this.gridRenderer.getRevealedLetters();
   
-  // Apply revealed hint letters to the template first
-  let updatedTemplate = this.phraseTemplate;
+  // Apply hint letters first (they take precedence)
   if (revealedLetters.length > 0) {
-    updatedTemplate = this.fillPhraseTemplateWithHints(
-      this.phraseTemplate,
-      this.currentPhrase.letterlist,
-      revealedLetters
-    );
-  }
-  
-  // Now get selected letters
-  const selectedLetters = this.gridRenderer.getSelectedLetters();
-  
-  // Create a version of the template WITHOUT the hint letters
-  let selectedOnlyTemplate = this.createBlankTemplate(this.currentPhrase.letterlist);
-  if (selectedLetters.length > 0) {
-    selectedOnlyTemplate = this.fillPhraseTemplate(
-      selectedOnlyTemplate,
-      this.currentPhrase.letterlist,
-      selectedLetters
-    );
-  }
-  
-  // Merge the two templates: Hint letters take precedence where both exist
-  const hintArray = updatedTemplate.split('');
-  const selectArray = selectedOnlyTemplate.split('');
-  const finalArray = [];
-  
-  for (let i = 0; i < hintArray.length; i++) {
-    if (hintArray[i] !== '_') {
-      // Use hint letter if present
-      finalArray.push(hintArray[i]);
-    } else {
-      // Otherwise use selected letter if present
-      finalArray.push(selectArray[i]);
+    console.log('Applying revealed letters:', revealedLetters.map(l => `${l.letter}(${l.pathIndex})`).join(', '));
+    
+    // Map path indices to positions in the phrase
+    const letterlistArray = this.currentPhrase.letterlist.split('');
+    const alphaPositions = [];
+    let alphaIndex = 0;
+    
+    // Find positions of all alphanumeric characters
+    for (let i = 0; i < letterlistArray.length; i++) {
+      if (/[a-zA-Z0-9]/.test(letterlistArray[i])) {
+        alphaPositions[alphaIndex] = i;
+        alphaIndex++;
+      }
+    }
+    
+    // Apply each revealed letter
+    for (const revealedLetter of revealedLetters) {
+      if (revealedLetter.pathIndex >= 0 && revealedLetter.pathIndex < alphaPositions.length) {
+        const phrasePos = alphaPositions[revealedLetter.pathIndex];
+        if (phrasePos !== undefined) {
+          templateArray[phrasePos] = letterlistArray[phrasePos].toUpperCase();
+        }
+      }
     }
   }
   
-  // Display the merged template
-  displayElement.textContent = finalArray.join('');
+  // Now apply selected letters, skipping positions that already have hint letters
+  const selectedLetters = this.gridRenderer.getSelectedLetters();
+  if (selectedLetters.length > 0) {
+    console.log('Applying selected letters:', selectedLetters.map(l => `${l.letter}`).join(', '));
+    
+    // Map to phrase positions (skipping start cell)
+    const letterlistArray = this.currentPhrase.letterlist.split('');
+    const alphaPositions = [];
+    let alphaIndex = 0;
+    
+    // Find positions of all alphanumeric characters
+    for (let i = 0; i < letterlistArray.length; i++) {
+      if (/[a-zA-Z0-9]/.test(letterlistArray[i])) {
+        alphaPositions[alphaIndex] = i;
+        alphaIndex++;
+      }
+    }
+    
+    // Apply selected letters, starting at position 1 (after start cell)
+    // Remember selected letters don't include the start cell
+    for (let i = 0; i < selectedLetters.length; i++) {
+      if (i + 1 < alphaPositions.length) { // +1 to account for start cell
+        const phrasePos = alphaPositions[i + 1];
+        
+        // Only fill if not already filled by a hint
+        if (phrasePos !== undefined && templateArray[phrasePos] === '_') {
+          templateArray[phrasePos] = selectedLetters[i].letter.toUpperCase();
+        }
+      }
+    }
+  }
   
-  // Adjust phrase display height
+  // Update the display
+  displayElement.textContent = templateArray.join('');
+  
+  // Adjust phrase display height if needed
   if (this.scrollHandler && this.scrollHandler.adjustPhraseDisplayHeight) {
-    this.scrollHandler.adjustPhraseDisplayHeight();
+    setTimeout(() => {
+      this.scrollHandler.adjustPhraseDisplayHeight();
+    }, 50);
   }
 }
   
@@ -934,11 +988,11 @@ showHintMismatchMessage(conflict) {
   // Set hint mismatch message
   messageContainer.textContent = 'Hint letter mismatch. Deselect cells and try again.';
   
-  // Show details about the mismatch for debugging
+  // Show details about the mismatch
   if (conflict) {
     const detailsEl = document.createElement('div');
     detailsEl.className = 'mismatch-details';
-    detailsEl.textContent = `Expected ${conflict.expectedLetter} at position ${conflict.position + 1}`;
+    detailsEl.textContent = `Expected '${conflict.expectedLetter}' but got '${conflict.actualLetter}' at position ${conflict.position + 1}`;
     detailsEl.style.fontSize = '0.8em';
     detailsEl.style.marginTop = '5px';
     messageContainer.appendChild(detailsEl);
