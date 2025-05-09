@@ -288,63 +288,56 @@ handleCellClick(x, y, cell) {
   this.handleSelectionChange();
 }
   
-// 1. Add a method to check for hint letter conflicts
 checkHintLetterConflict(selectedLetters) {
   if (!this.currentPhrase || !this.phraseTemplate) return false;
   
-  // Get the template with revealed hint letters
+  // Get the revealed hint letters (important: only hint letters, not selected letters)
+  const revealedLetters = this.gridRenderer.getRevealedLetters();
+  
+  // If no revealed hint letters, no conflicts possible
+  if (revealedLetters.length === 0) return false;
+  
+  // Process the template with revealed hint letters only
   const templateWithHints = this.fillPhraseTemplateWithHints(
     this.phraseTemplate,
     this.currentPhrase.letterlist,
-    this.gridRenderer.getRevealedLetters()
+    revealedLetters
   );
   
-  // Process the template to find positions of hint letters
-  const hintPositions = [];
-  const templateArray = templateWithHints.split('');
-  
-  // Find all positions where a hint letter exists
-  templateArray.forEach((char, index) => {
-    if (char !== '_') {
-      hintPositions.push({
-        position: index,
-        letter: char
-      });
-    }
-  });
-  
-  // If no hint positions, no conflicts possible
-  if (hintPositions.length === 0) return false;
-  
-  // Create a version of the template with selected letters filled in
-  let updatedTemplate = this.fillPhraseTemplate(
-    this.phraseTemplate,
+  // Create a version of the template with selected letters filled in (without hints)
+  let selectedTemplate = this.createBlankTemplate(this.currentPhrase.letterlist);
+  selectedTemplate = this.fillPhraseTemplate(
+    selectedTemplate,
     this.currentPhrase.letterlist,
     selectedLetters
   );
   
-  // Check each hint position against what's been selected
-  for (const hintPos of hintPositions) {
-    // If the selection has reached or passed this hint position
-    if (updatedTemplate.length > hintPos.position) {
-      const selectedChar = updatedTemplate[hintPos.position];
-      
-      // If this position has been selected but doesn't match the hint
-      if (selectedChar !== '_' && selectedChar !== hintPos.letter) {
-        console.log(`Hint letter conflict detected at position ${hintPos.position}. 
-                    Expected ${hintPos.letter}, got ${selectedChar}`);
-        return {
-          position: hintPos.position,
-          expectedLetter: hintPos.letter,
-          actualLetter: selectedChar
-        };
+  // Now check for conflicts between the two templates
+  const templateArray = templateWithHints.split('');
+  const selectedArray = selectedTemplate.split('');
+  
+  for (let i = 0; i < templateArray.length; i++) {
+    // If this position has a hint letter
+    if (templateArray[i] !== '_') {
+      // And if user has selected enough letters to reach this position
+      if (selectedArray[i] !== '_') {
+        // Check if the selected letter matches the hint letter
+        if (selectedArray[i] !== templateArray[i]) {
+          console.log(`Hint letter conflict detected at position ${i}. 
+                      Expected ${templateArray[i]}, got ${selectedArray[i]}`);
+          return {
+            position: i,
+            expectedLetter: templateArray[i],
+            actualLetter: selectedArray[i]
+          };
+        }
       }
     }
   }
   
   return false; // No conflicts
 }
-
+  
 // 2. Update the handleSelectionChange method to include the conflict check
 handleSelectionChange() {
   // Get selected letters
@@ -402,6 +395,37 @@ handleSelectionChange() {
     }
   }
 }
+
+// 2. Modified fillPhraseTemplate method that doesn't try to incorporate hints
+// This is used just for checking selected letters against hint letters
+fillPhraseTemplate(template, phrase, selectedLetters) {
+  // Check if we have empty input
+  if (!template || !phrase || !selectedLetters) {
+    return template || '';
+  }
+  
+  // Create array from template
+  const templateArray = template.split('');
+  
+  // Only use letters that actually have content
+  const validSelectedLetters = selectedLetters.filter(cell => 
+    cell.letter && cell.letter.trim() !== '');
+  
+  // Count positions that need letters (underscores)
+  const letterPositions = [];
+  for (let i = 0; i < templateArray.length; i++) {
+    if (templateArray[i] === '_' && /[a-zA-Z0-9]/.test(phrase[i])) {
+      letterPositions.push(i);
+    }
+  }
+  
+  // Start filling in the template with the actual selected letters in sequence
+  for (let i = 0; i < validSelectedLetters.length && i < letterPositions.length; i++) {
+    const letter = validSelectedLetters[i].letter.toUpperCase();
+    if (letter && letter.trim() !== '') {
+      templateArray[letterPositions[i]] = letter;
+    }
+  }
   
 /**
  * New method to check if the selected phrase is correct
@@ -556,13 +580,11 @@ updatePhraseWithHints() {
   const displayElement = document.getElementById('phrase-text');
   if (!displayElement) return;
   
-  // Start with the base template
-  let updatedTemplate = this.phraseTemplate;
-  
   // Get revealed letters from grid renderer (for hints)
   const revealedLetters = this.gridRenderer.getRevealedLetters();
   
-  // Apply revealed hint letters to template
+  // Apply revealed hint letters to the template first
+  let updatedTemplate = this.phraseTemplate;
   if (revealedLetters.length > 0) {
     updatedTemplate = this.fillPhraseTemplateWithHints(
       this.phraseTemplate,
@@ -571,18 +593,36 @@ updatePhraseWithHints() {
     );
   }
   
-  // Now update with user-selected letters - these will only fill in the non-hint positions
+  // Now get selected letters
   const selectedLetters = this.gridRenderer.getSelectedLetters();
+  
+  // Create a version of the template WITHOUT the hint letters
+  let selectedOnlyTemplate = this.createBlankTemplate(this.currentPhrase.letterlist);
   if (selectedLetters.length > 0) {
-    updatedTemplate = this.fillPhraseTemplate(
-      updatedTemplate,  // Important: start with the template that already has hints
+    selectedOnlyTemplate = this.fillPhraseTemplate(
+      selectedOnlyTemplate,
       this.currentPhrase.letterlist,
       selectedLetters
     );
   }
   
-  // Display the updated template
-  displayElement.textContent = updatedTemplate;
+  // Merge the two templates: Hint letters take precedence where both exist
+  const hintArray = updatedTemplate.split('');
+  const selectArray = selectedOnlyTemplate.split('');
+  const finalArray = [];
+  
+  for (let i = 0; i < hintArray.length; i++) {
+    if (hintArray[i] !== '_') {
+      // Use hint letter if present
+      finalArray.push(hintArray[i]);
+    } else {
+      // Otherwise use selected letter if present
+      finalArray.push(selectArray[i]);
+    }
+  }
+  
+  // Display the merged template
+  displayElement.textContent = finalArray.join('');
   
   // Adjust phrase display height
   if (this.scrollHandler && this.scrollHandler.adjustPhraseDisplayHeight) {
@@ -612,7 +652,6 @@ fillPhraseTemplateWithHints(template, phrase, revealedLetters) {
   for (let i = 0; i < phrase.length; i++) {
     if (/[a-zA-Z0-9]/.test(phrase[i])) {
       pathIndexToCharPosition.set(pathPosition, i);
-      console.log(`Path position ${pathPosition} maps to phrase position ${i} (letter: ${phrase[i]})`);
       pathPosition++;
     }
   }
@@ -622,10 +661,10 @@ fillPhraseTemplateWithHints(template, phrase, revealedLetters) {
     const phrasePosition = pathIndexToCharPosition.get(revealedCell.pathIndex);
     
     if (phrasePosition !== undefined) {
-      console.log(`Revealing letter at path index ${revealedCell.pathIndex}, phrase position ${phrasePosition}: ${phraseArray[phrasePosition]}`);
-      templateArray[phrasePosition] = phraseArray[phrasePosition];
-    } else {
-      console.warn(`No phrase position found for path index ${revealedCell.pathIndex}`);
+      // Only update the template if the position is valid
+      if (phrasePosition < templateArray.length) {
+        templateArray[phrasePosition] = phraseArray[phrasePosition];
+      }
     }
   }
   
