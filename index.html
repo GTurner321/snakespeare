@@ -15,6 +15,19 @@
             font-weight: bold;
             background-color: rgba(0, 0, 0, 0.1);
         }
+        
+        /* Snake piece styling */
+        .snake-piece {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+            object-fit: contain;
+            transform-origin: center;
+        }
     </style>
 </head>
 <body>
@@ -40,9 +53,10 @@
     
     <!-- JavaScript Modules -->
     <script type="module">
-        // Import with the correct path to gamecontroller.js and islandrenderer.js
+        // Import with the correct path to gamecontroller.js, islandrenderer.js, and snakepath.js
         import GameController from './js/core/gamecontroller.js';
         import IslandRenderer from './js/core/islandrenderer.js';
+        import SnakePath from './js/core/snakepath.js';
         
         // Initialize game when DOM is loaded
         document.addEventListener('DOMContentLoaded', () => {
@@ -64,7 +78,13 @@
             document.addEventListener('gridRendererInitialized', (e) => {
                 const gridRenderer = e.detail.gridRenderer;
                 console.log('Grid renderer initialized, applying island theme...');
+                
+                // Initialize IslandRenderer
                 const islandRenderer = new IslandRenderer(gridRenderer);
+                
+                // Initialize SnakePath
+                console.log('Initializing snake path visualization...');
+                const snakePath = new SnakePath(gridRenderer);
                 
                 // Create custom event to trigger initial island styling
                 setTimeout(() => {
