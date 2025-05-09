@@ -427,6 +427,9 @@ fillPhraseTemplate(template, phrase, selectedLetters) {
     }
   }
   
+  return templateArray.join('');
+}
+  
 /**
  * New method to check if the selected phrase is correct
  * Compares the selected letters against the expected phrase
@@ -501,6 +504,10 @@ checkIfSelectionFollowsPath(selectedLetters) {
 createPhraseTemplate(phrase) {
   // Only replace alphanumeric characters with underscores
   // Keep spaces, punctuation and other special characters as is
+  return phrase.replace(/[a-zA-Z0-9]/g, '_');
+}
+
+createBlankTemplate(phrase) {
   return phrase.replace(/[a-zA-Z0-9]/g, '_');
 }
   
