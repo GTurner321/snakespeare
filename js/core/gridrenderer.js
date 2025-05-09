@@ -2023,30 +2023,6 @@ cellHasContent(x, y) {
   return cell && cell.letter && cell.letter.trim() !== '';
 }
 
-/**
- * Modify the loadPhrase method in GameController.js
- * Add this code after the grid is centered and before the display template is shown
- */
-
-// Modified loadPhrase method in GameController.js
-// Find this section in loadPhrase:
-
-  // Center the grid on the start cell
-  this.gridRenderer.centerGridOnStartCell();
-  
-  // Add this new code here!
-  // Optimize the grid view after random letters are applied and before showing the template
-  setTimeout(() => {
-    // Only run optimization if we successfully generated a path
-    if (generationSuccessful) {
-      this.gridRenderer.optimizeGridView();
-    }
-  }, 300); // Wait a bit to ensure all letters are applied
-  
-  // Update scroll area states
-  if (this.scrollHandler && this.scrollHandler.updateScrollAreaStates) {
-    this.scrollHandler.updateScrollAreaStates();
-  }
   
   /**
    * Scroll the grid in the given direction with variable speed
