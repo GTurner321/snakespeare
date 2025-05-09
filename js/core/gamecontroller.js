@@ -288,15 +288,86 @@ handleCellClick(x, y, cell) {
   this.handleSelectionChange();
 }
   
-/**
- * Handle changes to the selected cells
- * Modified to check for the correct phrase
- */
+// 1. Add a method to check for hint letter conflicts
+checkHintLetterConflict(selectedLetters) {
+  if (!this.currentPhrase || !this.phraseTemplate) return false;
+  
+  // Get the template with revealed hint letters
+  const templateWithHints = this.fillPhraseTemplateWithHints(
+    this.phraseTemplate,
+    this.currentPhrase.letterlist,
+    this.gridRenderer.getRevealedLetters()
+  );
+  
+  // Process the template to find positions of hint letters
+  const hintPositions = [];
+  const templateArray = templateWithHints.split('');
+  
+  // Find all positions where a hint letter exists
+  templateArray.forEach((char, index) => {
+    if (char !== '_') {
+      hintPositions.push({
+        position: index,
+        letter: char
+      });
+    }
+  });
+  
+  // If no hint positions, no conflicts possible
+  if (hintPositions.length === 0) return false;
+  
+  // Create a version of the template with selected letters filled in
+  let updatedTemplate = this.fillPhraseTemplate(
+    this.phraseTemplate,
+    this.currentPhrase.letterlist,
+    selectedLetters
+  );
+  
+  // Check each hint position against what's been selected
+  for (const hintPos of hintPositions) {
+    // If the selection has reached or passed this hint position
+    if (updatedTemplate.length > hintPos.position) {
+      const selectedChar = updatedTemplate[hintPos.position];
+      
+      // If this position has been selected but doesn't match the hint
+      if (selectedChar !== '_' && selectedChar !== hintPos.letter) {
+        console.log(`Hint letter conflict detected at position ${hintPos.position}. 
+                    Expected ${hintPos.letter}, got ${selectedChar}`);
+        return {
+          position: hintPos.position,
+          expectedLetter: hintPos.letter,
+          actualLetter: selectedChar
+        };
+      }
+    }
+  }
+  
+  return false; // No conflicts
+}
+
+// 2. Update the handleSelectionChange method to include the conflict check
 handleSelectionChange() {
   // Get selected letters
   const selectedLetters = this.gridRenderer.getSelectedLetters();
   
-  // Update phrase display with currently selected letters
+  // Check for hint letter conflicts BEFORE updating the phrase display
+  const conflict = this.checkHintLetterConflict(selectedLetters);
+  
+  if (conflict) {
+    // Show error message
+    this.showHintMismatchMessage(conflict);
+    
+    // Deselect the last cell that caused the conflict
+    this.gridRenderer.deselectLastCell();
+    
+    // Update again after deselection
+    this.updatePhraseWithHints();
+    
+    // Early return to prevent further processing
+    return;
+  }
+  
+  // Continue with the original method as before
   this.updatePhraseWithHints();
   
   // Update scroll area states
@@ -331,7 +402,7 @@ handleSelectionChange() {
     }
   }
 }
-
+  
 /**
  * New method to check if the selected phrase is correct
  * Compares the selected letters against the expected phrase
@@ -416,6 +487,7 @@ createPhraseTemplate(phrase) {
  * @param {Array} selectedLetters - Array of selected cell objects
  * @return {string} Updated template with selected letters filled in
  */
+// 4. Modify the fillPhraseTemplate method to respect hint letters
 fillPhraseTemplate(template, phrase, selectedLetters) {
   // Check if we have empty input
   if (!template || !phrase || !selectedLetters) {
@@ -424,6 +496,13 @@ fillPhraseTemplate(template, phrase, selectedLetters) {
   
   // Create array from template
   const templateArray = template.split('');
+  
+  // Get a template with revealed hint letters first
+  const hintTemplate = this.fillPhraseTemplateWithHints(
+    template,
+    phrase,
+    this.gridRenderer.getRevealedLetters()
+  ).split('');
   
   // Only use letters that actually have content
   const validSelectedLetters = selectedLetters.filter(cell => 
@@ -434,10 +513,10 @@ fillPhraseTemplate(template, phrase, selectedLetters) {
                              this.gridRenderer.grid[25][25] && 
                              this.gridRenderer.grid[25][25].isSelected;
   
-  // Count positions that need letters (underscores)
+  // Count positions that need letters (underscores) that are not already filled with hints
   const letterPositions = [];
-  for (let i = 0; i < templateArray.length; i++) {
-    if (templateArray[i] === '_') {
+  for (let i = 0; i < hintTemplate.length; i++) {
+    if (hintTemplate[i] === '_') {
       letterPositions.push(i);
     }
   }
@@ -455,6 +534,7 @@ fillPhraseTemplate(template, phrase, selectedLetters) {
   }
   
   // Fill remaining positions with selected letters in sequence
+  // Skip positions that already have hint letters
   for (let i = 0; i < validSelectedLetters.length && letterIndex < letterPositions.length; i++) {
     const letter = validSelectedLetters[i].letter.toUpperCase();
     if (letter && letter.trim() !== '') {
@@ -464,11 +544,9 @@ fillPhraseTemplate(template, phrase, selectedLetters) {
   }
   
   return templateArray.join('');
-}  
+}
 
-  /**
- * Updated updatePhraseWithHints method to show actual selected letters in sequence
- */
+// 5. Update the updatePhraseWithHints method to ensure hints are preserved
 updatePhraseWithHints() {
   if (!this.gridRenderer || !this.currentPhrase || !this.phraseTemplate) {
     return;
@@ -478,12 +556,11 @@ updatePhraseWithHints() {
   const displayElement = document.getElementById('phrase-text');
   if (!displayElement) return;
   
-  // Create copy of the template
+  // Start with the base template
   let updatedTemplate = this.phraseTemplate;
   
   // Get revealed letters from grid renderer (for hints)
   const revealedLetters = this.gridRenderer.getRevealedLetters();
-  console.log('Revealed letters count for phrase display:', revealedLetters.length);
   
   // Apply revealed hint letters to template
   if (revealedLetters.length > 0) {
@@ -494,12 +571,11 @@ updatePhraseWithHints() {
     );
   }
   
-  // Now update with user-selected letters - these will override any hint letters
-  // as the user actively builds their own path
+  // Now update with user-selected letters - these will only fill in the non-hint positions
   const selectedLetters = this.gridRenderer.getSelectedLetters();
   if (selectedLetters.length > 0) {
     updatedTemplate = this.fillPhraseTemplate(
-      updatedTemplate,
+      updatedTemplate,  // Important: start with the template that already has hints
       this.currentPhrase.letterlist,
       selectedLetters
     );
@@ -801,6 +877,49 @@ setIslandReductionLevel(level) {
     
     console.log(`Island reduction level set to ${level}`);
   }
+}
+
+// 3. Add a method to show the hint mismatch message
+showHintMismatchMessage(conflict) {
+  // Find or create message container
+  let messageContainer = document.getElementById('message-container');
+  if (!messageContainer) {
+    messageContainer = document.createElement('div');
+    messageContainer.id = 'message-container';
+    messageContainer.style.position = 'absolute';
+    messageContainer.style.top = '10px';
+    messageContainer.style.left = '50%';
+    messageContainer.style.transform = 'translateX(-50%)';
+    messageContainer.style.padding = '10px 20px';
+    messageContainer.style.backgroundColor = 'rgba(180, 80, 0, 0.8)';
+    messageContainer.style.color = 'white';
+    messageContainer.style.borderRadius = '5px';
+    messageContainer.style.fontWeight = 'bold';
+    messageContainer.style.zIndex = '1000';
+    messageContainer.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+    document.getElementById(this.options.gameContainerId).appendChild(messageContainer);
+  }
+
+  // Set hint mismatch message
+  messageContainer.textContent = 'Hint letter mismatch. Deselect cells and try again.';
+  
+  // Show details about the mismatch for debugging
+  if (conflict) {
+    const detailsEl = document.createElement('div');
+    detailsEl.className = 'mismatch-details';
+    detailsEl.textContent = `Expected ${conflict.expectedLetter} at position ${conflict.position + 1}`;
+    detailsEl.style.fontSize = '0.8em';
+    detailsEl.style.marginTop = '5px';
+    messageContainer.appendChild(detailsEl);
+  }
+  
+  // Show message
+  messageContainer.style.display = 'block';
+  
+  // Hide after a delay
+  setTimeout(() => {
+    messageContainer.style.display = 'none';
+  }, 4000);
 }
   
 // Modified loadPhrase method to use adjacent random letters
