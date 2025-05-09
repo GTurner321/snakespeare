@@ -1783,6 +1783,270 @@ setPath(path) {
       detail: { offset: this.viewOffset, gridRenderer: this }
     }));
   }
+
+/**
+ * This function should be added to the GridRenderer class in gridrenderer.js
+ * It scans for empty rows/columns and auto-scrolls to optimize the view.
+ */
+optimizeGridView() {
+  console.log('Optimizing grid view to minimize empty space');
+  
+  // Skip if not on large screen
+  if (window.innerWidth < 768) {
+    console.log('Skipping grid view optimization for small screens');
+    return;
+  }
+  
+  // Get current visible dimensions
+  const width = this.options.gridWidth;
+  const height = this.options.gridHeight;
+  
+  // Track empty rows and columns from each edge
+  let emptyRowsTop = 0;
+  let emptyRowsBottom = 0;
+  let emptyColsLeft = 0;
+  let emptyColsRight = 0;
+  
+  // Check for empty rows at the top
+  for (let y = this.viewOffset.y; y < this.viewOffset.y + height && y < this.fullGridSize; y++) {
+    let rowIsEmpty = true;
+    
+    for (let x = this.viewOffset.x; x < this.viewOffset.x + width && x < this.fullGridSize; x++) {
+      if (this.cellHasContent(x, y)) {
+        rowIsEmpty = false;
+        break;
+      }
+    }
+    
+    if (rowIsEmpty) {
+      emptyRowsTop++;
+    } else {
+      break;
+    }
+  }
+  
+  // Check for empty rows at the bottom
+  for (let y = this.viewOffset.y + height - 1; y >= this.viewOffset.y && y < this.fullGridSize; y--) {
+    let rowIsEmpty = true;
+    
+    for (let x = this.viewOffset.x; x < this.viewOffset.x + width && x < this.fullGridSize; x++) {
+      if (this.cellHasContent(x, y)) {
+        rowIsEmpty = false;
+        break;
+      }
+    }
+    
+    if (rowIsEmpty) {
+      emptyRowsBottom++;
+    } else {
+      break;
+    }
+  }
+  
+  // Check for empty columns on the left
+  for (let x = this.viewOffset.x; x < this.viewOffset.x + width && x < this.fullGridSize; x++) {
+    let colIsEmpty = true;
+    
+    for (let y = this.viewOffset.y; y < this.viewOffset.y + height && y < this.fullGridSize; y++) {
+      if (this.cellHasContent(x, y)) {
+        colIsEmpty = false;
+        break;
+      }
+    }
+    
+    if (colIsEmpty) {
+      emptyColsLeft++;
+    } else {
+      break;
+    }
+  }
+  
+  // Check for empty columns on the right
+  for (let x = this.viewOffset.x + width - 1; x >= this.viewOffset.x && x < this.fullGridSize; x--) {
+    let colIsEmpty = true;
+    
+    for (let y = this.viewOffset.y; y < this.viewOffset.y + height && y < this.fullGridSize; y++) {
+      if (this.cellHasContent(x, y)) {
+        colIsEmpty = false;
+        break;
+      }
+    }
+    
+    if (colIsEmpty) {
+      emptyColsRight++;
+    } else {
+      break;
+    }
+  }
+  
+  console.log('Empty space analysis:', {
+    emptyRowsTop,
+    emptyRowsBottom, 
+    emptyColsLeft,
+    emptyColsRight
+  });
+  
+  // Calculate scroll adjustments (want to leave exactly 1 row/col empty on each side)
+  let scrollUp = 0;
+  let scrollDown = 0;
+  let scrollLeft = 0;
+  let scrollRight = 0;
+  
+  // If more than 1 empty row at the top, scroll up
+  if (emptyRowsTop > 1) {
+    scrollUp = emptyRowsTop - 1;
+  }
+  
+  // If more than 1 empty row at the bottom, scroll down
+  if (emptyRowsBottom > 1) {
+    scrollDown = emptyRowsBottom - 1;
+  }
+  
+  // If more than 1 empty column on the left, scroll left
+  if (emptyColsLeft > 1) {
+    scrollLeft = emptyColsLeft - 1;
+  }
+  
+  // If more than 1 empty column on the right, scroll right
+  if (emptyColsRight > 1) {
+    scrollRight = emptyColsRight - 1;
+  }
+  
+  // Check for conflicts and resolve
+  // If both scrollUp and scrollDown, use the larger value
+  if (scrollUp > 0 && scrollDown > 0) {
+    if (scrollUp >= scrollDown) {
+      this.viewOffset.y = Math.max(0, this.viewOffset.y - scrollUp);
+      console.log(`Scrolling up by ${scrollUp} rows`);
+    } else {
+      this.viewOffset.y = Math.min(
+        this.fullGridSize - height,
+        this.viewOffset.y + scrollDown
+      );
+      console.log(`Scrolling down by ${scrollDown} rows`);
+    }
+  } 
+  // If just scrollUp
+  else if (scrollUp > 0) {
+    this.viewOffset.y = Math.max(0, this.viewOffset.y - scrollUp);
+    console.log(`Scrolling up by ${scrollUp} rows`);
+  } 
+  // If just scrollDown
+  else if (scrollDown > 0) {
+    this.viewOffset.y = Math.min(
+      this.fullGridSize - height,
+      this.viewOffset.y + scrollDown
+    );
+    console.log(`Scrolling down by ${scrollDown} rows`);
+  }
+  
+  // Check for conflicts and resolve
+  // If both scrollLeft and scrollRight, use the larger value
+  if (scrollLeft > 0 && scrollRight > 0) {
+    if (scrollLeft >= scrollRight) {
+      this.viewOffset.x = Math.max(0, this.viewOffset.x - scrollLeft);
+      console.log(`Scrolling left by ${scrollLeft} columns`);
+    } else {
+      this.viewOffset.x = Math.min(
+        this.fullGridSize - width,
+        this.viewOffset.x + scrollRight
+      );
+      console.log(`Scrolling right by ${scrollRight} columns`);
+    }
+  } 
+  // If just scrollLeft
+  else if (scrollLeft > 0) {
+    this.viewOffset.x = Math.max(0, this.viewOffset.x - scrollLeft);
+    console.log(`Scrolling left by ${scrollLeft} columns`);
+  } 
+  // If just scrollRight
+  else if (scrollRight > 0) {
+    this.viewOffset.x = Math.min(
+      this.fullGridSize - width,
+      this.viewOffset.x + scrollRight
+    );
+    console.log(`Scrolling right by ${scrollRight} columns`);
+  }
+  
+  // If any scrolling happened, re-render the grid with animation
+  if (scrollUp > 0 || scrollDown > 0 || scrollLeft > 0 || scrollRight > 0) {
+    // Add slow animation class for smoother transition
+    if (this.gridElement) {
+      this.gridElement.classList.remove('fast-scroll', 'slow-scroll');
+      this.gridElement.classList.add('slow-scroll');
+    }
+    
+    // Force grid rebuild
+    this._lastRenderOffset = null;
+    this.renderVisibleGrid();
+    
+    // Remove transition class after animation completes
+    setTimeout(() => {
+      if (this.gridElement) {
+        this.gridElement.classList.remove('slow-scroll');
+      }
+    }, 450);
+    
+    // Notify about the optimization
+    document.dispatchEvent(new CustomEvent('gridViewOptimized', { 
+      detail: { 
+        offset: this.viewOffset, 
+        gridRenderer: this,
+        adjustments: {
+          vertical: scrollUp > 0 ? -scrollUp : scrollDown,
+          horizontal: scrollLeft > 0 ? -scrollLeft : scrollRight
+        }
+      }
+    }));
+    
+    return true; // Scrolling happened
+  }
+  
+  return false; // No scrolling needed
+}
+
+/**
+ * Helper method to check if a cell has any content (letter)
+ * Add this to the GridRenderer class
+ * @param {number} x - X coordinate
+ * @param {number} y - Y coordinate
+ * @return {boolean} True if the cell has content
+ */
+cellHasContent(x, y) {
+  // Check if coordinates are within grid bounds
+  if (y < 0 || y >= this.grid.length || x < 0 || x >= this.grid[0].length) {
+    return false;
+  }
+  
+  // Check if the cell has a non-empty letter
+  const cell = this.grid[y][x];
+  return cell && cell.letter && cell.letter.trim() !== '';
+}
+
+/**
+ * Modify the loadPhrase method in GameController.js
+ * Add this code after the grid is centered and before the display template is shown
+ */
+
+// Modified loadPhrase method in GameController.js
+// Find this section in loadPhrase:
+
+  // Center the grid on the start cell
+  this.gridRenderer.centerGridOnStartCell();
+  
+  // Add this new code here!
+  // Optimize the grid view after random letters are applied and before showing the template
+  setTimeout(() => {
+    // Only run optimization if we successfully generated a path
+    if (generationSuccessful) {
+      this.gridRenderer.optimizeGridView();
+    }
+  }, 300); // Wait a bit to ensure all letters are applied
+  
+  // Update scroll area states
+  if (this.scrollHandler && this.scrollHandler.updateScrollAreaStates) {
+    this.scrollHandler.updateScrollAreaStates();
+  }
   
   /**
    * Scroll the grid in the given direction with variable speed
