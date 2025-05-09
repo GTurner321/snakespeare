@@ -1785,8 +1785,9 @@ setPath(path) {
   }
 
 /**
- * This function should be added to the GridRenderer class in gridrenderer.js
+ * Fixed optimizeGridView method for GridRenderer class
  * It scans for empty rows/columns and auto-scrolls to optimize the view.
+ * Fixed to correctly reduce empty space instead of adding more.
  */
 optimizeGridView() {
   console.log('Optimizing grid view to minimize empty space');
@@ -1887,85 +1888,90 @@ optimizeGridView() {
   });
   
   // Calculate scroll adjustments (want to leave exactly 1 row/col empty on each side)
-  let scrollUp = 0;
+  // FIXED: Adjusting the logic to move content toward the center, not away
   let scrollDown = 0;
-  let scrollLeft = 0;
+  let scrollUp = 0;
   let scrollRight = 0;
+  let scrollLeft = 0;
   
-  // If more than 1 empty row at the top, scroll up
+  // If more than 1 empty row at the top, scroll down to reduce top empty space
   if (emptyRowsTop > 1) {
-    scrollUp = emptyRowsTop - 1;
+    scrollDown = emptyRowsTop - 1;
   }
   
-  // If more than 1 empty row at the bottom, scroll down
+  // If more than 1 empty row at the bottom, scroll up to reduce bottom empty space
   if (emptyRowsBottom > 1) {
-    scrollDown = emptyRowsBottom - 1;
+    scrollUp = emptyRowsBottom - 1;
   }
   
-  // If more than 1 empty column on the left, scroll left
+  // If more than 1 empty column on the left, scroll right to reduce left empty space
   if (emptyColsLeft > 1) {
-    scrollLeft = emptyColsLeft - 1;
+    scrollRight = emptyColsLeft - 1;
   }
   
-  // If more than 1 empty column on the right, scroll right
+  // If more than 1 empty column on the right, scroll left to reduce right empty space
   if (emptyColsRight > 1) {
-    scrollRight = emptyColsRight - 1;
+    scrollLeft = emptyColsRight - 1;
   }
   
   // Check for conflicts and resolve
   // If both scrollUp and scrollDown, use the larger value
   if (scrollUp > 0 && scrollDown > 0) {
     if (scrollUp >= scrollDown) {
+      // Move the view up to reduce bottom empty space
       this.viewOffset.y = Math.max(0, this.viewOffset.y - scrollUp);
-      console.log(`Scrolling up by ${scrollUp} rows`);
+      console.log(`Scrolling up by ${scrollUp} rows to reduce bottom empty space`);
     } else {
+      // Move the view down to reduce top empty space
       this.viewOffset.y = Math.min(
         this.fullGridSize - height,
         this.viewOffset.y + scrollDown
       );
-      console.log(`Scrolling down by ${scrollDown} rows`);
+      console.log(`Scrolling down by ${scrollDown} rows to reduce top empty space`);
     }
   } 
-  // If just scrollUp
+  // If just scrollUp (to reduce bottom empty space)
   else if (scrollUp > 0) {
     this.viewOffset.y = Math.max(0, this.viewOffset.y - scrollUp);
-    console.log(`Scrolling up by ${scrollUp} rows`);
+    console.log(`Scrolling up by ${scrollUp} rows to reduce bottom empty space`);
   } 
-  // If just scrollDown
+  // If just scrollDown (to reduce top empty space)
   else if (scrollDown > 0) {
     this.viewOffset.y = Math.min(
       this.fullGridSize - height,
       this.viewOffset.y + scrollDown
     );
-    console.log(`Scrolling down by ${scrollDown} rows`);
+    console.log(`Scrolling down by ${scrollDown} rows to reduce top empty space`);
   }
   
   // Check for conflicts and resolve
   // If both scrollLeft and scrollRight, use the larger value
   if (scrollLeft > 0 && scrollRight > 0) {
     if (scrollLeft >= scrollRight) {
+      // Move the view left to reduce right empty space
       this.viewOffset.x = Math.max(0, this.viewOffset.x - scrollLeft);
-      console.log(`Scrolling left by ${scrollLeft} columns`);
+      console.log(`Scrolling left by ${scrollLeft} columns to reduce right empty space`);
     } else {
+      // Move the view right to reduce left empty space
       this.viewOffset.x = Math.min(
         this.fullGridSize - width,
         this.viewOffset.x + scrollRight
       );
-      console.log(`Scrolling right by ${scrollRight} columns`);
+      console.log(`Scrolling right by ${scrollRight} columns to reduce left empty space`);
     }
   } 
-  // If just scrollLeft
+  // If just scrollLeft (to reduce right empty space)
   else if (scrollLeft > 0) {
     this.viewOffset.x = Math.max(0, this.viewOffset.x - scrollLeft);
-    console.log(`Scrolling left by ${scrollLeft} columns`);
+    console.log(`Scrolling left by ${scrollLeft} columns to reduce right empty space`);
   } 
-  // If just scrollRight
+  // If just scrollRight (to reduce left empty space)
   else if (scrollRight > 0) {
     this.viewOffset.x = Math.min(
       this.fullGridSize - width,
       this.viewOffset.x + scrollRight
     );
-    console.log(`Scrolling right by ${scrollRight} columns`);
+    console.log(`Scrolling right by ${scrollRight} columns to reduce left empty space`);
   }
   
   // If any scrolling happened, re-render the grid with animation
@@ -2004,7 +2010,7 @@ optimizeGridView() {
   
   return false; // No scrolling needed
 }
-
+  
 /**
  * Helper method to check if a cell has any content (letter)
  * Add this to the GridRenderer class
