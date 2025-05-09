@@ -944,67 +944,79 @@ clearRandomLetters() {
   }
 
   /**
-   * Render the currently visible portion of the grid - optimized for touch
-   */
-  renderVisibleGrid() {
-    const isMobile = window.innerWidth < 768;
-    const width = isMobile ? this.options.gridWidthSmall : this.options.gridWidth;
-    const height = isMobile ? this.options.gridHeightSmall : this.options.gridHeight;
+ * Render the currently visible portion of the grid - enhanced for letter updates
+ */
+renderVisibleGrid() {
+  const isMobile = window.innerWidth < 768;
+  const width = isMobile ? this.options.gridWidthSmall : this.options.gridWidth;
+  const height = isMobile ? this.options.gridHeightSmall : this.options.gridHeight;
+  
+  // Calculate visible bounds
+  const endX = this.viewOffset.x + width;
+  const endY = this.viewOffset.y + height;
+  
+  // Check if grid needs to be rebuilt (initial render or after scrolling)
+  const needsRebuild = !this.gridElement.children.length || 
+                       this._lastRenderOffset?.x !== this.viewOffset.x || 
+                       this._lastRenderOffset?.y !== this.viewOffset.y;
+  
+  // Save current render offset
+  this._lastRenderOffset = { ...this.viewOffset };
+  
+  // Full rebuild if needed
+  if (needsRebuild) {
+    console.log('Full grid rebuild');
+    this.gridElement.innerHTML = '';
+    let cellCount = 0;
     
-    // Calculate visible bounds
-    const endX = this.viewOffset.x + width;
-    const endY = this.viewOffset.y + height;
+    // Render visible cells
+    for (let y = this.viewOffset.y; y < endY && y < this.fullGridSize; y++) {
+      for (let x = this.viewOffset.x; x < endX && x < this.fullGridSize; x++) {
+        const cellElement = this.createCellElement(x, y);
+        this.gridElement.appendChild(cellElement);
+        cellCount++;
+      }
+    }
     
-    // Check if grid needs to be rebuilt (initial render or after scrolling)
-    const needsRebuild = !this.gridElement.children.length || 
-                         this._lastRenderOffset?.x !== this.viewOffset.x || 
-                         this._lastRenderOffset?.y !== this.viewOffset.y;
+    console.log(`Created ${cellCount} cells`);
     
-    // Save current render offset
-    this._lastRenderOffset = { ...this.viewOffset };
-    
-    // Full rebuild if needed
-    if (needsRebuild) {
-      console.log('Full grid rebuild');
-      this.gridElement.innerHTML = '';
-      let cellCount = 0;
+    // Notify that grid was rebuilt
+    document.dispatchEvent(new CustomEvent('gridRebuilt', { 
+      detail: { gridElement: this.gridElement, gridRenderer: this }
+    }));
+  }
+  // Otherwise just update cell states and content
+  else {
+    console.log('Updating cell states and content');
+    // Update all visible cells without rebuilding DOM
+    const cells = this.gridElement.querySelectorAll('.grid-cell');
+    cells.forEach(cellElement => {
+      const x = parseInt(cellElement.dataset.gridX, 10);
+      const y = parseInt(cellElement.dataset.gridY, 10);
       
-      // Render visible cells
-      for (let y = this.viewOffset.y; y < endY && y < this.fullGridSize; y++) {
-        for (let x = this.viewOffset.x; x < endX && x < this.fullGridSize; x++) {
-          const cellElement = this.createCellElement(x, y);
-          this.gridElement.appendChild(cellElement);
-          cellCount++;
+      // Skip if invalid coordinates
+      if (isNaN(x) || isNaN(y)) return;
+      
+      // ENHANCED: Update cell text content to match grid model
+      // This ensures letters are properly updated when island reduction changes
+      if (y >= 0 && y < this.grid.length && x >= 0 && x < this.grid[0].length) {
+        const cell = this.grid[y][x];
+        // Update the cell content if it's different
+        const currentText = cellElement.textContent;
+        const modelText = cell.letter || '•'; // Use dot if no letter
+        if (currentText !== modelText) {
+          cellElement.textContent = modelText;
         }
       }
       
-      console.log(`Created ${cellCount} cells`);
-      
-      // Notify that grid was rebuilt
-      document.dispatchEvent(new CustomEvent('gridRebuilt', { 
-        detail: { gridElement: this.gridElement, gridRenderer: this }
-      }));
-    }
-    // Otherwise just update cell states
-    else {
-      console.log('Updating cell states only');
-      // Update all visible cells without rebuilding DOM
-      const cells = this.gridElement.querySelectorAll('.grid-cell');
-      cells.forEach(cellElement => {
-        const x = parseInt(cellElement.dataset.gridX, 10);
-        const y = parseInt(cellElement.dataset.gridY, 10);
-        
-        // Skip if invalid coordinates
-        if (isNaN(x) || isNaN(y)) return;
-        
-        // Update cell classes based on current state
-        this.updateCellElementClasses(cellElement, x, y);
-      });
-    }
-    
-    // Check if we need to update scroll limits
-    this.checkScrollLimits();
+      // Update cell classes based on current state
+      this.updateCellElementClasses(cellElement, x, y);
+    });
   }
+  
+  // Check if we need to update scroll limits
+  this.checkScrollLimits();
+}
   
   /**
    * Check scroll limits and update UI accordingly
@@ -1411,6 +1423,7 @@ document.dispatchEvent(new CustomEvent('islandReductionLevelChanged', {
   
 /**
  * Apply random letters based on the current island reduction level
+ * Enhanced to ensure proper rendering of letter cells
  * @param {PathGenerator} pathGenerator - The path generator with pre-generated cells
  */
 applyIslandReductionLetters(pathGenerator) {
@@ -1425,8 +1438,18 @@ applyIslandReductionLetters(pathGenerator) {
   // Apply these letters to the grid
   this.applyAdjacentRandomLetters(randomLetters);
   
+  // CRITICAL: Set _lastRenderOffset to null to force a complete grid rebuild
+  this._lastRenderOffset = null;
+  
   // Re-render the grid to show changes
   this.renderVisibleGrid();
+  
+  // ENHANCED: Add a second delayed render to ensure cell content updates
+  setTimeout(() => {
+    this._lastRenderOffset = null;
+    this.renderVisibleGrid();
+    console.log("Secondary grid render to ensure letter updates");
+  }, 100);
   
   // Dispatch an event to notify that letters were updated
   document.dispatchEvent(new CustomEvent('islandLettersUpdated', { 
@@ -1453,7 +1476,7 @@ applyIslandReductionLetters(pathGenerator) {
         }
       }));
     }
-  }, 100);
+  }, 150);
 }
   
 /**
