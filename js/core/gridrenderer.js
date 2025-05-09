@@ -1797,8 +1797,12 @@ setPath(path) {
  * It scans for empty rows/columns and auto-scrolls to optimize the view.
  * Fixed to correctly reduce empty space instead of adding more.
  */
+/**
+ * Improved optimizeGridView method for GridRenderer class
+ * Balances empty rows/columns between opposite edges
+ */
 optimizeGridView() {
-  console.log('Optimizing grid view to minimize empty space');
+  console.log('Optimizing grid view to balance empty space between opposite edges');
   
   // Skip if not on large screen
   if (window.innerWidth < 768) {
@@ -1895,95 +1899,90 @@ optimizeGridView() {
     emptyColsRight
   });
   
-  // Calculate scroll adjustments (want to leave exactly 1 row/col empty on each side)
-  // FIXED: Adjusting the logic to move content toward the center, not away
-  let scrollDown = 0;
-  let scrollUp = 0;
-  let scrollRight = 0;
-  let scrollLeft = 0;
+  // Calculate vertical balance adjustments
+  let verticalAdjustment = 0;
   
-  // If more than 1 empty row at the top, scroll down to reduce top empty space
-  if (emptyRowsTop > 1) {
-    scrollDown = emptyRowsTop - 1;
-  }
-  
-  // If more than 1 empty row at the bottom, scroll up to reduce bottom empty space
-  if (emptyRowsBottom > 1) {
-    scrollUp = emptyRowsBottom - 1;
-  }
-  
-  // If more than 1 empty column on the left, scroll right to reduce left empty space
-  if (emptyColsLeft > 1) {
-    scrollRight = emptyColsLeft - 1;
-  }
-  
-  // If more than 1 empty column on the right, scroll left to reduce right empty space
-  if (emptyColsRight > 1) {
-    scrollLeft = emptyColsRight - 1;
-  }
-  
-  // Check for conflicts and resolve
-  // If both scrollUp and scrollDown, use the larger value
-  if (scrollUp > 0 && scrollDown > 0) {
-    if (scrollUp >= scrollDown) {
-      // Move the view up to reduce bottom empty space
-      this.viewOffset.y = Math.max(0, this.viewOffset.y - scrollUp);
-      console.log(`Scrolling up by ${scrollUp} rows to reduce bottom empty space`);
+  // If both top and bottom have less than 2 empty rows, no adjustment needed
+  if (emptyRowsTop < 2 && emptyRowsBottom < 2) {
+    console.log('Vertical balance: Both edges have fewer than 2 empty rows, no adjustment needed');
+  } else {
+    // Calculate the difference between empty rows
+    const verticalDifference = Math.abs(emptyRowsTop - emptyRowsBottom);
+    
+    // If difference is already 1 or less, no adjustment needed
+    if (verticalDifference <= 1) {
+      console.log('Vertical balance: Difference is already 1 or less, no adjustment needed');
     } else {
-      // Move the view down to reduce top empty space
+      // Calculate how much to adjust to make the difference 1
+      const targetAdjustment = Math.floor(verticalDifference / 2);
+      
+      if (emptyRowsTop > emptyRowsBottom) {
+        // Move view down to reduce top empty space
+        verticalAdjustment = targetAdjustment;
+        console.log(`Vertical balance: Moving down by ${verticalAdjustment} rows to balance top/bottom empty space`);
+      } else {
+        // Move view up to reduce bottom empty space
+        verticalAdjustment = -targetAdjustment;
+        console.log(`Vertical balance: Moving up by ${Math.abs(verticalAdjustment)} rows to balance top/bottom empty space`);
+      }
+    }
+  }
+  
+  // Calculate horizontal balance adjustments
+  let horizontalAdjustment = 0;
+  
+  // If both left and right have less than 2 empty columns, no adjustment needed
+  if (emptyColsLeft < 2 && emptyColsRight < 2) {
+    console.log('Horizontal balance: Both edges have fewer than 2 empty columns, no adjustment needed');
+  } else {
+    // Calculate the difference between empty columns
+    const horizontalDifference = Math.abs(emptyColsLeft - emptyColsRight);
+    
+    // If difference is already 1 or less, no adjustment needed
+    if (horizontalDifference <= 1) {
+      console.log('Horizontal balance: Difference is already 1 or less, no adjustment needed');
+    } else {
+      // Calculate how much to adjust to make the difference 1
+      const targetAdjustment = Math.floor(horizontalDifference / 2);
+      
+      if (emptyColsLeft > emptyColsRight) {
+        // Move view right to reduce left empty space
+        horizontalAdjustment = targetAdjustment;
+        console.log(`Horizontal balance: Moving right by ${horizontalAdjustment} columns to balance left/right empty space`);
+      } else {
+        // Move view left to reduce right empty space
+        horizontalAdjustment = -targetAdjustment;
+        console.log(`Horizontal balance: Moving left by ${Math.abs(horizontalAdjustment)} columns to balance left/right empty space`);
+      }
+    }
+  }
+  
+  // Apply the calculated adjustments
+  if (verticalAdjustment !== 0 || horizontalAdjustment !== 0) {
+    // Apply vertical adjustment
+    if (verticalAdjustment > 0) {
+      // Move view down
       this.viewOffset.y = Math.min(
         this.fullGridSize - height,
-        this.viewOffset.y + scrollDown
+        this.viewOffset.y + verticalAdjustment
       );
-      console.log(`Scrolling down by ${scrollDown} rows to reduce top empty space`);
+    } else if (verticalAdjustment < 0) {
+      // Move view up
+      this.viewOffset.y = Math.max(0, this.viewOffset.y + verticalAdjustment);
     }
-  } 
-  // If just scrollUp (to reduce bottom empty space)
-  else if (scrollUp > 0) {
-    this.viewOffset.y = Math.max(0, this.viewOffset.y - scrollUp);
-    console.log(`Scrolling up by ${scrollUp} rows to reduce bottom empty space`);
-  } 
-  // If just scrollDown (to reduce top empty space)
-  else if (scrollDown > 0) {
-    this.viewOffset.y = Math.min(
-      this.fullGridSize - height,
-      this.viewOffset.y + scrollDown
-    );
-    console.log(`Scrolling down by ${scrollDown} rows to reduce top empty space`);
-  }
-  
-  // Check for conflicts and resolve
-  // If both scrollLeft and scrollRight, use the larger value
-  if (scrollLeft > 0 && scrollRight > 0) {
-    if (scrollLeft >= scrollRight) {
-      // Move the view left to reduce right empty space
-      this.viewOffset.x = Math.max(0, this.viewOffset.x - scrollLeft);
-      console.log(`Scrolling left by ${scrollLeft} columns to reduce right empty space`);
-    } else {
-      // Move the view right to reduce left empty space
+    
+    // Apply horizontal adjustment
+    if (horizontalAdjustment > 0) {
+      // Move view right
       this.viewOffset.x = Math.min(
         this.fullGridSize - width,
-        this.viewOffset.x + scrollRight
+        this.viewOffset.x + horizontalAdjustment
       );
-      console.log(`Scrolling right by ${scrollRight} columns to reduce left empty space`);
+    } else if (horizontalAdjustment < 0) {
+      // Move view left
+      this.viewOffset.x = Math.max(0, this.viewOffset.x + horizontalAdjustment);
     }
-  } 
-  // If just scrollLeft (to reduce right empty space)
-  else if (scrollLeft > 0) {
-    this.viewOffset.x = Math.max(0, this.viewOffset.x - scrollLeft);
-    console.log(`Scrolling left by ${scrollLeft} columns to reduce right empty space`);
-  } 
-  // If just scrollRight (to reduce left empty space)
-  else if (scrollRight > 0) {
-    this.viewOffset.x = Math.min(
-      this.fullGridSize - width,
-      this.viewOffset.x + scrollRight
-    );
-    console.log(`Scrolling right by ${scrollRight} columns to reduce left empty space`);
-  }
-  
-  // If any scrolling happened, re-render the grid with animation
-  if (scrollUp > 0 || scrollDown > 0 || scrollLeft > 0 || scrollRight > 0) {
+    
     // Add slow animation class for smoother transition
     if (this.gridElement) {
       this.gridElement.classList.remove('fast-scroll', 'slow-scroll');
@@ -2007,8 +2006,8 @@ optimizeGridView() {
         offset: this.viewOffset, 
         gridRenderer: this,
         adjustments: {
-          vertical: scrollUp > 0 ? -scrollUp : scrollDown,
-          horizontal: scrollLeft > 0 ? -scrollLeft : scrollRight
+          vertical: verticalAdjustment,
+          horizontal: horizontalAdjustment
         }
       }
     }));
