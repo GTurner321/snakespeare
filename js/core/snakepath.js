@@ -68,13 +68,22 @@ class SnakePath {
    * Set up event listeners for path changes
    */
   setupEventListeners() {
-    // Listen for selection changes to update snake visualization
-    document.addEventListener('revealedLettersUpdated', () => {
+    // Listen for cell selection changes (this is the main event we need)
+    document.addEventListener('selectionsCleared', () => {
       this.updateSnakePath();
     });
     
-    // Update when selections are cleared
-    document.addEventListener('selectionsCleared', () => {
+    // Critical event: listen for selection changes from the GridRenderer
+    if (this.gridRenderer && this.gridRenderer.options && this.gridRenderer.options.onSelectionChange) {
+      const originalOnSelectionChange = this.gridRenderer.options.onSelectionChange;
+      this.gridRenderer.options.onSelectionChange = (...args) => {
+        originalOnSelectionChange(...args);
+        this.updateSnakePath();
+      };
+    }
+    
+    // Update when a single cell is selected
+    document.addEventListener('gridCellSelected', () => {
       this.updateSnakePath();
     });
     
@@ -95,6 +104,15 @@ class SnakePath {
         this.updateSnakePath();
       }, 100);
     });
+    
+    // Also set a regular update interval to ensure snake pieces are always present
+    // This helps in cases where other events might have removed our snake images
+    setInterval(() => {
+      if (this.gridRenderer && this.gridRenderer.selectedCells && 
+          this.gridRenderer.selectedCells.length > 0) {
+        this.updateSnakePath();
+      }
+    }, 1000);
     
     console.log('SnakePath event listeners set up');
   }
@@ -202,9 +220,21 @@ class SnakePath {
     img.style.left = '0';
     img.style.width = '100%';
     img.style.height = '100%';
+    
+    // Set the rotation as a CSS custom property for hover effects
+    const rotationValue = config.rotation;
+    img.style.setProperty('--rotation', `${rotationValue}deg`);
+    
+    // Apply the rotation and flip transformation
     img.style.transform = `rotate(${config.rotation}deg) ${config.flip ? 'scaleX(-1)' : ''}`;
     img.style.pointerEvents = 'none'; // Allow clicks to pass through
     img.style.zIndex = '10'; // Ensure it's above the cell background
+    
+    // Add data attributes for better debugging and interactions
+    img.dataset.pieceType = config.piece;
+    img.dataset.rotation = config.rotation;
+    img.dataset.flip = config.flip;
+    
     return img;
   }
   
@@ -248,11 +278,51 @@ class SnakePath {
       // Set position to relative for proper image positioning
       cellElement.style.position = 'relative';
       
-      // Log for debugging
-      console.log(`Cell ${index}: Added ${pieceConfig.piece} piece, rotation: ${pieceConfig.rotation}°, flip: ${pieceConfig.flip}`);
+      // Add piece type class to the cell for additional styling possibilities
+      cellElement.classList.add(`has-${pieceConfig.piece}`);
+      
+      // Log for debugging (only for first few pieces to avoid console spam)
+      if (index < 3 || isLastCell) {
+        console.log(`Cell ${index}: Added ${pieceConfig.piece} piece, rotation: ${pieceConfig.rotation}°, flip: ${pieceConfig.flip}`);
+      }
     });
     
+    // Handle the special case for start cell (first cell)
+    if (selectedCells.length > 0) {
+      const startCell = selectedCells[0];
+      const startCellElement = document.querySelector(`.grid-cell[data-grid-x="${startCell.x}"][data-grid-y="${startCell.y}"]`);
+      
+      if (startCellElement && !startCellElement.classList.contains('selected-cell')) {
+        // The start cell may not have the selected-cell class but still needs the snake tail
+        // Find existing snake piece
+        const existingPiece = startCellElement.querySelector('.snake-piece');
+        if (!existingPiece) {
+          const pieceConfig = this.determinePiece(0, selectedCells, false);
+          const pieceImage = this.createPieceImage(pieceConfig);
+          startCellElement.appendChild(pieceImage);
+          startCellElement.style.position = 'relative';
+          startCellElement.classList.add(`has-${pieceConfig.piece}`);
+        }
+      }
+    }
+    
     console.log(`Updated snake path with ${selectedCells.length} pieces`);
+    
+    // Fire a custom event that other components can listen for
+    document.dispatchEvent(new CustomEvent('snakePathUpdated', { 
+      detail: { 
+        pieceCount: selectedCells.length,
+        snakePath: this
+      }
+    }));
+  }
+  
+  /**
+   * Public method to force a snake path update
+   * Can be called from other components
+   */
+  refreshSnakePath() {
+    this.updateSnakePath();
   }
 }
 
