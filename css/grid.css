@@ -4,7 +4,8 @@
    
    CONTENTS:
    1. Game Container & General Layout
-   2. Grid Container & Cells
+   2a. Grid Container & Cells
+   2b. Snake cells
    3. Scroll Areas (Replacing Arrow Buttons)
    4. Phrase Display
    5. Menu System (Replacing Refresh Buttons)
@@ -57,7 +58,7 @@ body {
 }
 
 /* ==========================================================================
-   2. Grid Container & Cells - Island Theme
+   2a. Grid Container & Cells - Island Theme
    ========================================================================== */
 
 /* Grid container wrapper - ensure proper dimensions */
@@ -77,7 +78,7 @@ body {
 .grid-container {
     display: grid;
     gap: 0; /* Remove gaps between cells for a continuous sea */
-    background-color: #00aaff; /* NEW: Bright azure blue for the sea */
+    background-color: #00aaff; /* Bright azure blue for the sea */
     border: 2px solid #0096e0; /* Slightly darker azure border */
     border-radius: 4px;
     padding: 2px;
@@ -115,8 +116,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: #00aaff; /* NEW: Bright azure blue for the sea */
-    color: transparent; /* CHANGED: Hide the dot by making text transparent */
+    background-color: #00aaff; /* Bright azure blue for the sea */
+    color: transparent; /* Hide the dot by making text transparent */
     border: 1px solid #0096e0; /* Slightly darker azure border */
     text-shadow: none; /* Remove text shadow */
     border-radius: 4px;
@@ -124,7 +125,7 @@ body {
     font-weight: bold;
     font-size: 1.4rem;
     user-select: none;
-    /* CHANGED: Targeted transitions instead of 'all' for better performance */
+    /* Targeted transitions instead of 'all' for better performance */
     transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
     box-sizing: border-box;
     width: 50px;
@@ -138,11 +139,14 @@ body {
     /* Fix for occasional touch events not registering */
     z-index: 1;
     margin: 0; /* No margins between cells */
+    /* Added for snake piece positioning */
+    position: relative;
+    overflow: hidden; /* Keep snake pieces within the cell boundaries */
 }
 
 /* Style for "adjacent to letter" sea cells - lighter blue */
 .grid-cell.sea-adjacent {
-    background-color: #89cff0 !important; /* NEW: Baby blue for cells adjacent to islands */
+    background-color: #89cff0 !important; /* Baby blue for cells adjacent to islands */
     border-color: #5eb1e5 !important; /* Slightly darker baby blue border */
 }
 
@@ -156,29 +160,27 @@ body {
 
 /* Yellow borders for letter cells adjacent to sea */
 .grid-cell.path-cell.island-edge-top {
-    border-top: 4px solid #ffeb3b !important; /* WIDER: Yellow top border */
+    border-top: 4px solid #ffeb3b !important; /* Yellow top border */
 }
 
 .grid-cell.path-cell.island-edge-right {
-    border-right: 4px solid #ffeb3b !important; /* WIDER: Yellow right border */
+    border-right: 4px solid #ffeb3b !important; /* Yellow right border */
 }
 
 .grid-cell.path-cell.island-edge-bottom {
-    border-bottom: 4px solid #ffeb3b !important; /* WIDER: Yellow bottom border */
+    border-bottom: 4px solid #ffeb3b !important; /* Yellow bottom border */
 }
 
 .grid-cell.path-cell.island-edge-left {
-    border-left: 4px solid #ffeb3b !important; /* WIDER: Yellow left border */
+    border-left: 4px solid #ffeb3b !important; /* Yellow left border */
 }
 
 /* Preserve the start cell style - green */
 .grid-cell.start-cell {
-    background-color: #4CAF50 !important; /* Green for start */
-    color: white !important;
-    text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.4) !important;
-    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2) !important;
+    background-color: #b2dfdb !important; /* Changed to match island cells for snake visualization */
+    color: rgba(0, 77, 64, 0.2) !important; /* Faded text for snake pieces */
     z-index: 5 !important; /* Higher z-index to stand out */
-    border: 1px solid #2E7D32 !important; /* Darker green border */
+    border: 1px solid #80cbc4 !important; /* Match island cell border */
 }
 
 /* Style for revealed hint cells - preserve as red */
@@ -191,30 +193,28 @@ body {
     z-index: 4 !important; /* Higher than regular cells */
 }
 
-/* Selected cell style - preserve as blue for now */
+/* Selected cell style - changed to match island theme for snake pieces */
 .grid-cell.selected-cell {
-    background-color: #2196F3 !important; /* Blue for selected */
-    color: white !important;
-    text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.4) !important;
+    background-color: #b2dfdb !important; /* Same as island cells */
+    color: rgba(0, 77, 64, 0.2) !important; /* Faded text to show through snake pieces */
+    text-shadow: none !important;
     z-index: 6 !important; /* Ensure selected is on top */
-    box-shadow: 0 0 8px rgba(0, 0, 0, 0.3) !important;
-    border: 2px solid #0D47A1 !important; /* Darker blue border */
+    border: 2px solid #80cbc4 !important; /* Lighter teal border */
 }
 
-/* Completed path style - preserve as green for now */
+/* Completed path style - maintain green base but allow for snake pieces */
 .grid-cell.completed-cell {
-    background-color: #4CAF50 !important; /* Green for completed cells */
-    color: white !important;
-    text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.4) !important;
-    border: 1px solid #2E7D32 !important; /* Darker green border */
-    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1) !important;
+    background-color: #c8e6c9 !important; /* Lighter green for completed cells */
+    color: rgba(0, 77, 64, 0.2) !important; /* Faded text for better snake visibility */
+    text-shadow: none !important;
+    border: 1px solid #81c784 !important; /* Lighter green border */
     z-index: 7 !important; /* Ensure completed is on top of all other states */
 }
 
 /* Out of bounds cells as darker blue */
 .grid-cell.out-of-bounds {
-    background-color: #0077b3; /* NEW: Darker azure for out of bounds */
-    color: transparent; /* CHANGED: Hide the X by making text transparent */
+    background-color: #0077b3; /* Darker azure for out of bounds */
+    color: transparent; /* Hide the X by making text transparent */
     border-color: #006699; /* Medium blue border */
 }
 
@@ -241,7 +241,7 @@ body {
 @media (hover: hover) and (pointer: fine) {
     /* Hover for sea cells */
     .grid-cell:not(.path-cell):not(.start-cell):not(.out-of-bounds):hover {
-        background-color: #3bbbff; /* NEW: Lighter azure blue on hover */
+        background-color: #3bbbff; /* Lighter azure blue on hover */
         cursor: pointer;
         box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
     }
@@ -252,10 +252,10 @@ body {
         cursor: pointer;
     }
     
-    /* Ensure selected state always overrides hover */
+    /* Ensure selected state always has correct hover style with snake pieces */
     .grid-cell.selected-cell:hover {
-        background-color: #2196F3 !important; /* Keep blue for selected when hovering */
-        z-index: 2 !important; /* Keep selected on top */
+        background-color: #a7d9d0 !important; /* Slightly lighter green for selected hover */
+        cursor: pointer;
     }
     
     /* Hover effect for revealed cells */
@@ -266,7 +266,7 @@ body {
     
     /* Keep hover for completed */
     .grid-cell.completed-cell:hover {
-        background-color: #4CAF50 !important; /* Keep green for completed when hovering */
+        background-color: #c8e6c9 !important; /* Keep green for completed when hovering */
         cursor: default !important; /* Change cursor to default for completed cells */
     }
 }
@@ -309,6 +309,92 @@ body {
         -webkit-tap-highlight-color: transparent;
         /* Disable iOS callouts */
         -webkit-touch-callout: none;
+    }
+}
+
+/* ==========================================================================
+   2b. Snake Cells
+   ========================================================================== */
+
+/* Base styles for snake pieces */
+.snake-piece {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* Allow clicks to pass through to the cell */
+    z-index: 10;
+    object-fit: contain;
+    transform-origin: center;
+    transition: transform 0.2s ease; /* Smooth rotation transitions */
+}
+
+/* Specific styling for each piece type */
+.snake-tail {
+    filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.3));
+}
+
+.snake-straight {
+    filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.3));
+}
+
+.snake-curved {
+    filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.3));
+}
+
+.snake-head {
+    filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.3));
+    z-index: 11; /* Ensure head is on top */
+}
+
+/* Animation for completed path with snake pieces */
+@keyframes snake-completed-pulse {
+    0% { filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.3)); }
+    50% { filter: drop-shadow(0 0 6px rgba(76, 175, 80, 0.7)); }
+    100% { filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.3)); }
+}
+
+/* Apply completion animation to snake pieces in completed cells */
+.grid-cell.completed-cell .snake-piece {
+    animation: snake-completed-pulse 2s infinite;
+}
+
+/* Override visibility for snake pieces in special cell states */
+.grid-cell.revealed-cell .snake-piece {
+    /* Make snake pieces semi-transparent on hint cells */
+    opacity: 0.8;
+}
+
+/* Responsive styles for snake pieces */
+@media (max-width: 768px) {
+    .snake-piece {
+        padding: 2px; /* Add a slight padding on smaller screens */
+    }
+}
+
+@media (max-width: 480px) {
+    .snake-piece {
+        padding: 3px; /* Add more padding on very small screens */
+    }
+}
+
+/* Special snake combination styles */
+.grid-cell.start-cell .snake-tail {
+    /* Ensure tail is properly centered and visible */
+    z-index: 12;
+}
+
+.grid-cell.selected-cell:last-child .snake-head {
+    /* Make the head stand out more when it's the last selected cell */
+    filter: drop-shadow(0 0 4px rgba(76, 175, 80, 0.5));
+}
+
+/* Hover effects for cells with snake pieces */
+@media (hover: hover) and (pointer: fine) {
+    .grid-cell.selected-cell:hover .snake-piece {
+        /* Subtle scale effect on hover */
+        transform: scale(1.05) rotate(var(--rotation, 0deg));
     }
 }
 
