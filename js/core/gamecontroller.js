@@ -396,40 +396,6 @@ handleSelectionChange() {
   }
 }
 
-// 2. Modified fillPhraseTemplate method that doesn't try to incorporate hints
-// This is used just for checking selected letters against hint letters
-fillPhraseTemplate(template, phrase, selectedLetters) {
-  // Check if we have empty input
-  if (!template || !phrase || !selectedLetters) {
-    return template || '';
-  }
-  
-  // Create array from template
-  const templateArray = template.split('');
-  
-  // Only use letters that actually have content
-  const validSelectedLetters = selectedLetters.filter(cell => 
-    cell.letter && cell.letter.trim() !== '');
-  
-  // Count positions that need letters (underscores)
-  const letterPositions = [];
-  for (let i = 0; i < templateArray.length; i++) {
-    if (templateArray[i] === '_' && /[a-zA-Z0-9]/.test(phrase[i])) {
-      letterPositions.push(i);
-    }
-  }
-  
-  // Start filling in the template with the actual selected letters in sequence
-  for (let i = 0; i < validSelectedLetters.length && i < letterPositions.length; i++) {
-    const letter = validSelectedLetters[i].letter.toUpperCase();
-    if (letter && letter.trim() !== '') {
-      templateArray[letterPositions[i]] = letter;
-    }
-  }
-  
-  return templateArray.join('');
-}
-  
 /**
  * New method to check if the selected phrase is correct
  * Compares the selected letters against the expected phrase
