@@ -10,7 +10,7 @@
     <!-- Google Fonts - Black Ops One for the metallic buttons -->
     <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&display=swap" rel="stylesheet">
     <style>
-        /* Additional menu styles - Keep these minimal */
+        /* Menu styles */
         .menu-item.active-hint {
             font-weight: bold;
             background-color: rgba(0, 0, 0, 0.1);
@@ -27,8 +27,9 @@
             left: 0 !important;
             width: 100% !important;
             height: 100% !important;
-            z-index: 500 !important; /* Higher than cell but lower than text */
+            z-index: 500 !important;
             pointer-events: none !important;
+            display: block !important;
         }
     </style>
 </head>
@@ -55,7 +56,7 @@
     
     <!-- JavaScript Modules -->
     <script type="module">
-        // Import with the correct path to gamecontroller.js, islandrenderer.js, and snakepath.js
+        // Import modules
         import GameController from './js/core/gamecontroller.js';
         import IslandRenderer from './js/core/islandrenderer.js';
         import SnakePath from './js/core/snakepath.js';
@@ -73,41 +74,41 @@
                     desktop: { width: 15, height: 11 }
                 },
                 cellSize: 45,
-                randomFillPercentage: 0.8  // Enable adjacent-cells random letter filling
+                randomFillPercentage: 0.8
             });
             
             // Make game controller globally accessible
             window.gameController = gameController;
             
-            // Initialize island renderer when grid renderer is ready
+            // Initialize island renderer and snake path
             document.addEventListener('gridRendererInitialized', (e) => {
                 const gridRenderer = e.detail.gridRenderer;
-                console.log('Grid renderer initialized, applying island theme...');
+                console.log('Grid renderer initialized...');
                 
                 // Initialize IslandRenderer
-                const islandRenderer = new IslandRenderer(gridRenderer);
+                new IslandRenderer(gridRenderer);
                 
-                // Initialize SnakePath with the grid renderer
-                console.log('Initializing snake path visualization...');
-                try {
-                    const snakePath = new SnakePath(gridRenderer);
-                    window.snakePath = snakePath;
-                } catch (error) {
-                    console.error('Error initializing SnakePath:', error);
-                }
+                // Initialize SnakePath after IslandRenderer
+                setTimeout(() => {
+                    try {
+                        console.log('Initializing snake path...');
+                        new SnakePath(gridRenderer);
+                    } catch (error) {
+                        console.error('Error initializing SnakePath:', error);
+                    }
+                }, 500);
             });
             
-            // Attempt to load phrase data from CSV
+            // Load phrase data from CSV
             try {
                 console.log('Loading phrase data from CSV...');
                 gameController.loadPhraseData('assets/phrasedata.csv')
                     .catch(error => {
                         console.error('Failed to load CSV:', error);
-                        console.log('Falling back to sample data');
                         gameController.loadSampleData();
                     });
             } catch (error) {
-                console.error('Error initializing phrase data:', error);
+                console.error('Error loading phrase data:', error);
                 gameController.loadSampleData();
             }
         });
