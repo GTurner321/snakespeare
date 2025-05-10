@@ -177,11 +177,17 @@ body {
 
 /* Start cell style to match island cells for snake path */
 .grid-cell.start-cell {
-    background-color: #b2dfdb !important; /* Green island color */
-    color: #004d40 !important; /* Dark teal for visible text */
-    text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8) !important;
-    border: 1px solid #80cbc4 !important; /* Match island cell border */
-    z-index: 5 !important; /* Higher z-index to stand out */
+  background-color: #8fd9a8 !important; /* Brighter green */
+  color: #004d40 !important; /* Dark teal for better visibility */
+  font-weight: bold !important;
+  box-shadow: 0 0 5px rgba(0, 77, 64, 0.4) !important;
+  z-index: 3 !important;
+}
+
+.grid-cell.start-cell.selected-cell {
+  background-color: #b2dfdb !important; /* Match other selected cells */
+  border-color: #00897b !important; /* Slightly darker border for emphasis */
+  box-shadow: 0 0 6px rgba(0, 77, 64, 0.5) !important;
 }
 
 /* Style for revealed hint cells - preserve as red */
