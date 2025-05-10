@@ -5,10 +5,19 @@
  * REVISED: Added improved debugging, direct image URLs, and testing functions
  */
 
-class SnakePath {
+// Make the class available globally first, then export it
+window.SnakePath = class SnakePath {
   constructor(gridRenderer) {
     this.gridRenderer = gridRenderer;
     this.initialized = false;
+    
+    // FIXED: Use direct raw URLs for images instead of blob URLs
+    this.pieceImages = {
+      tail: 'https://raw.githubusercontent.com/GTurner321/snakespeare/main/assets/tailpiece.png',
+      straight: 'https://raw.githubusercontent.com/GTurner321/snakespeare/main/assets/straightpiece.png',
+      curved: 'https://raw.githubusercontent.com/GTurner321/snakespeare/main/assets/curvedpiece.png',
+      head: 'https://raw.githubusercontent.com/GTurner321/snakespeare/main/assets/headpiece.png'
+    };
     
     // FIXED: Use direct raw URLs for images instead of blob URLs
     this.pieceImages = {
@@ -543,7 +552,7 @@ determinePiece(index, cells, isLastCell) {
     }));
   }
   
-  /**
+/**
    * Public method to force a snake path update
    * Can be called from other components
    */
@@ -553,5 +562,8 @@ determinePiece(index, cells, isLastCell) {
   }
 }
 
+// Log that the module has been loaded
+console.log('SnakePath module loaded and available globally as window.SnakePath');
+
 // Export class for use in other modules
-export default SnakePath;
+export default window.SnakePath;
