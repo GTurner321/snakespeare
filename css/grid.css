@@ -140,7 +140,7 @@ body {
     z-index: 1;
     margin: 0; /* No margins between cells */
     /* Critical for snake piece positioning */
-    position: relative;
+    position: relative !important;
     overflow: hidden; /* Keep snake pieces within the cell boundaries */
 }
 
@@ -325,17 +325,19 @@ body {
 
 /* Base styles for snake pieces */
 .snake-piece {
-    position: absolute;
+    position: absolute !important;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     pointer-events: none; /* Allow clicks to pass through to the cell */
-    z-index: 10;
+    z-index: 500; /* Much higher z-index to ensure visibility over cells */
     object-fit: contain; /* Ensure image scales to fit while maintaining aspect ratio */
     transform-origin: center;
     transition: transform 0.2s ease; /* Smooth rotation transitions */
     overflow: hidden; /* Keep pieces contained within cell boundaries */
+    display: block; /* Ensure the images are displayed */
+    opacity: 1; /* Full opacity for better visibility */
 }
 
 /* Specific styling for each piece type */
@@ -370,7 +372,7 @@ body {
 
 /* Ensure snake pieces have higher z-index than background but lower than letters */
 .grid-cell.selected-cell .snake-piece {
-    z-index: 7; /* Above the cell background, below the letter */
+    z-index: 550 !important; /* Above the cell background, below the letter */
 }
 
 /* Make letters visible above snake pieces */
