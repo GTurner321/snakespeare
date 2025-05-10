@@ -18,15 +18,21 @@
         
         /* Snake piece styling */
         .snake-piece {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 10;
-            object-fit: contain;
-            transform-origin: center;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            pointer-events: none !important;
+            z-index: 10 !important;
+            object-fit: contain !important;
+            transform-origin: center !important;
+        }
+        
+        /* Ensure grid cells can position children absolutely */
+        .grid-cell {
+            position: relative !important;
+            overflow: visible !important;
         }
     </style>
 </head>
@@ -74,6 +80,9 @@
                 randomFillPercentage: 0.8  // Enable adjacent-cells random letter filling
             });
             
+            // Make game controller globally accessible
+            window.gameController = gameController;
+            
             // Initialize island renderer when grid renderer is ready
             document.addEventListener('gridRendererInitialized', (e) => {
                 const gridRenderer = e.detail.gridRenderer;
@@ -82,9 +91,18 @@
                 // Initialize IslandRenderer
                 const islandRenderer = new IslandRenderer(gridRenderer);
                 
-                // Initialize SnakePath
+                // Initialize SnakePath with clear console logging
                 console.log('Initializing snake path visualization...');
                 const snakePath = new SnakePath(gridRenderer);
+                
+                // IMPORTANT: Store reference in window for access by other components
+                window.snakePath = snakePath;
+                
+                // Force an initial snake path update after a delay
+                setTimeout(() => {
+                    console.log('Forcing initial snake path update...');
+                    snakePath.updateSnakePath();
+                }, 1000);
                 
                 // Create custom event to trigger initial island styling
                 setTimeout(() => {
@@ -103,6 +121,13 @@
                 setTimeout(() => {
                     document.dispatchEvent(new CustomEvent('updateIslandStyling'));
                 }, 300);
+                
+                // Also update snake path after island reduction
+                if (window.snakePath) {
+                    setTimeout(() => {
+                        window.snakePath.updateSnakePath();
+                    }, 350);
+                }
             });
             
             // Attempt to load phrase data from CSV
