@@ -568,7 +568,6 @@ fillPhraseTemplate(template, phrase, selectedLetters) {
   return templateArray.join('');
 }
 
-// 5. Update the updatePhraseWithHints method to ensure hints are preserved
 updatePhraseWithHints() {
   if (!this.gridRenderer || !this.currentPhrase || !this.phraseTemplate) {
     return;
@@ -614,26 +613,40 @@ updatePhraseWithHints() {
     }
   }
   
-  // Now apply selected letters, skipping positions that already have hint letters
+  // Check if start cell is selected and has a letter
+  const centerX = 25;
+  const centerY = 25;
+  const startCell = this.gridRenderer.grid[centerY][centerX];
+  const isStartSelected = startCell.isSelected;
+  
+  // Get positions of alphanumeric characters in phrase
+  const letterlistArray = this.currentPhrase.letterlist.split('');
+  const alphaPositions = [];
+  let alphaIndex = 0;
+  
+  for (let i = 0; i < letterlistArray.length; i++) {
+    if (/[a-zA-Z0-9]/.test(letterlistArray[i])) {
+      alphaPositions[alphaIndex] = i;
+      alphaIndex++;
+    }
+  }
+  
+  // If start cell is selected and has a letter, fill in the first letter position
+  if (isStartSelected && startCell.letter && startCell.letter.trim() !== '') {
+    console.log(`Start cell is selected with letter '${startCell.letter}', adding to first position`);
+    const firstLetterPos = alphaPositions[0]; // First letter position
+    if (templateArray[firstLetterPos] === '_') { // Only replace underscore (not a hint)
+      templateArray[firstLetterPos] = startCell.letter.toUpperCase();
+    }
+  }
+  
+  // Now apply regular selected letters, skipping positions that already have hint letters
+  // and excluding the start cell since we already handled it
   const selectedLetters = this.gridRenderer.getSelectedLetters();
   if (selectedLetters.length > 0) {
     console.log('Applying selected letters:', selectedLetters.map(l => `${l.letter}`).join(', '));
     
-    // Map to phrase positions (skipping start cell)
-    const letterlistArray = this.currentPhrase.letterlist.split('');
-    const alphaPositions = [];
-    let alphaIndex = 0;
-    
-    // Find positions of all alphanumeric characters
-    for (let i = 0; i < letterlistArray.length; i++) {
-      if (/[a-zA-Z0-9]/.test(letterlistArray[i])) {
-        alphaPositions[alphaIndex] = i;
-        alphaIndex++;
-      }
-    }
-    
     // Apply selected letters, starting at position 1 (after start cell)
-    // Remember selected letters don't include the start cell
     for (let i = 0; i < selectedLetters.length; i++) {
       if (i + 1 < alphaPositions.length) { // +1 to account for start cell
         const phrasePos = alphaPositions[i + 1];
