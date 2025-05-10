@@ -72,18 +72,32 @@
                 // Initialize IslandRenderer
                 const islandRenderer = new IslandRenderer(gridRenderer);
                 
-                // Initialize SnakePath with clear console logging
+                // Initialize SnakePath with improved error handling
                 console.log('Initializing snake path visualization...');
-                const snakePath = new SnakePath(gridRenderer);
-                
-                // IMPORTANT: Store reference in window for access by other components
-                window.snakePath = snakePath;
-                
-                // Force an initial snake path update after a delay
-                setTimeout(() => {
-                    console.log('Forcing initial snake path update...');
-                    snakePath.updateSnakePath();
-                }, 1000);
+                try {
+                    // Create a new SnakePath instance directly using the class from window
+                    window.snakePath = new window.SnakePath(gridRenderer);
+                    console.log('Successfully created SnakePath instance:', window.snakePath);
+                    
+                    // Force an initial snake path update after a delay
+                    setTimeout(() => {
+                        console.log('Forcing initial snake path update...');
+                        window.snakePath.updateSnakePath();
+                    }, 1000);
+                } catch (error) {
+                    console.error('Error initializing SnakePath:', error);
+                    
+                    // Fallback initialization if the first attempt fails
+                    setTimeout(() => {
+                        try {
+                            console.log('Attempting fallback SnakePath initialization...');
+                            window.snakePath = new window.SnakePath(gridRenderer);
+                            window.snakePath.updateSnakePath();
+                        } catch (fallbackError) {
+                            console.error('Fallback initialization also failed:', fallbackError);
+                        }
+                    }, 1500);
+                }
                 
                 // Create custom event to trigger initial island styling
                 setTimeout(() => {
