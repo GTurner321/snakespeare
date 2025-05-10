@@ -413,43 +413,36 @@ determinePiece(index, cells, isLastCell) {
   return { piece: 'straight', rotation: 0, flip: false };
 }
   
-  /**
-   * Create a snake piece image element
-   * @param {Object} config - Piece configuration {piece, rotation, flip}
-   * @return {HTMLElement} The created image element
-   */
-  createPieceImage(config) {
-    const img = document.createElement('img');
-    img.src = this.pieceImages[config.piece];
-    img.className = `snake-piece snake-${config.piece}`;
-    
-    // Apply all styles as inline styles for better visibility
-    img.style.position = 'absolute';
-    img.style.top = '0';
-    img.style.left = '0';
-    img.style.width = '100%';
-    img.style.height = '100%';
-    img.style.zIndex = '50'; // Higher z-index for visibility
-    img.style.pointerEvents = 'none'; // Allow clicks to pass through
-    img.style.backgroundColor = 'transparent';
-    
-    // Set the rotation as a CSS custom property for hover effects
-    const rotationValue = config.rotation;
-    img.style.setProperty('--rotation', `${rotationValue}deg`);
-    
-    // Apply the rotation and flip transformation
-    img.style.transform = `rotate(${config.rotation}deg) ${config.flip ? 'scaleX(-1)' : ''}`;
-    
-    // Add data attributes for better debugging and interactions
-    img.dataset.pieceType = config.piece;
-    img.dataset.rotation = config.rotation;
-    img.dataset.flip = config.flip;
-    
-    // For debugging - add unique ID
-    img.id = `snake-piece-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-    
-    return img;
-  }
+createPieceImage(config) {
+  const img = document.createElement('img');
+  img.src = this.pieceImages[config.piece];
+  img.className = `snake-piece snake-${config.piece}`;
+  
+  // Apply all styles as inline styles for better visibility
+  img.style.position = 'absolute';
+  img.style.top = '0';
+  img.style.left = '0';
+  img.style.width = '100%';
+  img.style.height = '100%';
+  
+  // Critical: Much higher z-index for visibility (originally 50)
+  img.style.zIndex = '500'; // Increased from 50 to 500 for better visibility
+  
+  img.style.pointerEvents = 'none'; // Allow clicks to pass through
+  img.style.backgroundColor = 'transparent';
+  
+  // Apply the rotation and flip transformation
+  img.style.transform = `rotate(${config.rotation}deg) ${config.flip ? 'scaleX(-1)' : ''}`;
+  
+  // Ensure visibility with additional styles
+  img.style.display = 'block';
+  img.style.opacity = '1';
+  
+  // For debugging - add unique ID
+  img.id = `snake-piece-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+  
+  return img;
+}
   
   /**
    * Update the full snake path visualization
