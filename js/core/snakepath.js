@@ -52,9 +52,6 @@ window.SnakePath = class SnakePath {
       '3,3': { piece: 'straight', rotation: 90, flip: false }
     };
     
-    // Make this instance available globally for direct access
-    window.snakePath = this;
-    
     // Add event listeners for path changes
     this.setupEventListeners();
     
