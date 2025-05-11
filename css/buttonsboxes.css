@@ -1,360 +1,479 @@
-/* ===========================================================================
-   BUTTONS AND BOXES UNIFIED STYLING
-   Provides consistent metallic styling for buttons and content boxes
-   =========================================================================== */
-
 /* ==========================================================================
-   1. VARIABLES & ROOT SETTINGS
+   Grid Game Main Styles
+   Contains styles for the game grid, scroll areas, and general layout
+   
+   CONTENTS:
+   1. Game Container & General Layout
+   2a. Grid Container & Cells
+   2b. Snake cells
+   3. Scroll Areas (Replacing Arrow Buttons)
+   4. Phrase Display
+   5. Menu System (Replacing Refresh Buttons)
+   6. Menu Animations
+   7. Animation and Touch Handling
    ========================================================================== */
 
+/* ==========================================================================
+   Color Variables - Theme Colors
+   ========================================================================== */
 :root {
-    /* Metallic button color variables */
-    --btn-metal-lighter: #f8f8f8;
-    --btn-metal-light: #f0f0f0;
-    --btn-metal-mediumlight: #e0e0e0;
-    --btn-metal-medium: #d0d0d0;
-    --btn-metal-dark: #a8a8a8;
-    --btn-metal-darker: #888888;
-    --btn-metal-border: #999;
-    --btn-metal-border-top: #bbb;
-    --btn-metal-border-bottom: #777;
-    --btn-metal-shadow: rgba(0, 0, 0, 0.2);
-    --btn-metal-inner-highlight: rgba(255, 255, 255, 0.8);
-    --btn-metal-inner-shadow: rgba(0, 0, 0, 0.1);
-    --btn-text-color: #444;
-    --btn-text-shadow-light: rgba(255, 255, 255, 0.7);
-    --btn-text-shadow-dark: rgba(0, 0, 0, 0.4);
-    
-    /* Box styling variables */
-    --box-bg-color: #f0f0f0;
-    --box-border-color: #a0a0a0;
-    --box-shadow: 0 4px 8px 2px rgba(0, 0, 0, 0.15);
-    --box-inner-shadow: rgba(0, 0, 0, 0.05);
-    --box-inner-highlight: rgba(255, 255, 255, 0.7);
-    
-    /* Animation durations */
-    --transition-speed: 0.3s;
-    --pulse-speed: 0.2s;
+  /* Island Theme Primary Colors */
+  --lightblue: #64C0EB;    /* shore line lighter blue */
+  --defaultblue: #56A5D6;  /* darker blue for main sea and default */
+  --maingreen: #61E7A7;    /* main island cell green */
+  --startgreen: #19C773;   /* start cell green */
+  --sandyellow: #F6EC74;   /* yellow sand border */
+  
+  /* Derived/Secondary Colors */
+  --defaultblue-dark: #4A91BB;      /* darker border for main sea */
+  --defaultblue-darker: #3A82AD;    /* out of bounds background */
+  --defaultblue-darkest: #2E6C94;   /* out of bounds border */
+  --defaultblue-light: #78C9EF;     /* hover effect for sea cells */
+  --maingreen-dark: #4BC98A;        /* border for island cells */
+  --maingreen-light: #7DEEB6;       /* hover effect for island cells */
+  --maingreen-lighter: #8CEFC0;     /* hover effect for selected cells */
+  
+  /* Completed Cell Colors */
+  --completed-green: #C8E6C9;       /* lighter green for completed cells */
+  --completed-border: #81C784;      /* border for completed cells */
+  
+  /* Hint/Revealed Cell Colors */
+  --hint-red: #ffcdd2;              /* light red for hint cells */
+  --hint-red-border: #e57373;       /* border for hint cells */
+  --hint-red-text: #d32f2f;         /* text color for hint cells */
+  --hint-red-shadow: rgba(211, 47, 47, 0.3); /* shadow for hint cells */
+  --hint-red-hover: #ef9a9a;        /* hover color for hint cells */
+  
+  /* Touch & Interaction Colors */
+  --touch-highlight: rgba(33, 150, 243, 0.5); /* highlight color for touched cells */
+  --touch-border: #0D47A1;          /* border color for touched cells */
+  --invalid-bg-normal: #f0f0f0;     /* normal background for invalid selection */
+  --invalid-bg-flash: #ff6b6b;      /* flash background for invalid selection */
+  --invalid-border-normal: #ccc;    /* normal border for invalid selection */
+  --invalid-border-flash: #d32f2f;  /* flash border for invalid selection */
+  
+  /* Snake Animation Colors */
+  --snake-shadow-normal: rgba(0, 0, 0, 0.3);   /* normal shadow for snake pieces */
+  --snake-shadow-pulse: rgba(76, 175, 80, 0.7); /* pulse shadow for completed snake */
+  --snake-hover-shadow: rgba(0, 150, 136, 0.6); /* hover shadow for snake pieces */
+  --snake-head-shadow: rgba(76, 175, 80, 0.5);  /* shadow for snake head */
+  
+  /* Text and Other UI Colors */
+  --text-dark: #004d40;             /* dark teal for text on islands */
+  --box-shadow-color: rgba(0, 77, 64, 0.4); /* shadow for cells */
+  --cell-selected-shadow: rgba(255, 255, 255, 0.5); /* shadow for selected cells */
 }
 
 /* ==========================================================================
-   2. METALLIC BUTTON STYLING - UNIVERSAL - REWRITTEN
+   1. Game Container & General Layout
    ========================================================================== */
 
-.metallic-button {
-    /* Base styling */
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 8px 15px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-family: 'Black Ops One', 'Trebuchet MS', Arial, sans-serif;
-    font-weight: normal;
-    font-size: 1rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+body {
+    font-family: 'Trebuchet MS', Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f5f5f5;
+    color: #333;
+    overflow-x: hidden;
+}
+
+.game-container {
+    max-width: 890px;
+    margin: 0 auto;
+    padding: 10px 20px 20px 20px; /* Reduced top padding */
     position: relative;
-    overflow: hidden;
-    
-    /* Metallic Effect - Silver diagonal gradient stripes */
-    background: repeating-linear-gradient(
-        120deg,
-        var(--btn-metal-light) 0px,
-        var(--btn-metal-medium) 10px,
-        var(--btn-metal-light) 30px,
-        var(--btn-metal-mediumlight) 55px,
-        var(--btn-metal-medium) 80px,
-        var(--btn-metal-mediumlight) 95px,
-        var(--btn-metal-light) 120px,
-        var(--btn-metal-medium) 135px
-    );
-    
-    /* Additional gradient overlay for depth */
-    background-blend-mode: overlay;
-    background-size: 420px 100%;
-    
-    /* Text styling with embossed effect */
-    color: var(--btn-text-color);
-    text-shadow: 0px 1px 1px var(--btn-text-shadow-light), 
-                 0px -1px 1px var(--btn-text-shadow-dark);
-                 
-    /* Border styling */
-    border: 1px solid var(--btn-metal-border);
-    border-top: 1px solid var(--btn-metal-border-top);
-    border-bottom: 3px solid var(--btn-metal-border-bottom);
-    
-    /* No default shadow - added on hover only */
-    box-shadow: none;
-                
-    /* Smooth transitions */
-    transition: transform var(--transition-speed) ease,
-                box-shadow var(--transition-speed) ease,
-                background var(--transition-speed) ease,
-                border-bottom-width var(--transition-speed) ease;
-                
-    /* No text selection */
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-    
-    /* Prevent any default browser touch behaviors that might interfere */
-    touch-action: manipulation;
 }
 
-/* Hover state - Only apply on non-touch devices */
-@media (hover: hover) and (pointer: fine) {
-    .metallic-button:hover:not(:disabled):not(.clicked) {
-        /* Lighter metallic effect on hover */
-        background: repeating-linear-gradient(
-            120deg,
-            var(--btn-metal-lighter) 0px,
-            var(--btn-metal-light) 15px,
-            var(--btn-metal-lighter) 35px,
-            var(--btn-metal-mediumlight) 60px,
-            var(--btn-metal-light) 85px,
-            var(--btn-metal-mediumlight) 100px,
-            var(--btn-metal-lighter) 125px,
-            var(--btn-metal-light) 140px
-        );
-        
-        /* Lift up slightly with very subtle shadow */
-        transform: translateY(-1px);
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-    }
+/* Remove game-title as requested */
+.game-title {
+    display: none;
 }
 
-/* Active/pressed state */
-.metallic-button:active:not(:disabled) {
-    /* Darker metallic effect when pressed */
-    background: repeating-linear-gradient(
-        120deg,
-        var(--btn-metal-medium) 0px,
-        var(--btn-metal-mediumlight) 32px,
-        var(--btn-metal-dark) 57px,
-        var(--btn-metal-medium) 66px,
-        var(--btn-metal-mediumlight) 97px,
-        var(--btn-metal-medium) 122px,
-        var(--btn-metal-dark) 137px
-    );
-
-    /* Press down effect */
-    transform: translateY(1px);
-    border-bottom-width: 1px;
-    
-    /* No shadow when pressed */
-    box-shadow: none;
-                
-    /* Adjusted text shadow for pressed effect */
-    text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.5),
-                 0px -1px 1px rgba(0, 0, 0, 0.3);
-}
-
-/* Disabled state */
-.metallic-button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none !important;
-    border-bottom-width: 3px !important;
-    box-shadow: none !important;
-}
-
-/* Animation for button clicks - SIMPLIFIED */
-@keyframes button-pulse {
-    0% { transform: scale(1); }
-    50% { 
-        transform: scale(1.02);
-        background: repeating-linear-gradient(
-            120deg,
-            var(--btn-metal-lighter) 0px,
-            var(--btn-metal-light) 15px,
-            var(--btn-metal-lighter) 35px,
-            var(--btn-metal-mediumlight) 60px,
-            var(--btn-metal-light) 85px,
-            var(--btn-metal-mediumlight) 100px,
-            var(--btn-metal-lighter) 125px,
-            var(--btn-metal-light) 140px
-        );
-    }
-    100% { 
-        transform: scale(1);
-        background: repeating-linear-gradient(
-            120deg,
-            var(--btn-metal-light) 0px,
-            var(--btn-metal-medium) 10px,
-            var(--btn-metal-light) 30px,
-            var(--btn-metal-mediumlight) 55px,
-            var(--btn-metal-medium) 80px,
-            var(--btn-metal-mediumlight) 95px,
-            var(--btn-metal-light) 120px,
-            var(--btn-metal-medium) 135px
-        );
-    }
-}
-
-/* Clicked state - consistent animation */
-.metallic-button.clicked {
-    animation: button-pulse var(--pulse-speed) ease-in-out forwards;
-    box-shadow: none !important;
-}
-
-/* Button with icons */
-.metallic-button svg,
-.metallic-button img {
-    width: 16px;
-    height: 16px;
-    margin-right: 8px;
-    /* Add shadow to icons for consistency with text */
-    filter: drop-shadow(0px 1px 1px var(--btn-text-shadow-light))
-            drop-shadow(0px -1px 1px var(--btn-text-shadow-dark));
-}
-
-/* Larger button variant */
-.metallic-button.large {
-    font-size: 1.25rem;
-    padding: 10px 20px;
-}
-
-/* Small button variant */
-.metallic-button.small {
-    font-size: 0.85rem;
-    padding: 6px 12px;
-}
-
-/* TOUCH DEVICE SPECIFIC STYLES */
-/* Apply consistent styles for touch devices */
-.touch-device .metallic-button {
-    box-shadow: none !important;
-    transition: transform 0.15s ease,
-                background 0.15s ease,
-                border-bottom-width 0.15s ease;
-}
-
-/* Fix for iOS touch */
-@media (hover: none) {
-    .metallic-button:hover:not(:active):not(.clicked) {
-        transform: none !important;
-        box-shadow: none !important;
-        background: repeating-linear-gradient(
-            120deg,
-            var(--btn-metal-light) 0px,
-            var(--btn-metal-medium) 10px,
-            var(--btn-metal-light) 30px,
-            var(--btn-metal-mediumlight) 55px,
-            var(--btn-metal-medium) 80px,
-            var(--btn-metal-mediumlight) 95px,
-            var(--btn-metal-light) 120px,
-            var(--btn-metal-medium) 135px
-        ) !important;
-    }
+/* Remove original info box as requested */
+#game-info {
+    display: none;
 }
 
 /* Medium screens */
 @media (max-width: 768px) {
-    .metallic-button {
-        /* Adjusted diagonal gradient pattern for medium screens */
-        background: repeating-linear-gradient(
-            120deg,
-            var(--btn-metal-light) 0px,
-            var(--btn-metal-medium) 8px,
-            var(--btn-metal-light) 25px,
-            var(--btn-metal-mediumlight) 45px,
-            var(--btn-metal-medium) 70px,
-            var(--btn-metal-mediumlight) 85px,
-            var(--btn-metal-light) 110px,
-            var(--btn-metal-medium) 125px
-        );
-        
-        /* Better touch targets for medium screens */
-        min-height: 44px;
-        min-width: 100px;
-        
-        /* Improved text readability */
-        letter-spacing: 0.04em;
-        
-        /* No default shadow */
-        box-shadow: none;
-    }
-    
-    /* Hover state on medium screens - only non-touch devices */
-    @media (hover: hover) and (pointer: fine) {
-        .metallic-button:hover:not(:disabled):not(.clicked) {
-            background: repeating-linear-gradient(
-                120deg,
-                var(--btn-metal-lighter) 0px,
-                var(--btn-metal-light) 12px,
-                var(--btn-metal-lighter) 30px,
-                var(--btn-metal-mediumlight) 50px,
-                var(--btn-metal-light) 75px,
-                var(--btn-metal-mediumlight) 90px,
-                var(--btn-metal-lighter) 115px,
-                var(--btn-metal-light) 130px
-            );
-            transform: translateY(-1px);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-        }
-    }
-    
-    /* Active state on medium screens - adjusted darker gradient */
-    .metallic-button:active:not(:disabled) {
-        background: repeating-linear-gradient(
-            120deg,
-            var(--btn-metal-medium) 0px,
-            var(--btn-metal-mediumlight) 28px,
-            var(--btn-metal-dark) 50px,
-            var(--btn-metal-medium) 60px,
-            var(--btn-metal-mediumlight) 90px,
-            var(--btn-metal-medium) 115px,
-            var(--btn-metal-dark) 130px
-        );
-        box-shadow: none;
-    }
-    
-    /* Consistent button clicked animation with cleaner finish */
-    .metallic-button.clicked {
-        animation: button-pulse var(--pulse-speed) ease-in-out forwards;
-        box-shadow: none !important;
+    .game-container {
+        padding: 10px;
     }
 }
 
 /* Small screens */
 @media (max-width: 480px) {
-    .metallic-button {
-        /* Adjusted diagonal gradient pattern for small screens */
-        background: repeating-linear-gradient(
-            120deg,
-            var(--btn-metal-light) 0px,
-            var(--btn-metal-medium) 6px,
-            var(--btn-metal-light) 20px,
-            var(--btn-metal-mediumlight) 35px,
-            var(--btn-metal-medium) 60px,
-            var(--btn-metal-mediumlight) 75px,
-            var(--btn-metal-light) 100px,
-            var(--btn-metal-medium) 115px
-        );
-        
-        /* No default shadow */
-        box-shadow: none;
+    .game-container {
+        padding: 8px;
+    }
+}
+
+/* ==========================================================================
+   2a. Grid Container & Cells - Island Theme
+   ========================================================================== */
+
+/* Grid container wrapper - ensure proper dimensions */
+.grid-container-wrapper,
+#grid-container {
+    width: 100%;
+    margin: 0;
+    position: relative;
+    display: flex;
+    justify-content: center;
+}
+
+#grid-container {
+    min-height: 450px; /* Ensure minimum height */
+}
+
+.grid-container {
+    display: grid;
+    gap: 0; /* Remove gaps between cells for a continuous sea */
+    background-color: var(--defaultblue); /* Main sea color */
+    border: 2px solid var(--defaultblue-dark); /* Slightly darker border */
+    border-radius: 4px;
+    padding: 2px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    position: relative;
+    margin: 0 auto;
+    width: fit-content;
+    height: fit-content;
+    /* Enhanced touch behaviors for more reliable swipe handling */
+    touch-action: none !important;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    /* Prevent highlight color on tap for iOS */
+    -webkit-tap-highlight-color: transparent;
+    z-index: 10; /* Higher z-index to appear above scroll areas */
+}
+
+/* Default grid template for desktop */
+.grid-container[data-grid-size="desktop"] {
+    grid-template-columns: repeat(15, 45px);
+    grid-template-rows: repeat(11, 45px);
+}
+
+/* Grid template for mobile */
+.grid-container[data-grid-size="mobile"] {
+    grid-template-columns: repeat(9, 45px);
+    grid-template-rows: repeat(9, 45px);
+}
+
+/* Default non-letter cell - deep blue sea */
+.grid-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--defaultblue); /* Main sea color */
+    color: transparent; /* Hide the dot by making text transparent */
+    border: 1px solid var(--defaultblue-dark); /* Slightly darker border */
+    text-shadow: none; /* Remove text shadow */
+    border-radius: 4px;
+    font-family: 'Trebuchet MS', Arial, sans-serif;
+    font-weight: bold;
+    font-size: 1.4rem;
+    user-select: none;
+    /* Targeted transitions instead of 'all' for better performance */
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    box-sizing: border-box;
+    width: 50px;
+    height: 50px;
+    /* Hardware acceleration for smoother performance */
+    transform: translateZ(0);
+    /* Signal to browser that these properties will change */
+    will-change: background-color, color, border-color;
+    /* Prevent text selection on cells */
+    pointer-events: auto;
+    /* Fix for occasional touch events not registering */
+    z-index: 1;
+    margin: 0; /* No margins between cells */
+    /* Critical for snake piece positioning */
+    position: relative !important;
+    overflow: hidden; /* Keep snake pieces within the cell boundaries */
+}
+
+/* Style for "adjacent to letter" sea cells - lighter blue */
+.grid-cell.sea-adjacent {
+    background-color: var(--lightblue) !important; /* Shore line lighter blue */
+    border-color: var(--defaultblue) !important; /* Border matches the main sea color */
+}
+
+/* Style for letter cells - green islands */
+.grid-cell.path-cell {
+    background-color: var(--maingreen) !important; /* Main island green */
+    color: var(--text-dark) !important; /* Dark teal for letters */
+    border: 1px solid var(--maingreen-dark) !important; /* Slightly darker green border */
+    text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8) !important;
+}
+
+/* Yellow borders for letter cells adjacent to sea */
+.grid-cell.path-cell.island-edge-top {
+    border-top: 4px solid var(--sandyellow) !important; /* Sand yellow top border */
+}
+
+.grid-cell.path-cell.island-edge-right {
+    border-right: 4px solid var(--sandyellow) !important; /* Sand yellow right border */
+}
+
+.grid-cell.path-cell.island-edge-bottom {
+    border-bottom: 4px solid var(--sandyellow) !important; /* Sand yellow bottom border */
+}
+
+.grid-cell.path-cell.island-edge-left {
+    border-left: 4px solid var(--sandyellow) !important; /* Sand yellow left border */
+}
+
+/* Start cell style to match island cells for snake path */
+.grid-cell.start-cell {
+  background-color: var(--startgreen) !important; /* Start cell green */
+  color: var(--text-dark) !important; /* Dark teal for better visibility */
+  font-weight: bold !important;
+  box-shadow: 0 0 5px var(--box-shadow-color) !important;
+  z-index: 3 !important;
+}
+
+.grid-cell.start-cell.selected-cell {
+  background-color: var(--maingreen) !important; /* Match other selected cells with main island green */
+  border-color: var(--startgreen) !important; /* Use start cell green as border for emphasis */
+  box-shadow: 0 0 6px var(--box-shadow-color) !important;
+}
+
+/* Style for revealed hint cells - preserve as red */
+.grid-cell.revealed-cell {
+    background-color: var(--hint-red) !important; /* Light red */
+    border: 1px solid var(--hint-red-border) !important; /* Slightly darker red border */
+    color: var(--hint-red-text) !important; /* Darker red for the letter */
+    box-shadow: inset 0 0 5px var(--hint-red-shadow) !important;
+    text-shadow: none !important;
+    z-index: 4 !important; /* Higher than regular cells */
+}
+
+/* Selected cell style - to match island theme for snake pieces */
+.grid-cell.selected-cell {
+    background-color: var(--maingreen) !important; /* Same as island cells */
+    color: var(--text-dark) !important; /* Dark teal for visible text */
+    border: 2px solid var(--maingreen-dark) !important; /* Slightly thicker border */
+    text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8) !important;
+    z-index: 6 !important; /* Ensure selected is on top */
+}
+
+/* Completed path style - lighter green with visible text */
+.grid-cell.completed-cell {
+    background-color: var(--completed-green) !important; /* Lighter green for completed cells */
+    color: var(--text-dark) !important; /* Dark teal for text */
+    border: 1px solid var(--completed-border) !important; /* Lighter green border */
+    text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8) !important;
+    z-index: 7 !important; /* Ensure completed is on top of all other states */
+}
+
+/* Out of bounds cells as darker blue */
+.grid-cell.out-of-bounds {
+    background-color: var(--defaultblue-darker); /* Darker shade for out of bounds */
+    color: transparent; /* Hide the X by making text transparent */
+    border-color: var(--defaultblue-darkest); /* Even darker blue border */
+}
+
+/* Style for cells being touched - improved for better visual feedback */
+.grid-cell.touch-active {
+    box-shadow: 0 0 8px var(--touch-highlight) !important;
+    border-color: var(--touch-border) !important;
+    /* Speed up the touch feedback transition */
+    transition: box-shadow 0.1s ease, border-color 0.1s ease;
+}
+
+/* Animation for invalid selections - no transform */
+@keyframes invalid-selection-pulse {
+    0% { background-color: var(--invalid-bg-normal); border-color: var(--invalid-border-normal); }
+    50% { background-color: var(--invalid-bg-flash); border-color: var(--invalid-border-flash); }
+    100% { background-color: var(--invalid-bg-normal); border-color: var(--invalid-border-normal); }
+}
+
+.grid-cell.invalid-selection {
+    animation: invalid-selection-pulse 0.3s ease;
+}
+
+/* Hover effects for the island theme */
+@media (hover: hover) and (pointer: fine) {
+    /* Hover for sea cells */
+    .grid-cell:not(.path-cell):not(.start-cell):not(.out-of-bounds):hover {
+        background-color: var(--defaultblue-light); /* Lighter blue on hover */
+        cursor: pointer;
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
     }
     
-    /* Hover state on small screens */
-    @media (hover: hover) and (pointer: fine) {
-        .metallic-button:hover:not(:disabled):not(.clicked) {
-            /* Smaller transform to prevent UI issues on small screens */
-            transform: translateY(-1px);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-            
-            background: repeating-linear-gradient(
-                120deg,
-                var(--btn-metal-lighter) 0px,
-                var(--btn-metal-light) 10px,
-                var(--btn-metal-lighter) 25px,
-                var(--btn-metal-mediumlight) 40px,
-                var(--btn-metal-light) 65px,
-                var(--btn-metal-mediumlight) 80px,
-                var(--btn-metal-lighter) 105px,
-                var(--btn-metal-light) 120px
-            );
-        }
+    /* Hover for letter island cells */
+    .grid-cell.path-cell:hover:not(.selected-cell):not(.start-cell):not(.revealed-cell):not(.completed-cell) {
+        background-color: var(--maingreen-light) !important; /* Lighter green on hover */
+        cursor: pointer;
+    }
+    
+    /* Ensure selected state always has correct hover style with snake pieces */
+    .grid-cell.selected-cell:hover {
+        background-color: var(--maingreen-lighter) !important; /* Even lighter green for selected hover */
+        cursor: pointer;
+    }
+    
+    /* Hover effect for revealed cells */
+    .grid-cell.revealed-cell:hover:not(.selected-cell):not(.completed-cell) {
+        background-color: var(--hint-red-hover) !important; /* Slightly darker red on hover */
+        cursor: pointer;
+    }
+    
+    /* Keep hover for completed */
+    .grid-cell.completed-cell:hover {
+        background-color: var(--completed-green) !important; /* Keep green for completed when hovering */
+        cursor: default !important; /* Change cursor to default for completed cells */
+    }
+}
+
+/* Medium screens */
+@media (max-width: 768px) {
+    .grid-cell {
+        font-size: 1.3rem;
+    }
+}
+
+/* Small screens */
+@media (max-width: 480px) {
+    .grid-cell {
+        font-size: 1.1rem;
+    }
+}
+
+/* Disable transitions on touch devices for more responsive swiping */
+@media (pointer: coarse) {
+    .grid-cell {
+        transition: none;
+    }
+    
+    /* Improve touch handling on mobile */
+    .grid-container {
+        touch-action: none !important;
+    }
+    
+    /* Make selected cells more visible on touch devices */
+    .grid-cell.selected-cell {
+        border-width: 3px;
+    }
+}
+
+/* Additional fix for iOS and Safari */
+@supports (-webkit-touch-callout: none) {
+    .grid-cell {
+        /* Prevent highlight color on tap */
+        -webkit-tap-highlight-color: transparent;
+        /* Disable iOS callouts */
+        -webkit-touch-callout: none;
+    }
+}
+
+/* ==========================================================================
+   2b. Snake Cells
+   ========================================================================== */
+
+/* Base styles for snake pieces */
+.snake-piece {
+    position: absolute !important;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* Allow clicks to pass through to the cell */
+    z-index: 500; /* Much higher z-index to ensure visibility over cells */
+    object-fit: contain; /* Ensure image scales to fit while maintaining aspect ratio */
+    transform-origin: center;
+    transition: transform 0.2s ease; /* Smooth rotation transitions */
+    overflow: hidden; /* Keep pieces contained within cell boundaries */
+    display: block; /* Ensure the images are displayed */
+    opacity: 1; /* Full opacity for better visibility */
+}
+
+/* Specific styling for each piece type */
+.snake-tail {
+    filter: drop-shadow(0 0 2px var(--snake-shadow-normal));
+}
+
+.snake-straight {
+    filter: drop-shadow(0 0 2px var(--snake-shadow-normal));
+}
+
+.snake-curved {
+    filter: drop-shadow(0 0 2px var(--snake-shadow-normal));
+}
+
+.snake-head {
+    filter: drop-shadow(0 0 2px var(--snake-shadow-normal));
+    z-index: 11; /* Ensure head is on top */
+}
+
+/* Animation for completed path with snake pieces */
+@keyframes snake-completed-pulse {
+    0% { filter: drop-shadow(0 0 2px var(--snake-shadow-normal)); }
+    50% { filter: drop-shadow(0 0 6px var(--snake-shadow-pulse)); }
+    100% { filter: drop-shadow(0 0 2px var(--snake-shadow-normal)); }
+}
+
+/* Apply completion animation to snake pieces in completed cells */
+.grid-cell.completed-cell .snake-piece {
+    animation: snake-completed-pulse 2s infinite;
+}
+
+/* Ensure snake pieces have higher z-index than background but lower than letters */
+.grid-cell.selected-cell .snake-piece {
+    z-index: 550 !important; /* Above the cell background, below the letter */
+}
+
+/* Make letters visible above snake pieces */
+.grid-cell.selected-cell {
+    color: var(--text-dark) !important; /* Dark teal color for letters */
+    font-weight: bold;
+    text-shadow: 0 1px 1px rgba(255, 255, 255, 0.8);
+    position: relative; /* Required for z-index to work */
+}
+
+/* Special styling for special cell states */
+.grid-cell.revealed-cell .snake-piece {
+    opacity: 0.7; /* More transparency on hint cells */
+}
+
+/* Responsive styles for snake pieces */
+@media (max-width: 768px) {
+    .snake-piece {
+        padding: 2px; /* Add a slight padding on smaller screens */
+    }
+}
+
+@media (max-width: 480px) {
+    .snake-piece {
+        padding: 3px; /* Add more padding on very small screens */
+    }
+}
+
+/* Special snake piece styles for start and end of path */
+.grid-cell.start-cell .snake-tail {
+    z-index: 12; /* Ensure tail is properly visible on start cell */
+}
+
+.grid-cell.selected-cell:last-child .snake-head {
+    z-index: 12; /* Make the head more visible when it's the last selected cell */
+    filter: drop-shadow(0 0 4px var(--snake-head-shadow));
+}
+
+/* Hover effects for cells with snake pieces */
+@media (hover: hover) and (pointer: fine) {
+    .grid-cell.selected-cell:hover .snake-piece {
+        filter: drop-shadow(0 0 4px var(--snake-hover-shadow));
+    }
+}
+
+/* Fix for iOS and Safari */
+@supports (-webkit-touch-callout: none) {
+    .snake-piece {
+        /* Prevent highlight color on tap */
+        -webkit-tap-highlight-color: transparent;
     }
 }
 
