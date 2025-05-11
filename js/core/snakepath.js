@@ -31,25 +31,35 @@ window.SnakePath = class SnakePath {
     this.verifyImageUrls();
     
     // Direction mapping: maps [fromDir, toDir] to rotation and piece type
-    this.directionMappings = {
-      // [fromDir, toDir]: { piece: 'straight|curved', rotation: degrees, flip: boolean }
-      '0,0': { piece: 'straight', rotation: 0, flip: false },
-      '0,1': { piece: 'curved', rotation: 270, flip: false },
-      '0,2': { piece: 'straight', rotation: 0, flip: false },
-      '0,3': { piece: 'curved', rotation: 0, flip: true },
-      '1,0': { piece: 'curved', rotation: 0, flip: false },
-      '1,1': { piece: 'straight', rotation: 90, flip: false },
-      '1,2': { piece: 'curved', rotation: 90, flip: false },
-      '1,3': { piece: 'straight', rotation: 90, flip: false },
-      '2,0': { piece: 'straight', rotation: 0, flip: false },
-      '2,1': { piece: 'curved', rotation: 180, flip: true },
-      '2,2': { piece: 'straight', rotation: 0, flip: false },
-      '2,3': { piece: 'curved', rotation: 180, flip: false },
-      '3,0': { piece: 'curved', rotation: 270, flip: true },
-      '3,1': { piece: 'straight', rotation: 90, flip: false },
-      '3,2': { piece: 'curved', rotation: 90, flip: true },
-      '3,3': { piece: 'straight', rotation: 90, flip: false }
-    };
+this.directionMappings = {
+  // [fromDir, toDir]: { piece: 'straight|curved', rotation: degrees, flip: boolean }
+  // Directions: 0 = top, 1 = right, 2 = bottom, 3 = left
+  
+  // Straight pieces
+  '0,0': { piece: 'straight', rotation: 0, flip: false },   // Top to top
+  '0,2': { piece: 'straight', rotation: 0, flip: true },    // Top to bottom (FIXED: vertical reflection)
+  '2,0': { piece: 'straight', rotation: 0, flip: true },    // Bottom to top (FIXED: vertical reflection)
+  '2,2': { piece: 'straight', rotation: 0, flip: false },   // Bottom to bottom
+  
+  '1,1': { piece: 'straight', rotation: 90, flip: false },  // Right to right
+  '1,3': { piece: 'straight', rotation: 90, flip: true },   // Right to left (FIXED: horizontal reflection)
+  '3,1': { piece: 'straight', rotation: 90, flip: true },   // Left to right (FIXED: horizontal reflection)
+  '3,3': { piece: 'straight', rotation: 90, flip: false },  // Left to left
+  
+  // Curved pieces
+  '0,1': { piece: 'curved', rotation: 270, flip: false },  // Top to right
+  '0,3': { piece: 'curved', rotation: 0, flip: false },    // Top to left
+  
+  '1,0': { piece: 'curved', rotation: 0, flip: true },     // Right to top (FIXED: horizontal reflection)
+  '1,2': { piece: 'curved', rotation: 90, flip: false },   // Right to bottom
+  
+  '2,1': { piece: 'curved', rotation: 0, flip: false },    // Bottom to right (FIXED: 90° clockwise)
+  '2,3': { piece: 'curved', rotation: 90, flip: true },    // Bottom to left (FIXED: vertical reflection)
+  
+  '3,0': { piece: 'curved', rotation: 180, flip: false },  // Left to top (FIXED: 90° clockwise)
+  '3,2': { piece: 'curved', rotation: 270, flip: false }   // Left to bottom
+};
+
     
     // Make this instance available globally for direct access
     window.snakePath = this;
