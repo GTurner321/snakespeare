@@ -1,14 +1,13 @@
 /**
- * IMPROVED SNAKE PATH SOLUTION
+ * IMPROVED SNAKE PATH SOLUTION WITH ENHANCED LOGGING
  * 
- * This file provides a replacement for snakepath.js
+ * This file provides a replacement for snakepath.js with detailed logging
  * It uses specific PNG files for all orientations (head, tail, straight, curved)
- * All orientations are from the user's perspective rather than the snake's
  * 
  * Instructions:
  * 1. Save this as js/core/snakepath.js, replacing the existing file
  * 2. Clear your browser cache completely
- * 3. Reload the page
+ * 3. Reload the page and check the console for detailed piece selection logs
  */
 
 // Make the class available globally first, then export it
@@ -19,6 +18,15 @@ window.SnakePath = class SnakePath {
     
     // Add critical CSS to ensure things work
     this.injectCriticalStyles();
+    
+    // Direction name mapping for clearer logging
+    this.directionNames = {
+      0: 'top',
+      1: 'right',
+      2: 'bottom',
+      3: 'left',
+      '-1': 'unknown'
+    };
     
     // Use direct raw GitHub URLs for all specific orientation PNG files
     this.pieceImages = {
@@ -54,43 +62,40 @@ window.SnakePath = class SnakePath {
     // Verify images are accessible
     this.verifyImageUrls();
     
-    // Direction mapping: maps [from cell, to cell] to the correct piece from user's perspective
-    // This is the key improvement to the original code
+    // IMPROVED: Direction mapping with clear descriptions:
+    // Format: [fromDir, toDir]: { piece: 'piece_name', description: 'human readable description' }
     this.directionMappings = {
-      // Directions mapped as: 0=top, 1=right, 2=bottom, 3=left
-      // Mapping format: [fromDir, toDir]: { piece: 'specific_piece_name' }
-      
       // Straight pieces
-      '0,2': { piece: 'straight_tb' },  // From top to bottom = top-bottom
-      '2,0': { piece: 'straight_bt' },  // From bottom to top = bottom-top
-      '1,3': { piece: 'straight_rl' },  // From right to left = right-left
-      '3,1': { piece: 'straight_lr' },  // From left to right = left-right
+      '0,2': { piece: 'straight_tb', description: 'Straight top to bottom' },
+      '2,0': { piece: 'straight_bt', description: 'Straight bottom to top' },
+      '1,3': { piece: 'straight_rl', description: 'Straight right to left' },
+      '3,1': { piece: 'straight_lr', description: 'Straight left to right' },
       
       // Curved pieces
-      '0,1': { piece: 'curved_tr' },  // From top to right = top-right
-      '0,3': { piece: 'curved_tl' },  // From top to left = top-left
-      '1,0': { piece: 'curved_rt' },  // From right to top = right-top
-      '1,2': { piece: 'curved_rb' },  // From right to bottom = right-bottom
-      '2,1': { piece: 'curved_br' },  // From bottom to right = bottom-right
-      '2,3': { piece: 'curved_bl' },  // From bottom to left = bottom-left
-      '3,0': { piece: 'curved_lt' },  // From left to top = left-top
-      '3,2': { piece: 'curved_lb' }   // From left to bottom = left-bottom
+      '0,1': { piece: 'curved_tr', description: 'Curved top to right' },
+      '0,3': { piece: 'curved_tl', description: 'Curved top to left' },
+      '1,0': { piece: 'curved_rt', description: 'Curved right to top' },
+      '1,2': { piece: 'curved_rb', description: 'Curved right to bottom' },
+      '2,1': { piece: 'curved_br', description: 'Curved bottom to right' },
+      '2,3': { piece: 'curved_bl', description: 'Curved bottom to left' },
+      '3,0': { piece: 'curved_lt', description: 'Curved left to top' },
+      '3,2': { piece: 'curved_lb', description: 'Curved left to bottom' }
     };
     
-    // Head piece mappings based on approach direction
+    // IMPROVED: Head piece mappings with descriptions
     this.headMappings = {
-      0: 'head_bt', // Coming from top = head faces bottom-to-top
-      1: 'head_rl', // Coming from right = head faces right-to-left
-      2: 'head_tb', // Coming from bottom = head faces top-to-bottom
-      3: 'head_lr'  // Coming from left = head faces left-to-right
+      0: { piece: 'head_bt', description: 'Head bottom to top (coming from top)' },
+      1: { piece: 'head_rl', description: 'Head right to left (coming from right)' },
+      2: { piece: 'head_tb', description: 'Head top to bottom (coming from bottom)' },
+      3: { piece: 'head_lr', description: 'Head left to right (coming from left)' }
     };
     
-    // Tail piece mappings based on next cell direction
+    // IMPROVED: Tail piece mappings with descriptions
     this.tailMappings = {
-      0: 'tail_tb', // Going to top = tail faces top-to-bottom
-      1: 'tail_lr', // Going to right = tail faces left-to-right
-      2: 'tail_bt', // Going to bottom = tail faces bottom-to-top
-      3: 'tail_rl'  // Going to left = tail faces right-to-left
+      0: { piece: 'tail_tb', description: 'Tail top to bottom (going to top)' },
+      1: { piece: 'tail_lr', description: 'Tail left to right (going to right)' },
+      2: { piece: 'tail_bt', description: 'Tail bottom to top (going to bottom)' },
+      3: { piece: 'tail_rl', description: 'Tail right to left (going to left)' }
     };
     
     // Make this instance available globally for direct access
@@ -104,7 +109,7 @@ window.SnakePath = class SnakePath {
     
     // Flag initialization as complete
     this.initialized = true;
-    console.log('SnakePath initialized with image URLs:', this.pieceImages);
+    console.log('🐍 SnakePath initialized with image URLs:', this.pieceImages);
     
     // Initial update after a short delay
     setTimeout(() => this.updateSnakePath(), 500);
@@ -226,7 +231,7 @@ window.SnakePath = class SnakePath {
   }
   
   /**
-   * Get direction from one cell to another
+   * Get direction from one cell to another with enhanced logging
    * @param {Object} fromCell - Starting cell coordinates {x, y}
    * @param {Object} toCell - Target cell coordinates {x, y}
    * @return {number} Direction index (0=top, 1=right, 2=bottom, 3=left)
@@ -246,67 +251,105 @@ window.SnakePath = class SnakePath {
     }
     
     // Now safely determine direction - FROM USER'S PERSPECTIVE
-    if (fromCell.y > toCell.y) return 0; // Going up (to top)
-    if (fromCell.x < toCell.x) return 1; // Going right
-    if (fromCell.y < toCell.y) return 2; // Going down (to bottom)
-    if (fromCell.x > toCell.x) return 3; // Going left
+    let direction = -1;
+    let directionName = 'unknown';
     
-    // If we get here, it means the cells are at the same position or have invalid coordinates
-    return -1; // Same position or invalid direction
+    if (fromCell.y > toCell.y) {
+      direction = 0; // Going up (to top)
+      directionName = 'top';
+    } else if (fromCell.x < toCell.x) {
+      direction = 1; // Going right
+      directionName = 'right';
+    } else if (fromCell.y < toCell.y) {
+      direction = 2; // Going down (to bottom)
+      directionName = 'bottom';
+    } else if (fromCell.x > toCell.x) {
+      direction = 3; // Going left
+      directionName = 'left';
+    }
+    
+    console.log(`Direction from (${fromCell.x},${fromCell.y}) to (${toCell.x},${toCell.y}): ${direction} (${directionName})`);
+    return direction;
   }
   
   /**
-   * Get the opposite of a direction (used for head and tail pieces)
+   * Get the opposite of a direction
    * @param {number} direction - Direction index (0=top, 1=right, 2=bottom, 3=left)
    * @return {number} Opposite direction
    */
   getOppositeDirection(direction) {
+    let opposite = -1;
+    
     switch (direction) {
-      case 0: return 2; // top → bottom
-      case 1: return 3; // right → left
-      case 2: return 0; // bottom → top
-      case 3: return 1; // left → right
-      default: return -1; // Invalid direction
+      case 0: opposite = 2; break; // top → bottom
+      case 1: opposite = 3; break; // right → left
+      case 2: opposite = 0; break; // bottom → top
+      case 3: opposite = 1; break; // left → right
+      default: opposite = -1; break; // Invalid direction
     }
+    
+    console.log(`Opposite direction of ${direction} (${this.directionNames[direction]}) is ${opposite} (${this.directionNames[opposite]})`);
+    return opposite;
   }
   
   /**
-   * Determine the piece type for a specific cell in the path
+   * Determine the piece type for a specific cell in the path with enhanced logging
    * @param {number} index - Index of the cell in the selected path
    * @param {Array} cells - Array of selected cell coordinates
    * @param {boolean} isLastCell - Whether this is the last cell in the path
    * @return {Object} Configuration for the piece
    */
   determinePiece(index, cells, isLastCell) {
+    console.log(`\n🔍 DETERMINING PIECE FOR CELL ${index} at (${cells[index].x}, ${cells[index].y})`);
+    console.log(`  Cell role: ${index === 0 ? 'TAIL' : (isLastCell ? 'HEAD' : 'MIDDLE')}`);
+    
     // For the first cell (tail piece)
     if (index === 0) {
       // If we only have one cell selected, default to bottom-to-top tail
       if (cells.length === 1) {
-        return { piece: 'tail_bt', type: 'tail' };
+        console.log(`  → Single cell selected, using default tail (bottom to top)`);
+        return { piece: 'tail_bt', type: 'tail', description: 'Default tail (bottom to top)' };
       }
       
       // Determine the direction from the tail to the next piece
       const nextDirection = this.getDirection(cells[0], cells[1]);
+      console.log(`  → Tail next direction: ${nextDirection} (${this.directionNames[nextDirection]})`);
       
       // Use tailMappings to get the correct tail piece based on next direction
-      const tailPiece = this.tailMappings[nextDirection];
-      return { piece: tailPiece, type: 'tail' };
+      const tailMapping = this.tailMappings[nextDirection];
+      if (tailMapping) {
+        console.log(`  → Selected TAIL piece: ${tailMapping.piece} - ${tailMapping.description}`);
+        return { piece: tailMapping.piece, type: 'tail', description: tailMapping.description };
+      } else {
+        console.warn(`  ⚠️ No tail mapping found for direction ${nextDirection}, using default`);
+        return { piece: 'tail_bt', type: 'tail', description: 'Default tail (bottom to top)' };
+      }
     }
     
     // For the last cell (head piece)
     if (isLastCell) {
+      console.log(`  → This is the HEAD piece (last selected cell)`);
+      
       // Get the direction from previous cell to this one
       const prevDirection = this.getDirection(cells[index - 1], cells[index]);
+      console.log(`  → Coming from: ${prevDirection} (${this.directionNames[prevDirection]})`);
       
       // Use opposite direction for head piece since it needs to face the approach direction
       const oppositeDirection = this.getOppositeDirection(prevDirection);
       
       // Get the correct head piece from headMappings
-      const headPiece = this.headMappings[oppositeDirection];
-      return { piece: headPiece, type: 'head' };
+      const headMapping = this.headMappings[oppositeDirection];
+      if (headMapping) {
+        console.log(`  → Selected HEAD piece: ${headMapping.piece} - ${headMapping.description}`);
+        return { piece: headMapping.piece, type: 'head', description: headMapping.description };
+      } else {
+        console.warn(`  ⚠️ No head mapping found for direction ${oppositeDirection}, using default`);
+        return { piece: 'head_tb', type: 'head', description: 'Default head (top to bottom)' };
+      }
     }
     
     // For middle cells (non-head, non-tail), determine if it's a straight or curved piece
+    console.log(`  → This is a MIDDLE piece (connects two segments)`);
     const prevCell = cells[index - 1];
     const thisCell = cells[index];
     const nextCell = cells[index + 1];
@@ -315,33 +358,55 @@ window.SnakePath = class SnakePath {
     const fromDirection = this.getDirection(prevCell, thisCell);
     const toDirection = this.getDirection(thisCell, nextCell);
     
+    console.log(`  → From: ${fromDirection} (${this.directionNames[fromDirection]})`);
+    console.log(`  → To: ${toDirection} (${this.directionNames[toDirection]})`);
+    
     // Create key for direction mappings
     const key = `${fromDirection},${toDirection}`;
+    console.log(`  → Direction key: ${key}`);
     
     // Look up the piece configuration from our direction mappings
     if (this.directionMappings[key]) {
+      const mappingInfo = this.directionMappings[key];
+      const pieceType = mappingInfo.piece.includes('curved') ? 'curved' : 'straight';
+      
+      console.log(`  → Selected ${pieceType.toUpperCase()} piece: ${mappingInfo.piece} - ${mappingInfo.description}`);
+      console.log(`  → PREVIOUS cell is at (${prevCell.x}, ${prevCell.y})`);
+      console.log(`  → CURRENT cell is at (${thisCell.x}, ${thisCell.y})`);
+      console.log(`  → NEXT cell is at (${nextCell.x}, ${nextCell.y})`);
+      
       return { 
-        piece: this.directionMappings[key].piece,
-        type: this.directionMappings[key].piece.includes('curved') ? 'curved' : 'straight'
+        piece: mappingInfo.piece,
+        type: pieceType,
+        description: mappingInfo.description
       };
     }
     
     // Default to straight piece if mapping not found
-    console.warn(`No mapping found for direction combination ${key}`);
-    return { piece: 'straight_tb', type: 'straight' };
+    console.warn(`  ⚠️ No mapping found for direction combination ${key}, using default`);
+    return { piece: 'straight_tb', type: 'straight', description: 'Default straight (top to bottom)' };
   }
   
   /**
-   * Helper function to log path segments for debugging
+   * Helper function to log path segments in a clearer format
    */
   logPathSegment(index, cells, pieceConfig) {
-    // Skip detailed logging for tail and head pieces
-    if (pieceConfig.type === 'tail' || pieceConfig.type === 'head') {
-      console.log(`Cell ${index}: ${pieceConfig.type} piece (${pieceConfig.piece})`);
+    // Skip processing for invalid cases
+    if (!pieceConfig || !cells || index >= cells.length) return;
+    
+    const cellCoord = `(${cells[index].x}, ${cells[index].y})`;
+    
+    if (pieceConfig.type === 'tail') {
+      console.log(`📌 Cell ${index} ${cellCoord}: TAIL - ${pieceConfig.piece} - ${pieceConfig.description || 'No description'}`);
       return;
     }
     
-    // Get the previous and next cells
+    if (pieceConfig.type === 'head') {
+      console.log(`📌 Cell ${index} ${cellCoord}: HEAD - ${pieceConfig.piece} - ${pieceConfig.description || 'No description'}`);
+      return;
+    }
+    
+    // For middle pieces, get more details
     const prevCell = cells[index - 1];
     const thisCell = cells[index];
     const nextCell = cells[index + 1];
@@ -351,9 +416,13 @@ window.SnakePath = class SnakePath {
     const toDir = this.getDirection(thisCell, nextCell);
     
     // Direction names for clearer logging
-    const dirNames = ['top', 'right', 'bottom', 'left'];
+    const dirFromName = this.directionNames[fromDir];
+    const dirToName = this.directionNames[toDir];
     
-    console.log(`Cell ${index}: ${dirNames[fromDir]} → ${dirNames[toDir]} = ${pieceConfig.piece}`);
+    console.log(`📌 Cell ${index} ${cellCoord}: MIDDLE - ${pieceConfig.piece}`);
+    console.log(`   From direction: ${fromDir} (${dirFromName}) → To direction: ${toDir} (${dirToName})`);
+    console.log(`   Description: ${pieceConfig.description || 'No description'}`);
+    console.log(`   Connecting: (${prevCell.x}, ${prevCell.y}) → (${thisCell.x}, ${thisCell.y}) → (${nextCell.x}, ${nextCell.y})`);
   }
   
   /**
@@ -367,6 +436,10 @@ window.SnakePath = class SnakePath {
     // Choose the correct image URL based on the piece
     img.src = this.pieceImages[config.piece];
     img.className = `snake-piece snake-${config.type}`;
+    img.setAttribute('data-piece-type', config.piece);
+    
+    // Set title for easier debugging
+    img.title = config.description || config.piece;
     
     // CRITICAL: Apply all styles as inline styles with high z-index
     img.style.position = 'absolute';
@@ -389,7 +462,7 @@ window.SnakePath = class SnakePath {
    * Update the full snake path visualization
    */
   updateSnakePath() {
-    console.log('updateSnakePath called');
+    console.log('\n🐍 UPDATE SNAKE PATH CALLED');
     
     // Clear existing snake images
     this.clearSnakeImages();
@@ -402,6 +475,12 @@ window.SnakePath = class SnakePath {
     }
     
     console.log(`Updating snake path for ${selectedCells.length} selected cells`);
+    
+    // Log all selected cells for debugging
+    console.log('Selected cells:');
+    selectedCells.forEach((cell, i) => {
+      console.log(`  ${i}: (${cell.x}, ${cell.y})`);
+    });
     
     // For each selected cell, determine piece type and add image
     selectedCells.forEach((cell, index) => {
@@ -419,7 +498,7 @@ window.SnakePath = class SnakePath {
       // Get the configuration for this piece
       const pieceConfig = this.determinePiece(index, selectedCells, isLastCell);
       
-      // Log debug info
+      // Log path segment info
       this.logPathSegment(index, selectedCells, pieceConfig);
       
       // CRITICAL: Force position relative
@@ -429,7 +508,6 @@ window.SnakePath = class SnakePath {
       const pieceImage = this.createPieceImage(pieceConfig);
       cellElement.appendChild(pieceImage);
       
-      // Log for debugging
       console.log(`Added ${pieceConfig.piece} piece to cell (${cell.x}, ${cell.y})`);
     });
     
@@ -508,7 +586,7 @@ window.SnakePath = class SnakePath {
     debug.style.padding = '15px';
     debug.style.borderRadius = '5px';
     debug.style.zIndex = '9999';
-    debug.style.maxWidth = '400px';
+    debug.style.maxWidth = '80%';
     debug.style.maxHeight = '80vh';
     debug.style.overflow = 'auto';
     debug.style.fontFamily = 'monospace';
@@ -529,10 +607,16 @@ window.SnakePath = class SnakePath {
       <h3 style="color:#ff80ab;">Tail Mappings</h3>
       <pre style="background:rgba(255,255,255,0.1);padding:10px;border-radius:4px;overflow:auto;">${JSON.stringify(this.tailMappings, null, 2)}</pre>
       
-      <h3 style="color:#ff80ab;">Selected Pieces</h3>
-      <div id="selected-pieces-debug"></div>
+      <h3 style="color:#ff80ab;">Images Used</h3>
+      <div id="images-debug" style="background:rgba(255,255,255,0.1);padding:10px;border-radius:4px;overflow:auto;"></div>
       
+      <h3 style="color:#ff80ab;">Current Snake Pieces</h3>
+      <div id="current-pieces-debug"></div>
+
       <button id="close-debug" style="margin-top:10px;padding:5px 10px;background:#ff80ab;color:white;border:none;border-radius:4px;cursor:pointer;">Close</button>
+      
+      <h3 style="color:#ff80ab;">Test All Pieces</h3>
+      <button id="test-pieces-button" style="margin-top:10px;padding:5px 10px;background:#80cbc4;color:black;border:none;border-radius:4px;cursor:pointer;">Test All Piece Images</button>
     `;
     
     // Add to document
@@ -543,10 +627,26 @@ window.SnakePath = class SnakePath {
       debug.remove();
     });
     
-    // Show currently selected pieces
-    const selectedPiecesDiv = document.getElementById('selected-pieces-debug');
-    const selectedCells = this.gridRenderer.selectedCells;
+    // Set up test pieces button
+    document.getElementById('test-pieces-button').addEventListener('click', () => {
+      this.showAllPieceImages();
+    });
     
+    // Show all image URLs being used
+    const imagesDebug = document.getElementById('images-debug');
+    let imagesHtml = '<ul>';
+    
+    Object.entries(this.pieceImages).forEach(([key, url]) => {
+      imagesHtml += `<li><strong>${key}:</strong> <small>${url}</small></li>`;
+    });
+    
+    imagesHtml += '</ul>';
+    imagesDebug.innerHTML = imagesHtml;
+    
+    // Show currently selected pieces
+    const currentPiecesDiv = document.getElementById('current-pieces-debug');
+    
+    const selectedCells = this.gridRenderer.selectedCells;
     if (selectedCells && selectedCells.length > 0) {
       let piecesHtml = '<ul style="background:rgba(255,255,255,0.1);padding:10px;border-radius:4px;overflow:auto;">';
       
@@ -554,32 +654,138 @@ window.SnakePath = class SnakePath {
         const isLastCell = index === selectedCells.length - 1;
         const pieceConfig = this.determinePiece(index, selectedCells, isLastCell);
         
+        // Find the actual DOM element and its current piece
+        const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
+        const currentPieceElement = cellElement ? cellElement.querySelector('.snake-piece') : null;
+        const currentPieceName = currentPieceElement ? currentPieceElement.getAttribute('data-piece-type') : 'none';
+        
+        // Determine additional directional info based on position
         let directionInfo = '';
+        
         if (index === 0) {
           directionInfo = selectedCells.length > 1 
-            ? `Next direction: ${this.getDirection(selectedCells[0], selectedCells[1])}` 
+            ? `Next cell: (${selectedCells[1].x}, ${selectedCells[1].y})`
             : 'No next cell';
         } else if (isLastCell) {
-          directionInfo = `Prev direction: ${this.getDirection(selectedCells[index-1], selectedCells[index])}`;
+          directionInfo = `Previous cell: (${selectedCells[index-1].x}, ${selectedCells[index-1].y})`;
         } else {
-          const fromDir = this.getDirection(selectedCells[index-1], selectedCells[index]);
-          const toDir = this.getDirection(selectedCells[index], selectedCells[index+1]);
-          directionInfo = `From direction: ${fromDir}, To direction: ${toDir}`;
+          directionInfo = `Previous: (${selectedCells[index-1].x}, ${selectedCells[index-1].y}), Next: (${selectedCells[index+1].x}, ${selectedCells[index+1].y})`;
         }
         
+        // Add cell info to HTML
         piecesHtml += `
-          <li style="margin-bottom:8px;">
-            <strong>Cell ${index} (${cell.x},${cell.y}):</strong> ${pieceConfig.piece}<br>
-            <small>${directionInfo}</small>
+          <li style="margin-bottom:15px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 8px;">
+            <strong>Cell ${index} (${cell.x},${cell.y}):</strong> 
+            <div style="margin-left:15px;">
+              <div>Type: ${pieceConfig.type.toUpperCase()}</div>
+              <div>Piece: <span style="color:#80cbc4">${pieceConfig.piece}</span></div>
+              <div>Current DOM: <span style="color:#ff9e80">${currentPieceName}</span></div>
+              <div>Description: ${pieceConfig.description || 'No description'}</div>
+              <div style="font-size:11px; margin-top:5px;">${directionInfo}</div>
+            </div>
           </li>
         `;
       });
       
       piecesHtml += '</ul>';
-      selectedPiecesDiv.innerHTML = piecesHtml;
+      currentPiecesDiv.innerHTML = piecesHtml;
     } else {
-      selectedPiecesDiv.innerHTML = '<p>No cells currently selected</p>';
+      currentPiecesDiv.innerHTML = '<p>No cells currently selected</p>';
     }
+  }
+  
+  /**
+   * Shows all piece images in a visual grid for testing
+   */
+  showAllPieceImages() {
+    // Remove any existing display
+    const existingDisplay = document.getElementById('piece-images-test');
+    if (existingDisplay) existingDisplay.remove();
+    
+    // Create container
+    const container = document.createElement('div');
+    container.id = 'piece-images-test';
+    container.style.position = 'fixed';
+    container.style.top = '50%';
+    container.style.left = '50%';
+    container.style.transform = 'translate(-50%, -50%)';
+    container.style.backgroundColor = 'rgba(0,0,0,0.9)';
+    container.style.color = 'white';
+    container.style.padding = '20px';
+    container.style.borderRadius = '8px';
+    container.style.zIndex = '10000';
+    container.style.width = '80%';
+    container.style.maxHeight = '90vh';
+    container.style.overflow = 'auto';
+    container.style.display = 'flex';
+    container.style.flexDirection = 'column';
+    container.style.alignItems = 'center';
+    
+    // Add title
+    const title = document.createElement('h2');
+    title.textContent = 'All Snake Piece Images';
+    title.style.marginBottom = '20px';
+    title.style.color = '#ff80ab';
+    container.appendChild(title);
+    
+    // Create grid for images
+    const grid = document.createElement('div');
+    grid.style.display = 'grid';
+    grid.style.gridTemplateColumns = 'repeat(4, 1fr)';
+    grid.style.gap = '15px';
+    grid.style.width = '100%';
+    
+    // Add each image to the grid
+    Object.entries(this.pieceImages).forEach(([key, url]) => {
+      const cell = document.createElement('div');
+      cell.style.display = 'flex';
+      cell.style.flexDirection = 'column';
+      cell.style.alignItems = 'center';
+      cell.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+      cell.style.padding = '10px';
+      cell.style.borderRadius = '4px';
+      
+      // Create image
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = key;
+      img.style.width = '60px';
+      img.style.height = '60px';
+      img.style.marginBottom = '8px';
+      img.style.backgroundColor = '#61E7A7'; // Green background like the cells
+      img.style.padding = '5px';
+      img.style.borderRadius = '4px';
+      
+      // Add label
+      const label = document.createElement('div');
+      label.textContent = key;
+      label.style.fontSize = '12px';
+      label.style.fontFamily = 'monospace';
+      label.style.textAlign = 'center';
+      
+      cell.appendChild(img);
+      cell.appendChild(label);
+      grid.appendChild(cell);
+    });
+    
+    container.appendChild(grid);
+    
+    // Add close button
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = 'Close';
+    closeBtn.style.marginTop = '20px';
+    closeBtn.style.padding = '8px 15px';
+    closeBtn.style.backgroundColor = '#ff80ab';
+    closeBtn.style.color = 'white';
+    closeBtn.style.border = 'none';
+    closeBtn.style.borderRadius = '4px';
+    closeBtn.style.cursor = 'pointer';
+    closeBtn.addEventListener('click', () => container.remove());
+    
+    container.appendChild(closeBtn);
+    
+    // Add to document
+    document.body.appendChild(container);
   }
   
   /**
@@ -587,8 +793,30 @@ window.SnakePath = class SnakePath {
    * Can be called from other components
    */
   refreshSnakePath() {
-    console.log('Manual refresh of snake path');
+    console.log('Manual refresh of snake path triggered');
     this.updateSnakePath();
+  }
+  
+  /**
+   * Test method to visualize a specific direction
+   * @param {number} fromDir - From direction (0-3)
+   * @param {number} toDir - To direction (0-3)
+   */
+  testDirection(fromDir, toDir) {
+    const key = `${fromDir},${toDir}`;
+    const mapping = this.directionMappings[key];
+    
+    if (!mapping) {
+      console.warn(`No mapping found for direction combination ${key}`);
+      return;
+    }
+    
+    console.log(`Direction ${fromDir} to ${toDir} (${key}):`);
+    console.log(`  Piece: ${mapping.piece}`);
+    console.log(`  Description: ${mapping.description}`);
+    
+    // Show a visual preview
+    alert(`Direction ${this.directionNames[fromDir]} to ${this.directionNames[toDir]} = ${mapping.piece}\nDescription: ${mapping.description}`);
   }
 };
 
