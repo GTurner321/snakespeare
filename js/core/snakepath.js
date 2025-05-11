@@ -1,6 +1,13 @@
 /**
- * Updated SnakePath solution that uses specific PNG files for each orientation
- * This eliminates the need for rotation and reflection transformations
+ * COMPLETE SNAKE PATH SOLUTION
+ * 
+ * This file provides a complete replacement for snakepath.js
+ * It uses specific PNG files for each orientation instead of rotations
+ * 
+ * Instructions:
+ * 1. Save this as js/core/snakepath.js, replacing the existing file
+ * 2. Clear your browser cache completely 
+ * 3. Reload the page
  */
 
 // Make the class available globally first, then export it
@@ -12,7 +19,7 @@ window.SnakePath = class SnakePath {
     // Add critical CSS to ensure things work
     this.injectCriticalStyles();
     
-    // NEW: Use direct URLs for all specific orientation PNG files
+    // Use direct raw GitHub URLs for all specific orientation PNG files
     this.pieceImages = {
       tail: 'https://raw.githubusercontent.com/GTurner321/snakespeare/main/assets/tailpiece.png',
       head: 'https://raw.githubusercontent.com/GTurner321/snakespeare/main/assets/headpiece.png',
@@ -37,44 +44,47 @@ window.SnakePath = class SnakePath {
     // Verify images are accessible
     this.verifyImageUrls();
     
-    // NEW: Direction mapping now includes the exact piece name to use instead of rotations and flips
-   this.directionMappings = {
-  // [fromDir, toDir]: { piece: 'specific_piece_name' }
-  // Directions from snake perspective: 0 = top, 1 = right, 2 = bottom, 3 = left
-  // But piece names are from user perspective
-  
-  // Same-direction mappings (snake continuing in same direction)
-  '0,0': { piece: 'straight_bt' },  // Continuing up (appears as bottom-top to user)
-  '1,1': { piece: 'straight_lr' },  // Continuing right (appears as left-right to user)
-  '2,2': { piece: 'straight_tb' },  // Continuing down (appears as top-bottom to user)
-  '3,3': { piece: 'straight_rl' },  // FIXED: Continuing left (appears as right-left to user)
-  
-  // Straight pieces - opposite directions
-  '0,2': { piece: 'straight_tb' },  // From top to bottom (appears as top-bottom)
-  '2,0': { piece: 'straight_bt' },  // From bottom to top (appears as bottom-top)
-  '1,3': { piece: 'straight_rl' },  // From right to left (appears as right-left)
-  '3,1': { piece: 'straight_lr' },  // From left to right (appears as left-right)
-  
-  // Curved pieces - all 8 permutations
-  // When snake changes direction, use the correct curve
-  '0,1': { piece: 'curved_tr' },  // From top to right (from user view: top-right)
-  '0,3': { piece: 'curved_tl' },  // From top to left (from user view: top-left)
-  
-  '1,0': { piece: 'curved_rt' },  // From right to top (from user view: right-top)
-  '1,2': { piece: 'curved_rb' },  // From right to bottom (from user view: right-bottom)
-  
-  '2,1': { piece: 'curved_br' },  // From bottom to right (from user view: bottom-right)
-  '2,3': { piece: 'curved_bl' },  // From bottom to left (from user view: bottom-left)
-  
-  '3,0': { piece: 'curved_lt' },  // From left to top (from user view: left-top)
-  '3,2': { piece: 'curved_lb' }   // From left to bottom (from user view: left-bottom)
-};
+    // Direction mapping: maps [fromDir, toDir] to the correct piece from user's perspective
+    this.directionMappings = {
+      // [fromDir, toDir]: { piece: 'specific_piece_name' }
+      // Directions from snake perspective: 0 = top, 1 = right, 2 = bottom, 3 = left
+      // But piece names are from user perspective
+      
+      // Same-direction mappings (snake continuing in same direction)
+      '0,0': { piece: 'straight_bt' },  // Continuing up (appears as bottom-top to user)
+      '1,1': { piece: 'straight_lr' },  // Continuing right (appears as left-right to user)
+      '2,2': { piece: 'straight_tb' },  // Continuing down (appears as top-bottom to user)
+      '3,3': { piece: 'straight_rl' },  // Continuing left (appears as right-left to user)
+      
+      // Straight pieces - opposite directions
+      '0,2': { piece: 'straight_tb' },  // From top to bottom (appears as top-bottom)
+      '2,0': { piece: 'straight_bt' },  // From bottom to top (appears as bottom-top)
+      '1,3': { piece: 'straight_rl' },  // From right to left (appears as right-left)
+      '3,1': { piece: 'straight_lr' },  // From left to right (appears as left-right)
+      
+      // Curved pieces - all 8 permutations
+      // When snake changes direction, use the correct curve
+      '0,1': { piece: 'curved_tr' },  // From top to right (from user view: top-right)
+      '0,3': { piece: 'curved_tl' },  // From top to left (from user view: top-left)
+      
+      '1,0': { piece: 'curved_rt' },  // From right to top (from user view: right-top)
+      '1,2': { piece: 'curved_rb' },  // From right to bottom (from user view: right-bottom)
+      
+      '2,1': { piece: 'curved_br' },  // From bottom to right (from user view: bottom-right)
+      '2,3': { piece: 'curved_bl' },  // From bottom to left (from user view: bottom-left)
+      
+      '3,0': { piece: 'curved_lt' },  // From left to top (from user view: left-top)
+      '3,2': { piece: 'curved_lb' }   // From left to bottom (from user view: left-bottom)
+    };
     
     // Make this instance available globally for direct access
     window.snakePath = this;
     
     // Set up event listeners
     this.setupEventListeners();
+    
+    // Add debug button
+    this.addDebugButton();
     
     // Flag initialization as complete
     this.initialized = true;
@@ -225,7 +235,6 @@ window.SnakePath = class SnakePath {
   
   /**
    * Determine the piece type for a specific cell in the path
-   * UPDATED to use specific piece names instead of rotation/flip
    * @param {number} index - Index of the cell in the selected path
    * @param {Array} cells - Array of selected cell coordinates
    * @param {boolean} isLastCell - Whether this is the last cell in the path
@@ -244,7 +253,7 @@ window.SnakePath = class SnakePath {
       const toCell = cells[1];
       const direction = this.getDirection(fromCell, toCell);
       
-      // Tail piece rotation - KEEP THE SAME AS BEFORE
+      // Tail piece rotation - keep original behavior for tail
       switch (direction) {
         case 0: return { piece: 'tail', rotation: 180, flip: false }; // Up
         case 1: return { piece: 'tail', rotation: 270, flip: false }; // Right
@@ -261,7 +270,7 @@ window.SnakePath = class SnakePath {
       const thisCell = cells[index];
       const direction = this.getDirection(prevCell, thisCell);
       
-      // Head piece rotation - KEEP THE SAME AS BEFORE
+      // Head piece rotation - keep original behavior for head
       switch (direction) {
         case 0: return { piece: 'head', rotation: 0, flip: false }; // From below
         case 1: return { piece: 'head', rotation: 90, flip: false }; // From left
@@ -282,7 +291,7 @@ window.SnakePath = class SnakePath {
     // Look up the piece configuration from our direction mappings
     const key = `${fromDir},${toDir}`;
     if (this.directionMappings[key]) {
-      // NEW: Now the mapping contains only the piece name with correct orientation
+      // Now the mapping contains only the piece name with correct orientation
       // No need for rotation or flip
       return { 
         piece: this.directionMappings[key].piece,
@@ -295,10 +304,33 @@ window.SnakePath = class SnakePath {
     console.warn(`No mapping found for direction combination ${key}`);
     return { piece: 'straight_tb', rotation: 0, flip: false };
   }
+  
+  /**
+   * Helper function to log path segments for debugging
+   */
+  logPathSegment(index, cells, pieceConfig) {
+    // Don't log for tail and head pieces
+    if (pieceConfig.piece === 'tail' || pieceConfig.piece === 'head') {
+      return;
+    }
     
+    // Get the previous and next cells
+    const prevCell = cells[index - 1];
+    const thisCell = cells[index];
+    const nextCell = cells[index + 1];
+    
+    // Determine the directions
+    const fromDir = this.getDirection(prevCell, thisCell);
+    const toDir = this.getDirection(thisCell, nextCell);
+    
+    // Direction names for clearer logging
+    const dirNames = ['top', 'right', 'bottom', 'left'];
+    
+    console.log(`Cell ${index}: ${dirNames[fromDir]} → ${dirNames[toDir]} = ${pieceConfig.piece}`);
+  }
+  
   /**
    * Create an image element for a snake piece with the correct configuration
-   * UPDATED to handle the new piece naming scheme
    * @param {Object} config - Configuration for the piece
    * @return {HTMLElement} The created image element
    */
@@ -373,6 +405,9 @@ window.SnakePath = class SnakePath {
       // Get the configuration for this piece
       const pieceConfig = this.determinePiece(index, selectedCells, isLastCell);
       
+      // Log debug info
+      this.logPathSegment(index, selectedCells, pieceConfig);
+      
       // CRITICAL: Force position relative
       cellElement.style.position = 'relative';
       
@@ -415,6 +450,73 @@ window.SnakePath = class SnakePath {
     }
     
     console.log(`Snake path update complete with ${selectedCells.length} pieces`);
+  }
+  
+  /**
+   * Debug tools to help identify direction issues
+   */
+  addDebugButton() {
+    const existingButton = document.getElementById('debug-direction-button');
+    if (existingButton) existingButton.remove();
+    
+    const button = document.createElement('button');
+    button.id = 'debug-direction-button';
+    button.textContent = 'Debug Directions';
+    button.style.position = 'fixed';
+    button.style.bottom = '10px';
+    button.style.right = '10px';
+    button.style.zIndex = '9999';
+    button.style.padding = '5px 10px';
+    button.style.backgroundColor = '#e91e63';
+    button.style.color = 'white';
+    button.style.border = 'none';
+    button.style.borderRadius = '4px';
+    button.style.cursor = 'pointer';
+    
+    button.addEventListener('click', () => this.showDirectionDebug());
+    
+    document.body.appendChild(button);
+  }
+  
+  showDirectionDebug() {
+    // Remove any existing debug
+    const existingDebug = document.getElementById('direction-debug');
+    if (existingDebug) existingDebug.remove();
+    
+    // Create debug container
+    const debug = document.createElement('div');
+    debug.id = 'direction-debug';
+    debug.style.position = 'fixed';
+    debug.style.top = '10px';
+    debug.style.left = '10px';
+    debug.style.backgroundColor = 'rgba(0,0,0,0.85)';
+    debug.style.color = 'white';
+    debug.style.padding = '15px';
+    debug.style.borderRadius = '5px';
+    debug.style.zIndex = '9999';
+    debug.style.maxWidth = '400px';
+    debug.style.maxHeight = '80vh';
+    debug.style.overflow = 'auto';
+    debug.style.fontFamily = 'monospace';
+    debug.style.fontSize = '12px';
+    debug.style.boxShadow = '0 4px 10px rgba(0,0,0,0.3)';
+    
+    // Direction legend
+    debug.innerHTML = `
+      <h3 style="margin-top:0;color:#ff80ab;">Direction Legend</h3>
+      <p>0 = top, 1 = right, 2 = bottom, 3 = left</p>
+      <h3 style="color:#ff80ab;">Piece Mappings</h3>
+      <pre style="background:rgba(255,255,255,0.1);padding:10px;border-radius:4px;overflow:auto;">${JSON.stringify(this.directionMappings, null, 2)}</pre>
+      <button id="close-debug" style="margin-top:10px;padding:5px 10px;background:#ff80ab;color:white;border:none;border-radius:4px;cursor:pointer;">Close</button>
+    `;
+    
+    // Add to document
+    document.body.appendChild(debug);
+    
+    // Set up close button
+    document.getElementById('close-debug').addEventListener('click', () => {
+      debug.remove();
+    });
   }
   
   /**
