@@ -184,19 +184,35 @@ this.directionMappings = {
     }
   }
   
-  /**
-   * Get coordinates of a cell relative to another
-   * @param {Object} fromCell - Starting cell coordinates {x, y}
-   * @param {Object} toCell - Target cell coordinates {x, y}
-   * @return {number} Direction index (0=top, 1=right, 2=bottom, 3=left)
-   */
-  getDirection(fromCell, toCell) {
-    if (fromCell.y > toCell.y) return 0; // Going up
-    if (fromCell.x < toCell.x) return 1; // Going right
-    if (fromCell.y < toCell.y) return 2; // Going down
-    if (fromCell.x > toCell.x) return 3; // Going left
-    return -1; // Invalid direction
+ /**
+ * Get coordinates of a cell relative to another
+ * @param {Object} fromCell - Starting cell coordinates {x, y}
+ * @param {Object} toCell - Target cell coordinates {x, y}
+ * @return {number} Direction index (0=top, 1=right, 2=bottom, 3=left)
+ */
+getDirection(fromCell, toCell) {
+  // Check if either cell is undefined or null
+  if (!fromCell || !toCell) {
+    console.warn('getDirection called with undefined or null cell', { fromCell, toCell });
+    return -1; // Return invalid direction
   }
+  
+  // Check if both cells have x and y properties
+  if (typeof fromCell.y !== 'number' || typeof toCell.y !== 'number' ||
+      typeof fromCell.x !== 'number' || typeof toCell.x !== 'number') {
+    console.warn('getDirection called with invalid cell coordinates', { fromCell, toCell });
+    return -1; // Return invalid direction
+  }
+  
+  // Now safely determine direction
+  if (fromCell.y > toCell.y) return 0; // Going up
+  if (fromCell.x < toCell.x) return 1; // Going right
+  if (fromCell.y < toCell.y) return 2; // Going down
+  if (fromCell.x > toCell.x) return 3; // Going left
+  
+  // If we get here, it means the cells are at the same position or have invalid coordinates
+  return -1; // Same position or invalid direction
+}
   
   /**
    * Determine the piece type and rotation for a specific cell in the path
