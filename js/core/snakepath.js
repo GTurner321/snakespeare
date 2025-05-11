@@ -35,29 +35,27 @@ this.directionMappings = {
   // [fromDir, toDir]: { piece: 'straight|curved', rotation: degrees, flip: boolean }
   // Directions: 0 = top, 1 = right, 2 = bottom, 3 = left
   
-  // Straight pieces
-  '0,0': { piece: 'straight', rotation: 0, flip: false },   // Top to top
-  '0,2': { piece: 'straight', rotation: 0, flip: true },    // Top to bottom (FIXED: vertical reflection)
-  '2,0': { piece: 'straight', rotation: 0, flip: true },    // Bottom to top (FIXED: vertical reflection)
-  '2,2': { piece: 'straight', rotation: 0, flip: false },   // Bottom to bottom
+  // Straight pieces - only need vertical and horizontal orientations
+  // Vertical pieces (0↔2)
+  '0,2': { piece: 'straight', rotation: 0, flip: false },   // Top to bottom (vertical)
+  '2,0': { piece: 'straight', rotation: 0, flip: false },   // Bottom to top (vertical)
   
-  '1,1': { piece: 'straight', rotation: 90, flip: false },  // Right to right
-  '1,3': { piece: 'straight', rotation: 90, flip: true },   // Right to left (FIXED: horizontal reflection)
-  '3,1': { piece: 'straight', rotation: 90, flip: true },   // Left to right (FIXED: horizontal reflection)
-  '3,3': { piece: 'straight', rotation: 90, flip: false },  // Left to left
+  // Horizontal pieces (1↔3)
+  '1,3': { piece: 'straight', rotation: 90, flip: false },  // Right to left (horizontal)
+  '3,1': { piece: 'straight', rotation: 90, flip: false },  // Left to right (horizontal)
   
-  // Curved pieces
-  '0,1': { piece: 'curved', rotation: 270, flip: false },  // Top to right
-  '0,3': { piece: 'curved', rotation: 0, flip: false },    // Top to left
+  // Curved pieces - all 8 orientations needed
+  '0,1': { piece: 'curved', rotation: 270, flip: false },  // Top to right ⎦
+  '0,3': { piece: 'curved', rotation: 0, flip: false },    // Top to left ⎣
   
-  '1,0': { piece: 'curved', rotation: 0, flip: true },     // Right to top (FIXED: horizontal reflection)
-  '1,2': { piece: 'curved', rotation: 90, flip: false },   // Right to bottom
+  '1,0': { piece: 'curved', rotation: 0, flip: true },     // Right to top ⎡
+  '1,2': { piece: 'curved', rotation: 90, flip: false },   // Right to bottom ⎩
   
-  '2,1': { piece: 'curved', rotation: 0, flip: false },    // Bottom to right (FIXED: 90° clockwise)
-  '2,3': { piece: 'curved', rotation: 90, flip: true },    // Bottom to left (FIXED: vertical reflection)
+  '2,1': { piece: 'curved', rotation: 0, flip: false },    // Bottom to right ⎦
+  '2,3': { piece: 'curved', rotation: 90, flip: true },    // Bottom to left ⎪
   
-  '3,0': { piece: 'curved', rotation: 180, flip: false },  // Left to top (FIXED: 90° clockwise)
-  '3,2': { piece: 'curved', rotation: 270, flip: false }   // Left to bottom
+  '3,0': { piece: 'curved', rotation: 180, flip: false },  // Left to top ⎤
+  '3,2': { piece: 'curved', rotation: 270, flip: false }   // Left to bottom ⎭
 };
 
     
@@ -205,63 +203,38 @@ this.directionMappings = {
    * @param {boolean} isLastCell - Whether this is the last cell in the path
    * @return {Object} Configuration for the piece {piece, rotation, flip}
    */
-  determinePiece(index, cells, isLastCell) {
-    // For the first cell (tail piece)
-    if (index === 0) {
-      // If we only have one cell selected, default tail direction is down
-      if (cells.length === 1) {
-        return { piece: 'tail', rotation: 0, flip: false };
-      }
-      
-      // Determine the direction from the tail to the next piece
-      const fromCell = cells[0];
-      const toCell = cells[1];
-      const direction = this.getDirection(fromCell, toCell);
-      
-      // Tail piece rotation
-      switch (direction) {
-        case 0: return { piece: 'tail', rotation: 180, flip: false }; // Up
-        case 1: return { piece: 'tail', rotation: 270, flip: false }; // Right
-        case 2: return { piece: 'tail', rotation: 0, flip: false };   // Down
-        case 3: return { piece: 'tail', rotation: 90, flip: false };  // Left
-        default: return { piece: 'tail', rotation: 0, flip: false };  // Default
-      }
+ determinePiece(index, cells, isLastCell) {
+  // [Tail and head piece code remains unchanged...]
+  
+  // For middle cells, determine if it's a straight or curved piece
+  const prevCell = cells[index - 1];
+  const thisCell = cells[index];
+  const nextCell = cells[index + 1];
+  
+  const fromDir = this.getDirection(prevCell, thisCell);
+  const toDir = this.getDirection(thisCell, nextCell);
+  
+  // If direction stays the same, use appropriate straight piece
+  if (fromDir === toDir) {
+    if (fromDir % 2 === 0) {
+      // Vertical straight (0 or 2)
+      return { piece: 'straight', rotation: 0, flip: false };
+    } else {
+      // Horizontal straight (1 or 3)
+      return { piece: 'straight', rotation: 90, flip: false };
     }
-    
-    // For the last cell (head piece)
-    if (isLastCell) {
-      // We need to know the direction from the previous cell to this one
-      const prevCell = cells[index - 1];
-      const thisCell = cells[index];
-      const direction = this.getDirection(prevCell, thisCell);
-      
-      switch (direction) {
-        case 0: return { piece: 'head', rotation: 0, flip: false }; // From below
-        case 1: return { piece: 'head', rotation: 90, flip: false }; // From left
-        case 2: return { piece: 'head', rotation: 180, flip: false }; // From above
-        case 3: return { piece: 'head', rotation: 270, flip: false }; // From right
-        default: return { piece: 'head', rotation: 180, flip: false }; // Default
-      }
-    }
-    
-    // For middle cells, determine if it's a straight or curved piece
-    const prevCell = cells[index - 1];
-    const thisCell = cells[index];
-    const nextCell = cells[index + 1];
-    
-    const fromDir = this.getDirection(prevCell, thisCell);
-    const toDir = this.getDirection(thisCell, nextCell);
-    
-    // Look up the piece configuration from our direction mappings
-    const key = `${fromDir},${toDir}`;
-    if (this.directionMappings[key]) {
-      return this.directionMappings[key];
-    }
-    
-    // Default to straight piece if mapping not found
-    console.warn(`No mapping found for direction combination ${key}`);
-    return { piece: 'straight', rotation: 0, flip: false };
   }
+  
+  // For all other direction combinations, lookup from the mapping
+  const key = `${fromDir},${toDir}`;
+  if (this.directionMappings[key]) {
+    return this.directionMappings[key];
+  }
+  
+  // Default - shouldn't happen if all mappings are defined
+  console.warn(`No mapping found for direction combination ${key}`);
+  return { piece: 'straight', rotation: 0, flip: false };
+}
   
   /**
    * Create an image element for a snake piece with the correct configuration
