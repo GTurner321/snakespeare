@@ -19,16 +19,16 @@
 :root {
   /* Island Theme Primary Colors */
   --lightblue: #64C0EB;    /* shore line lighter blue */
-  --defaultblue: #56A5D6;  /* darker blue for main sea and default */
+  --defaultblue: #3689E9;  /* darker blue for main sea and default */
   --maingreen: #61E7A7;    /* main island cell green */
   --startgreen: #19C773;   /* start cell green */
   --sandyellow: #F6EC74;   /* yellow sand border */
   
   /* Derived/Secondary Colors */
-  --defaultblue-dark: #4A91BB;      /* darker border for main sea */
-  --defaultblue-darker: #3A82AD;    /* out of bounds background */
-  --defaultblue-darkest: #2E6C94;   /* out of bounds border */
-  --defaultblue-light: #78C9EF;     /* hover effect for sea cells */
+  --defaultblue-dark: #2B75CC;       /* NEW: darker border for main sea */
+  --defaultblue-darker: #2162AF;     /* NEW: out of bounds background */
+  --defaultblue-darkest: #174E91;    /* NEW: out of bounds border */
+  --defaultblue-light: #7DBDFF;      /* NEW: hover effect for sea cells */
   --maingreen-dark: #4BC98A;        /* border for island cells */
   --maingreen-light: #7DEEB6;       /* hover effect for island cells */
   --maingreen-lighter: #8CEFC0;     /* hover effect for selected cells */
