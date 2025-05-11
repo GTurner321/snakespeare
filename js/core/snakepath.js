@@ -85,12 +85,12 @@ window.SnakePath = class SnakePath {
     };
     
     // Head piece mappings - direction indicates where the head is coming FROM
-    this.headMappings = {
-      0: { piece: 'head_tb', description: 'Head facing top (coming from top)' },
-      1: { piece: 'head_lr', description: 'Head facing right (coming from right)' },
-      2: { piece: 'head_bt', description: 'Head facing bottom (coming from bottom)' },
-      3: { piece: 'head_rl', description: 'Head facing left (coming from left)' }
-    };
+this.headMappings = {
+  0: { piece: 'head_tb', description: 'Head facing top (coming from top)' },
+  1: { piece: 'head_rl', description: 'Head facing right (coming from right)' }, // SWAPPED: Now using rl
+  2: { piece: 'head_bt', description: 'Head facing bottom (coming from bottom)' },
+  3: { piece: 'head_lr', description: 'Head facing left (coming from left)' }    // SWAPPED: Now using lr
+};
     
     // Tail piece mappings - direction indicates where the tail is going TO
     this.tailMappings = {
