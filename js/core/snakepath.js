@@ -35,29 +35,31 @@ this.directionMappings = {
   // [fromDir, toDir]: { piece: 'straight|curved', rotation: degrees, flip: boolean }
   // Directions: 0 = top, 1 = right, 2 = bottom, 3 = left
   
-  // Straight pieces - only need vertical and horizontal orientations
-  // Vertical pieces (0↔2)
+  // Keep existing same-direction mappings
+  '0,0': { piece: 'straight', rotation: 0, flip: false },
+  '1,1': { piece: 'straight', rotation: 90, flip: false },
+  '2,2': { piece: 'straight', rotation: 0, flip: false },
+  '3,3': { piece: 'straight', rotation: 90, flip: false },
+  
+  // Straight pieces - opposite directions
   '0,2': { piece: 'straight', rotation: 0, flip: false },   // Top to bottom (vertical)
   '2,0': { piece: 'straight', rotation: 0, flip: false },   // Bottom to top (vertical)
-  
-  // Horizontal pieces (1↔3)
   '1,3': { piece: 'straight', rotation: 90, flip: false },  // Right to left (horizontal)
   '3,1': { piece: 'straight', rotation: 90, flip: false },  // Left to right (horizontal)
   
-  // Curved pieces - all 8 orientations needed
+  // Curved pieces - all 8 orientations
   '0,1': { piece: 'curved', rotation: 270, flip: false },  // Top to right ⎦
   '0,3': { piece: 'curved', rotation: 0, flip: false },    // Top to left ⎣
   
-  '1,0': { piece: 'curved', rotation: 0, flip: true },     // Right to top ⎡
+  '1,0': { piece: 'curved', rotation: 0, flip: true },     // Right to top ⎡ [FIXED]
   '1,2': { piece: 'curved', rotation: 90, flip: false },   // Right to bottom ⎩
   
-  '2,1': { piece: 'curved', rotation: 0, flip: false },    // Bottom to right ⎦
-  '2,3': { piece: 'curved', rotation: 90, flip: true },    // Bottom to left ⎪
+  '2,1': { piece: 'curved', rotation: 0, flip: false },    // Bottom to right ⎦ [FIXED]
+  '2,3': { piece: 'curved', rotation: 90, flip: true },    // Bottom to left ⎪ [FIXED]
   
-  '3,0': { piece: 'curved', rotation: 180, flip: false },  // Left to top ⎤
+  '3,0': { piece: 'curved', rotation: 180, flip: false },  // Left to top ⎤ [FIXED]
   '3,2': { piece: 'curved', rotation: 270, flip: false }   // Left to bottom ⎭
 };
-
     
     // Make this instance available globally for direct access
     window.snakePath = this;
