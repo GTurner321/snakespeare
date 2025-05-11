@@ -1,6 +1,7 @@
 /**
- * Shakespeare Response Component - Improved Modal Version with Close Button
+ * Shakespeare Response Component - Improved Version with Info Box
  * Shows Shakespeare image and response in speech bubble when a phrase is completed
+ * Also displays information from the 'combined' column in a separate info box
  */
 
 class ShakespeareResponse {
@@ -65,16 +66,42 @@ class ShakespeareResponse {
     };
     this.shakespeareContainer.appendChild(this.shakespeareImage);
     
-    // Hide the modal overlay initially
+    // NEW: Create the information box
+    this.infoBoxContainer = document.createElement('div');
+    this.infoBoxContainer.className = 'info-box-container';
+    document.body.appendChild(this.infoBoxContainer);
+    
+    this.infoBox = document.createElement('div');
+    this.infoBox.className = 'info-box';
+    this.infoBoxContainer.appendChild(this.infoBox);
+    
+    // Create close button for info box
+    this.infoBoxCloseButton = document.createElement('button');
+    this.infoBoxCloseButton.className = 'info-box-close';
+    this.infoBoxCloseButton.innerHTML = '&times;'; // × symbol
+    this.infoBoxCloseButton.setAttribute('aria-label', 'Close Info');
+    this.infoBoxCloseButton.title = 'Close Info';
+    this.infoBox.appendChild(this.infoBoxCloseButton);
+    
+    // Add event listener to info box close button
+    this.infoBoxCloseButton.addEventListener('click', () => this.hideInfoBox());
+    
+    // Create paragraph for the info text
+    this.infoText = document.createElement('p');
+    this.infoText.className = 'info-text';
+    this.infoBox.appendChild(this.infoText);
+    
+    // Hide the modal overlay and info box initially
     this.modalOverlay.style.display = 'none';
+    this.infoBoxContainer.style.display = 'none';
     
     // Add CSS styles
     this.addStyles();
     
     // Subscribe to the gridCompletionChanged event
     document.addEventListener('gridCompletionChanged', (e) => {
-      const { completed, gridRenderer } = e.detail;
-      if (completed) {
+      const { completed, isCorrect, gridRenderer } = e.detail;
+      if (completed && isCorrect) {
         this.showResponseIfAvailable();
       }
     });
@@ -83,7 +110,7 @@ class ShakespeareResponse {
   }
   
   /**
-   * Add CSS styles for Shakespeare and speech bubble
+   * Add CSS styles for Shakespeare, speech bubble, and info box
    */
   addStyles() {
     const styleElement = document.createElement('style');
@@ -147,7 +174,8 @@ class ShakespeareResponse {
         width: 0;
       }
       
-      .speech-bubble-close {
+      .speech-bubble-close,
+      .info-box-close {
         position: absolute;
         top: 8px;
         right: 12px;
@@ -169,16 +197,19 @@ class ShakespeareResponse {
         z-index: 10;
       }
       
-      .speech-bubble-close:hover {
+      .speech-bubble-close:hover,
+      .info-box-close:hover {
         background-color: #d32f2f;
         transform: scale(1.1);
       }
       
-      .speech-bubble-close:active {
+      .speech-bubble-close:active,
+      .info-box-close:active {
         transform: scale(0.95);
       }
       
-      .speech-bubble-close:focus {
+      .speech-bubble-close:focus,
+      .info-box-close:focus {
         outline: none;
         box-shadow: 0 0 0 3px rgba(244, 67, 54, 0.3);
       }
@@ -187,6 +218,45 @@ class ShakespeareResponse {
         margin: 0;
         font-family: 'Georgia', serif;
         font-size: 24px;
+        line-height: 1.5;
+        color: #333;
+      }
+      
+      /* Info Box Styles */
+      .info-box-container {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        z-index: 1900;
+        padding: 20px;
+        opacity: 1;
+        transition: opacity 1s ease, transform 0.5s ease;
+      }
+      
+      .info-box-container.fade-out {
+        opacity: 0;
+        transform: translateY(100%);
+      }
+      
+      .info-box {
+        position: relative;
+        background: #f5f5dc;
+        border: 2px solid #8b4513;
+        border-radius: 10px;
+        padding: 20px 25px;
+        box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.2);
+        max-width: 700px;
+        width: 100%;
+        text-align: center;
+      }
+      
+      .info-text {
+        margin: 0;
+        font-family: 'Georgia', serif;
+        font-size: 20px;
         line-height: 1.5;
         color: #333;
       }
@@ -206,7 +276,17 @@ class ShakespeareResponse {
           font-size: 20px;
         }
         
-        .speech-bubble-close {
+        .info-box {
+          padding: 15px 20px;
+          max-width: 95%;
+        }
+        
+        .info-text {
+          font-size: 18px;
+        }
+        
+        .speech-bubble-close,
+        .info-box-close {
           width: 26px;
           height: 26px;
           font-size: 18px;
@@ -228,7 +308,16 @@ class ShakespeareResponse {
           font-size: 18px;
         }
         
-        .speech-bubble-close {
+        .info-box {
+          padding: 12px 15px;
+        }
+        
+        .info-text {
+          font-size: 16px;
+        }
+        
+        .speech-bubble-close,
+        .info-box-close {
           width: 24px;
           height: 24px;
           font-size: 16px;
@@ -254,13 +343,35 @@ class ShakespeareResponse {
     this.modalOverlay.classList.remove('fade-out');
     
     // Set a timeout to hide after the specified duration
-    clearTimeout(this.hideTimeout);
-    this.hideTimeout = setTimeout(() => {
+    clearTimeout(this.hideResponseTimeout);
+    this.hideResponseTimeout = setTimeout(() => {
       this.hideResponse();
     }, this.options.displayDuration);
     
     // Log that we're showing the response
     console.log('Showing Shakespeare response:', response);
+  }
+  
+  /**
+   * Show information box
+   * @param {string} info - The info text to display
+   */
+  showInfoBox(info) {
+    // Set the info text
+    this.infoText.textContent = info;
+    
+    // Show the info box
+    this.infoBoxContainer.style.display = 'flex';
+    this.infoBoxContainer.classList.remove('fade-out');
+    
+    // Set a timeout to hide after the specified duration
+    clearTimeout(this.hideInfoTimeout);
+    this.hideInfoTimeout = setTimeout(() => {
+      this.hideInfoBox();
+    }, this.options.displayDuration);
+    
+    // Log that we're showing the info
+    console.log('Showing info box:', info);
   }
   
   /**
@@ -276,11 +387,27 @@ class ShakespeareResponse {
     }, this.options.fadeDuration);
     
     // Clear any existing timeout
-    clearTimeout(this.hideTimeout);
+    clearTimeout(this.hideResponseTimeout);
   }
   
   /**
-   * Show response if available in the game controller
+   * Hide the info box with fade animation
+   */
+  hideInfoBox() {
+    // Add fade-out class
+    this.infoBoxContainer.classList.add('fade-out');
+    
+    // Hide completely after fade animation completes
+    setTimeout(() => {
+      this.infoBoxContainer.style.display = 'none';
+    }, this.options.fadeDuration);
+    
+    // Clear any existing timeout
+    clearTimeout(this.hideInfoTimeout);
+  }
+  
+  /**
+   * Show response and info if available in the game controller
    */
   showResponseIfAvailable() {
     // Get the game controller instance (should be accessible from window)
@@ -296,6 +423,17 @@ class ShakespeareResponse {
       this.showResponse(response);
     } else {
       console.warn('No response found in current phrase');
+    }
+    
+    // Get the combined info from the current phrase
+    const combinedInfo = gameController.currentPhrase.combined;
+    if (combinedInfo) {
+      // Add a slight delay to the info box appearance for better UX
+      setTimeout(() => {
+        this.showInfoBox(combinedInfo);
+      }, 500);
+    } else {
+      console.warn('No combined info found in current phrase');
     }
   }
 }
