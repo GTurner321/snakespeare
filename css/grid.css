@@ -14,6 +14,31 @@
    ========================================================================== */
 
 /* ==========================================================================
+   Color Variables - Theme Colors
+   ========================================================================== */
+:root {
+  /* Island Theme Primary Colors */
+  --lightblue: #64C0EB;    /* shore line lighter blue */
+  --defaultblue: #56A5D6;  /* darker blue for main sea and default */
+  --maingreen: #61E7A7;    /* main island cell green */
+  --startgreen: #19C773;   /* start cell green */
+  --sandyellow: #F6EC74;   /* yellow sand border */
+  
+  /* Derived/Secondary Colors */
+  --defaultblue-dark: #4A91BB;      /* darker border for main sea */
+  --defaultblue-darker: #3A82AD;    /* out of bounds background */
+  --defaultblue-darkest: #2E6C94;   /* out of bounds border */
+  --defaultblue-light: #78C9EF;     /* hover effect for sea cells */
+  --maingreen-dark: #4BC98A;        /* border for island cells */
+  --maingreen-light: #7DEEB6;       /* hover effect for island cells */
+  --maingreen-lighter: #8CEFC0;     /* hover effect for selected cells */
+  
+  /* Text and Other UI Colors */
+  --text-dark: #004d40;             /* dark teal for text on islands */
+  --box-shadow-color: rgba(0, 77, 64, 0.4); /* shadow for cells */
+}
+
+/* ==========================================================================
    1. Game Container & General Layout
    ========================================================================== */
 
@@ -78,8 +103,8 @@ body {
 .grid-container {
     display: grid;
     gap: 0; /* Remove gaps between cells for a continuous sea */
-    background-color: #00aaff; /* Bright azure blue for the sea */
-    border: 2px solid #0096e0; /* Slightly darker azure border */
+    background-color: var(--defaultblue); /* Main sea color */
+    border: 2px solid var(--defaultblue-dark); /* Slightly darker border */
     border-radius: 4px;
     padding: 2px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
@@ -116,9 +141,9 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: #00aaff; /* Bright azure blue for the sea */
+    background-color: var(--defaultblue); /* Main sea color */
     color: transparent; /* Hide the dot by making text transparent */
-    border: 1px solid #0096e0; /* Slightly darker azure border */
+    border: 1px solid var(--defaultblue-dark); /* Slightly darker border */
     text-shadow: none; /* Remove text shadow */
     border-radius: 4px;
     font-family: 'Trebuchet MS', Arial, sans-serif;
@@ -146,47 +171,47 @@ body {
 
 /* Style for "adjacent to letter" sea cells - lighter blue */
 .grid-cell.sea-adjacent {
-    background-color: #89cff0 !important; /* Baby blue for cells adjacent to islands */
-    border-color: #5eb1e5 !important; /* Slightly darker baby blue border */
+    background-color: var(--lightblue) !important; /* Shore line lighter blue */
+    border-color: var(--defaultblue) !important; /* Border matches the main sea color */
 }
 
-/* Style for letter cells - pale green islands */
+/* Style for letter cells - green islands */
 .grid-cell.path-cell {
-    background-color: #b2dfdb !important; /* Pale green for letter islands */
-    color: #004d40 !important; /* Dark teal for letters */
-    border: 1px solid #80cbc4 !important; /* Lighter teal border */
+    background-color: var(--maingreen) !important; /* Main island green */
+    color: var(--text-dark) !important; /* Dark teal for letters */
+    border: 1px solid var(--maingreen-dark) !important; /* Slightly darker green border */
     text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8) !important;
 }
 
 /* Yellow borders for letter cells adjacent to sea */
 .grid-cell.path-cell.island-edge-top {
-    border-top: 4px solid #ffeb3b !important; /* Yellow top border */
+    border-top: 4px solid var(--sandyellow) !important; /* Sand yellow top border */
 }
 
 .grid-cell.path-cell.island-edge-right {
-    border-right: 4px solid #ffeb3b !important; /* Yellow right border */
+    border-right: 4px solid var(--sandyellow) !important; /* Sand yellow right border */
 }
 
 .grid-cell.path-cell.island-edge-bottom {
-    border-bottom: 4px solid #ffeb3b !important; /* Yellow bottom border */
+    border-bottom: 4px solid var(--sandyellow) !important; /* Sand yellow bottom border */
 }
 
 .grid-cell.path-cell.island-edge-left {
-    border-left: 4px solid #ffeb3b !important; /* Yellow left border */
+    border-left: 4px solid var(--sandyellow) !important; /* Sand yellow left border */
 }
 
 /* Start cell style to match island cells for snake path */
 .grid-cell.start-cell {
-  background-color: #8fd9a8 !important; /* Brighter green */
-  color: #004d40 !important; /* Dark teal for better visibility */
+  background-color: var(--startgreen) !important; /* Start cell green */
+  color: var(--text-dark) !important; /* Dark teal for better visibility */
   font-weight: bold !important;
-  box-shadow: 0 0 5px rgba(0, 77, 64, 0.4) !important;
+  box-shadow: 0 0 5px var(--box-shadow-color) !important;
   z-index: 3 !important;
 }
 
 .grid-cell.start-cell.selected-cell {
-  background-color: #b2dfdb !important; /* Match other selected cells */
-  border-color: #00897b !important; /* Slightly darker border for emphasis */
+  background-color: var(--maingreen) !important; /* Match other selected cells with main island green */
+  border-color: var(--startgreen) !important; /* Use start cell green as border for emphasis */
   box-shadow: 0 0 6px rgba(0, 77, 64, 0.5) !important;
 }
 
@@ -202,9 +227,9 @@ body {
 
 /* Selected cell style - to match island theme for snake pieces */
 .grid-cell.selected-cell {
-    background-color: #b2dfdb !important; /* Same as island cells */
-    color: #004d40 !important; /* Dark teal for visible text */
-    border: 2px solid #80cbc4 !important; /* Slightly thicker border */
+    background-color: var(--maingreen) !important; /* Same as island cells */
+    color: var(--text-dark) !important; /* Dark teal for visible text */
+    border: 2px solid var(--maingreen-dark) !important; /* Slightly thicker border */
     text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8) !important;
     z-index: 6 !important; /* Ensure selected is on top */
 }
@@ -212,7 +237,7 @@ body {
 /* Completed path style - lighter green with visible text */
 .grid-cell.completed-cell {
     background-color: #c8e6c9 !important; /* Lighter green for completed cells */
-    color: #004d40 !important; /* Dark teal for text */
+    color: var(--text-dark) !important; /* Dark teal for text */
     border: 1px solid #81c784 !important; /* Lighter green border */
     text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8) !important;
     z-index: 7 !important; /* Ensure completed is on top of all other states */
@@ -220,9 +245,9 @@ body {
 
 /* Out of bounds cells as darker blue */
 .grid-cell.out-of-bounds {
-    background-color: #0077b3; /* Darker azure for out of bounds */
+    background-color: var(--defaultblue-darker); /* Darker shade for out of bounds */
     color: transparent; /* Hide the X by making text transparent */
-    border-color: #006699; /* Medium blue border */
+    border-color: var(--defaultblue-darkest); /* Even darker blue border */
 }
 
 /* Style for cells being touched - improved for better visual feedback */
@@ -248,20 +273,20 @@ body {
 @media (hover: hover) and (pointer: fine) {
     /* Hover for sea cells */
     .grid-cell:not(.path-cell):not(.start-cell):not(.out-of-bounds):hover {
-        background-color: #3bbbff; /* Lighter azure blue on hover */
+        background-color: var(--defaultblue-light); /* Lighter blue on hover */
         cursor: pointer;
         box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
     }
     
     /* Hover for letter island cells */
     .grid-cell.path-cell:hover:not(.selected-cell):not(.start-cell):not(.revealed-cell):not(.completed-cell) {
-        background-color: #80cbc4 !important; /* Slightly darker green on hover */
+        background-color: var(--maingreen-light) !important; /* Lighter green on hover */
         cursor: pointer;
     }
     
     /* Ensure selected state always has correct hover style with snake pieces */
     .grid-cell.selected-cell:hover {
-        background-color: #a7d9d0 !important; /* Slightly lighter green for selected hover */
+        background-color: var(--maingreen-lighter) !important; /* Even lighter green for selected hover */
         cursor: pointer;
     }
     
