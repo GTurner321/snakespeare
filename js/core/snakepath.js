@@ -38,32 +38,37 @@ window.SnakePath = class SnakePath {
     this.verifyImageUrls();
     
     // NEW: Direction mapping now includes the exact piece name to use instead of rotations and flips
-    this.directionMappings = {
-      // [fromDir, toDir]: { piece: 'specific_piece_name' }
-      // Directions: 0 = top, 1 = right, 2 = bottom, 3 = left
-      
-      // Same-direction mappings (straight pieces)
-      '0,0': { piece: 'straight_tb' },  // top to top (default to top to bottom)
-      '1,1': { piece: 'straight_lr' },  // right to right (default to left to right)
-      '2,2': { piece: 'straight_tb' },  // bottom to bottom (default to top to bottom)
-      '3,3': { piece: 'straight_lr' },  // left to left (default to left to right)
-      
-      // Straight pieces - opposite directions
-      '0,2': { piece: 'straight_tb' },  // Top to bottom
-      '2,0': { piece: 'straight_bt' },  // Bottom to top
-      '1,3': { piece: 'straight_rl' },  // Right to left
-      '3,1': { piece: 'straight_lr' },  // Left to right
-      
-      // Curved pieces
-      '0,1': { piece: 'curved_tr' },  // Top to right
-      '0,3': { piece: 'curved_tl' },  // Top to left
-      '1,0': { piece: 'curved_rt' },  // Right to top
-      '1,2': { piece: 'curved_rb' },  // Right to bottom
-      '2,1': { piece: 'curved_br' },  // Bottom to right
-      '2,3': { piece: 'curved_bl' },  // Bottom to left
-      '3,0': { piece: 'curved_lt' },  // Left to top
-      '3,2': { piece: 'curved_lb' }   // Left to bottom
-    };
+   this.directionMappings = {
+  // [fromDir, toDir]: { piece: 'specific_piece_name' }
+  // Directions from snake perspective: 0 = top, 1 = right, 2 = bottom, 3 = left
+  // But piece names are from user perspective
+  
+  // Same-direction mappings (snake continuing in same direction)
+  '0,0': { piece: 'straight_bt' },  // Continuing up (appears as bottom-top to user)
+  '1,1': { piece: 'straight_lr' },  // Continuing right (appears as left-right to user)
+  '2,2': { piece: 'straight_tb' },  // Continuing down (appears as top-bottom to user)
+  '3,3': { piece: 'straight_rl' },  // FIXED: Continuing left (appears as right-left to user)
+  
+  // Straight pieces - opposite directions
+  '0,2': { piece: 'straight_tb' },  // From top to bottom (appears as top-bottom)
+  '2,0': { piece: 'straight_bt' },  // From bottom to top (appears as bottom-top)
+  '1,3': { piece: 'straight_rl' },  // From right to left (appears as right-left)
+  '3,1': { piece: 'straight_lr' },  // From left to right (appears as left-right)
+  
+  // Curved pieces - all 8 permutations
+  // When snake changes direction, use the correct curve
+  '0,1': { piece: 'curved_tr' },  // From top to right (from user view: top-right)
+  '0,3': { piece: 'curved_tl' },  // From top to left (from user view: top-left)
+  
+  '1,0': { piece: 'curved_rt' },  // From right to top (from user view: right-top)
+  '1,2': { piece: 'curved_rb' },  // From right to bottom (from user view: right-bottom)
+  
+  '2,1': { piece: 'curved_br' },  // From bottom to right (from user view: bottom-right)
+  '2,3': { piece: 'curved_bl' },  // From bottom to left (from user view: bottom-left)
+  
+  '3,0': { piece: 'curved_lt' },  // From left to top (from user view: left-top)
+  '3,2': { piece: 'curved_lb' }   // From left to bottom (from user view: left-bottom)
+};
     
     // Make this instance available globally for direct access
     window.snakePath = this;
