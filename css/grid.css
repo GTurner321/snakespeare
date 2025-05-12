@@ -238,11 +238,17 @@ body {
 
 /* Completed path style - lighter green with visible text */
 .grid-cell.completed-cell {
-    background-color: #c8e6c9 !important; /* Lighter green for completed cells */
-    color: var(--text-dark) !important; /* Dark teal for text */
-    border: 1px solid #81c784 !important; /* Lighter green border */
-    text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8) !important;
-    z-index: 7 !important; /* Ensure completed is on top of all other states */
+  background-color: var(--color-path-bg, #90ee90) !important;
+  border-color: var(--color-path-border, #008000) !important;
+  color: var(--text-dark) !important; /* Dark teal for text */
+  border: 1px solid #81c784 !important; /* Lighter green border */
+  text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8) !important;
+  z-index: 7 !important; /* Ensure completed is on top of all other states */
+}
+
+.grid-cell.correct-path {
+  background-color: var(--color-path-bg, #90ee90) !important;
+  border-color: var(--color-path-border, #008000) !important;
 }
 
 /* Out of bounds cells as darker blue */
@@ -353,15 +359,15 @@ body {
 /* Base styles for snake pieces */
 .snake-piece {
     position: absolute !important;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none; /* Allow clicks to pass through to the cell */
-    z-index: 500; /* Much higher z-index to ensure visibility over cells */
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    pointer-events: none !important; /* Allow clicks to pass through to the cell */
+    z-index: 500 !important; /* Much higher z-index to ensure visibility over cells */
     object-fit: contain; /* Ensure image scales to fit while maintaining aspect ratio */
     transform-origin: center;
-    transition: transform 0.2s ease; /* Smooth rotation transitions */
+    transition: visibility 0.1s ease, transform 0.2s ease; /* Add visibility transition for flashing */
     overflow: hidden; /* Keep pieces contained within cell boundaries */
     display: block; /* Ensure the images are displayed */
     opacity: 1; /* Full opacity for better visibility */
@@ -385,16 +391,30 @@ body {
     z-index: 11; /* Ensure head is on top */
 }
 
-/* Animation for completed path with snake pieces */
+/* Flash animation keyframes for visibility toggling */
+@keyframes flash-visibility {
+  0% { visibility: visible; }
+  50% { visibility: hidden; }
+  100% { visibility: visible; }
+}
+
+/* Class that can be added to apply the flash animation */
+.snake-flash-animation {
+  animation: flash-visibility 1s ease 2; /* 1s duration, 2 iterations */
+}
+
+/* Remove continuous pulse animation on completed path to not interfere with flash */
 @keyframes snake-completed-pulse {
     0% { filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.3)); }
     50% { filter: drop-shadow(0 0 6px rgba(76, 175, 80, 0.7)); }
     100% { filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.3)); }
 }
 
-/* Apply completion animation to snake pieces in completed cells */
+/* Don't apply continuous animation to completed cells - will be replaced by flash */
 .grid-cell.completed-cell .snake-piece {
-    animation: snake-completed-pulse 2s infinite;
+    /* animation: snake-completed-pulse 2s infinite; */
+    /* Animation removed to allow for the flash effect instead */
+    filter: drop-shadow(0 0 3px rgba(76, 175, 80, 0.5));
 }
 
 /* Ensure snake pieces have higher z-index than background but lower than letters */
@@ -413,6 +433,22 @@ body {
 /* Special styling for special cell states */
 .grid-cell.revealed-cell .snake-piece {
     opacity: 0.7; /* More transparency on hint cells */
+}
+
+/* Ensure completed cells maintain green background */
+.grid-cell.completed-cell {
+    background-color: var(--color-path-bg, #90ee90) !important;
+    border-color: var(--color-path-border, #008000) !important;
+    color: var(--text-dark, #004d40) !important; /* Dark teal for text */
+    border: 1px solid #81c784 !important; /* Lighter green border */
+    text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8) !important;
+    z-index: 7 !important; /* Ensure completed is on top of other states */
+}
+
+/* Remove any yellow/different coloring for correct path */
+.grid-cell.correct-path {
+    background-color: var(--color-path-bg, #90ee90) !important;
+    border-color: var(--color-path-border, #008000) !important;
 }
 
 /* Responsive styles for snake pieces */
