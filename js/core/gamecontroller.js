@@ -981,7 +981,11 @@ showHintMismatchMessage(conflict) {
   }, 4000);
 }
   
-// Modified loadPhrase method with grid view optimization
+/**
+ * Modified loadPhrase method for GameController.js
+ * Fixes the path generation validation to ensure complete paths
+ */
+
 loadPhrase(phraseData) {
   this.currentPhrase = phraseData;
   
@@ -1011,39 +1015,60 @@ loadPhrase(phraseData) {
   // Track generation attempts
   let generationSuccessful = false;
   let attempts = 0;
-  const MAX_ATTEMPTS = 5; // Maximum number of generation attempts
+  const MAX_ATTEMPTS = 10; // INCREASED from 5 to 10 for better chance of success
   
   // Try generating the path up to MAX_ATTEMPTS times
   while (!generationSuccessful && attempts < MAX_ATTEMPTS) {
     attempts++;
-    console.log(`Path generation attempt #${attempts}`);
+    console.log(`Path generation attempt #${attempts} of ${MAX_ATTEMPTS}`);
     
     // Generate path using path generator (will filter out non-alphanumerics)
     this.currentPath = this.pathGenerator.generatePath(letterList);
+    
+    // FIXED: Check if path is null (incomplete) before setting
+    if (this.currentPath === null) {
+      console.warn(`Path generation attempt #${attempts} failed - path was incomplete`);
+      
+      // Force seed randomization between attempts
+      if (attempts < MAX_ATTEMPTS) {
+        // Shuffle more aggressively to get different paths
+        this.pathGenerator.shuffleArray([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        // Add a small delay to allow for better randomization
+        await new Promise(resolve => setTimeout(resolve, 5));
+      }
+      continue; // Skip to next attempt
+    }
     
     // Apply path to grid renderer and check if successful
     generationSuccessful = this.gridRenderer.setPath(this.currentPath);
     
     if (!generationSuccessful) {
-      console.warn(`Path generation attempt #${attempts} failed - retrying...`);
-      // Wait a tiny bit before retrying to avoid tight loop
-      // and allow for different random paths
+      console.warn(`Path generation attempt #${attempts} failed - some cells were outside bounds`);
+      // Force seed randomization between attempts
       if (attempts < MAX_ATTEMPTS) {
-        // Force seed randomization between attempts
-        this.pathGenerator.shuffleArray([1, 2, 3, 4, 5]);
+        // Shuffle more aggressively
+        this.pathGenerator.shuffleArray([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        // Add a small delay to allow for better randomization
+        await new Promise(resolve => setTimeout(resolve, 5));
       }
     }
   }
   
   if (!generationSuccessful) {
     console.error(`Failed to generate valid path after ${MAX_ATTEMPTS} attempts. Phrase may be too long.`);
-    // Optionally: Show an error message to the user or choose a different phrase
-    // For now, we'll continue with the partial path
+    
+    // IMPROVED: Load a different phrase instead of continuing with a broken one
+    console.log('Loading a different phrase instead...');
+    setTimeout(() => this.loadRandomPhrase(), 100);
+    return; // Exit this method early
   }
+  
+  // Only proceed with the rest of the setup if generation was successful
+  console.log('Path generation successful after', attempts, 'attempts');
   
   // NEW: Generate and apply adjacent random letters
   // Pre-generate random letter cells for all island reduction levels
-  if (generationSuccessful && this.options.randomFillPercentage > 0) {
+  if (this.options.randomFillPercentage > 0) {
     // Pre-generate cells for all levels
     this.pathGenerator.preGenerateRandomLetterCells();
     
@@ -1070,11 +1095,9 @@ loadPhrase(phraseData) {
     }, 50);
   } else {
     // If no random letters or generation failed, reveal hints immediately
-    if (generationSuccessful) {
-      // After the path is set, explicitly regenerate hint indices
-      this.gridRenderer.preGenerateHintIndices();
-      console.log("Hint indices generated after path was set");
-    }
+    // After the path is set, explicitly regenerate hint indices
+    this.gridRenderer.preGenerateHintIndices();
+    console.log("Hint indices generated after path was set");
   }
   
   // Center the grid on the start cell
@@ -1082,11 +1105,8 @@ loadPhrase(phraseData) {
   
   // NEW: Optimize the grid view after random letters are applied and before showing the template
   setTimeout(() => {
-    // Only run optimization if we successfully generated a path
-    if (generationSuccessful) {
-      this.gridRenderer.optimizeGridView();
-      console.log("Grid view optimized to minimize empty space");
-    }
+    this.gridRenderer.optimizeGridView();
+    console.log("Grid view optimized to minimize empty space");
   }, 300); // Wait a bit to ensure all letters are applied
   
   // Update scroll area states
@@ -1111,12 +1131,6 @@ loadPhrase(phraseData) {
   const meaningEl = document.querySelector('.phrase-meaning');
   if (meaningEl) {
     meaningEl.remove();
-  }
-  
-  // If generation failed after all attempts, maybe load a different phrase
-  if (!generationSuccessful) {
-    // Optional: Uncomment to automatically try a different phrase
-    // setTimeout(() => this.loadRandomPhrase(), 500);
   }
 }
   
