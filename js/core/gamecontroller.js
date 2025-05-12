@@ -983,10 +983,11 @@ showHintMismatchMessage(conflict) {
   
 /**
  * Modified loadPhrase method for GameController.js
- * Fixes the path generation validation to ensure complete paths
+ * Fixes both the path generation validation and async/await usage
  */
 
-loadPhrase(phraseData) {
+// Add the async keyword to make this function asynchronous
+async loadPhrase(phraseData) {
   this.currentPhrase = phraseData;
   
   // Log response for debugging
@@ -1155,8 +1156,9 @@ handleResize() {
   
 /**
  * Load sample data for testing
+ * Updated to be async since it calls loadPhrase which is now async
  */
-loadSampleData() {
+async loadSampleData() {
   // Sample phrase data for testing when CSV isn't available
   const samplePhrase = {
     id: 1,
@@ -1175,9 +1177,13 @@ loadSampleData() {
     usagetype: "Common"
   };
   
-  this.loadPhrase(samplePhrase);
+  // Use await here since loadPhrase is now async
+  await this.loadPhrase(samplePhrase);
 }
   
+/**
+ * Updated loadPhraseData method to be async and properly handle the async loadPhrase
+ */
 async loadPhraseData(csvUrl) {
   try {
     // Fetch CSV file
@@ -1237,7 +1243,8 @@ async loadPhraseData(csvUrl) {
       const randomPhrase = this.phrases[randomIndex];
       
       console.log('Loading random Shakespeare phrase ID:', randomPhrase.id);
-      this.loadPhrase(randomPhrase);
+      // Use await here since loadPhrase is now async
+      await this.loadPhrase(randomPhrase);
     } else {
       console.warn('No phrases found in CSV');
       this.loadSampleData();
@@ -1283,8 +1290,9 @@ parseCSV(csvData) {
   
 /**
  * Load a random phrase from the loaded phrases
+ * Updated to be async since it calls loadPhrase which is now async
  */
-loadRandomPhrase() {
+async loadRandomPhrase() {
   if (!this.phrases || this.phrases.length === 0) {
     console.warn('No phrases available to load randomly');
     this.loadSampleData();
@@ -1298,7 +1306,7 @@ loadRandomPhrase() {
   console.log(`Loading random phrase: "${randomPhrase.phrase}"`);
   
   // Load the phrase
-  this.loadPhrase(randomPhrase);
+  await this.loadPhrase(randomPhrase);
 }
 
 setHintLevel(level) {
