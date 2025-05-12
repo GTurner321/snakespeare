@@ -907,7 +907,7 @@ clearRandomLetters() {
   /**
    * Update grid template based on screen size
    */
-  updateGridTemplate() {
+ updateGridTemplate() {
     const isMobile = window.innerWidth < 768;
     const width = isMobile ? this.options.gridWidthSmall : this.options.gridWidth;
     const height = isMobile ? this.options.gridHeightSmall : this.options.gridHeight;
@@ -927,6 +927,9 @@ clearRandomLetters() {
     this.gridElement.style.height = `${totalHeight}px`;
     this.gridElement.style.maxWidth = '100%'; // Prevent overflow on small screens
     
+    // Add this line here:
+    this.gridElement.style.overflow = 'hidden'; // Hide anything outside the grid boundaries
+    
     console.log('Updated grid template:', {
       width,
       height,
@@ -942,10 +945,7 @@ clearRandomLetters() {
       detail: { width: totalWidth, height: totalHeight, gridRenderer: this }
     }));
   }
-
-/**
- * Optimized renderVisibleGrid with buffer zone and DOM preservation
- */
+  
 renderVisibleGrid() {
   const isMobile = window.innerWidth < 768;
   const width = isMobile ? this.options.gridWidthSmall : this.options.gridWidth;
@@ -979,8 +979,22 @@ renderVisibleGrid() {
     this.gridElement.innerHTML = '';
     
     // Update grid template with buffer zone
-    this.gridElement.style.gridTemplateColumns = `repeat(${visibleWidth}, ${this.options.cellSize}px)`;
-    this.gridElement.style.gridTemplateRows = `repeat(${visibleHeight}, ${this.options.cellSize}px)`;
+    // Replace these lines:
+    // this.gridElement.style.gridTemplateColumns = `repeat(${visibleWidth}, ${this.options.cellSize}px)`;
+    // this.gridElement.style.gridTemplateRows = `repeat(${visibleHeight}, ${this.options.cellSize}px)`;
+    
+    // With these:
+    const visibleCols = Math.min(visibleWidth, width + 2*bufferSize);
+    const visibleRows = Math.min(visibleHeight, height + 2*bufferSize);
+    this.gridElement.style.gridTemplateColumns = `repeat(${visibleCols}, ${this.options.cellSize}px)`;
+    this.gridElement.style.gridTemplateRows = `repeat(${visibleRows}, ${this.options.cellSize}px)`;
+    
+    // ALSO ADD HERE:
+    // Ensure grid container dimensions remain fixed to visible area only
+    const totalVisibleWidth = width * this.options.cellSize + (width - 1) * 2; // 2px gap
+    const totalVisibleHeight = height * this.options.cellSize + (height - 1) * 2; // 2px gap
+    this.gridElement.style.width = `${totalVisibleWidth}px`;
+    this.gridElement.style.height = `${totalVisibleHeight}px`;
     
     let cellCount = 0;
     
