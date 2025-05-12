@@ -183,21 +183,21 @@ body {
     text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8) !important;
 }
 
-/* Yellow borders for letter cells adjacent to sea */
-.grid-cell.path-cell.island-edge-top {
-    border-top: 4px solid var(--sandyellow) !important; /* Sand yellow top border */
+/* NEW CSS: Add beach borders to sea-adjacent cells instead */
+.grid-cell.sea-adjacent.shore-edge-top {
+    border-bottom: 8px solid var(--sandyellow) !important; /* Sand yellow bottom border - facing the island */
 }
 
-.grid-cell.path-cell.island-edge-right {
-    border-right: 4px solid var(--sandyellow) !important; /* Sand yellow right border */
+.grid-cell.sea-adjacent.shore-edge-right {
+    border-left: 8px solid var(--sandyellow) !important; /* Sand yellow left border - facing the island */
 }
 
-.grid-cell.path-cell.island-edge-bottom {
-    border-bottom: 4px solid var(--sandyellow) !important; /* Sand yellow bottom border */
+.grid-cell.sea-adjacent.shore-edge-bottom {
+    border-top: 8px solid var(--sandyellow) !important; /* Sand yellow top border - facing the island */
 }
 
-.grid-cell.path-cell.island-edge-left {
-    border-left: 4px solid var(--sandyellow) !important; /* Sand yellow left border */
+.grid-cell.sea-adjacent.shore-edge-left {
+    border-right: 8px solid var(--sandyellow) !important; /* Sand yellow right border - facing the island */
 }
 
 /* Start cell style to match island cells for snake path */
