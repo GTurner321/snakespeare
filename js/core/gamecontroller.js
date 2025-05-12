@@ -615,8 +615,8 @@ updatePhraseWithHints() {
   }
   
   // Check if start cell is selected and has a letter
-  const centerX = 25;
-  const centerY = 25;
+  const centerX = 35;  // Updated from 25 to 35 based on your grid dimensions
+  const centerY = 35;  // Updated from 25 to 35 based on your grid dimensions
   const startCell = this.gridRenderer.grid[centerY][centerX];
   const isStartSelected = startCell.isSelected;
   
@@ -632,11 +632,11 @@ updatePhraseWithHints() {
     }
   }
   
-  // If start cell is selected and has a letter, fill in the first letter position
+  // FIXED: If start cell is selected and has a letter, fill in the first letter position
   if (isStartSelected && startCell.letter && startCell.letter.trim() !== '') {
     console.log(`Start cell is selected with letter '${startCell.letter}', adding to first position`);
     const firstLetterPos = alphaPositions[0]; // First letter position
-    if (templateArray[firstLetterPos] === '_') { // Only replace underscore (not a hint)
+    if (firstLetterPos !== undefined && templateArray[firstLetterPos] === '_') { // Only replace underscore (not a hint)
       templateArray[firstLetterPos] = startCell.letter.toUpperCase();
     }
   }
@@ -669,6 +669,41 @@ updatePhraseWithHints() {
       this.scrollHandler.adjustPhraseDisplayHeight();
     }, 50);
   }
+}
+
+/**
+ * Helper method for checking if a selection follows the path correctly
+ * Modified to ensure start cell is handled
+ */
+checkIfSelectionFollowsPath(selectedLetters) {
+  // Easy case - no letters selected
+  if (!selectedLetters.length) return false;
+  
+  // FIXED: We need to also check if the start cell is selected
+  const centerX = 35;
+  const centerY = 35;
+  const startCell = this.gridRenderer.grid[centerY][centerX];
+  const isStartSelected = startCell.isSelected;
+  
+  if (!isStartSelected) {
+    console.log('Start cell is not selected, cannot follow path');
+    return false;
+  }
+  
+  // Check if each selected letter is on the path
+  // Note: First check if there's at least one path cell, otherwise it would be impossible
+  // to find the correct path
+  const hasPathCells = selectedLetters.some(cell => cell.isPathCell);
+  if (!hasPathCells) {
+    console.log('None of the selected cells are on the path');
+    return false;
+  }
+  
+  // Check if each selected letter is on the path
+  // A stricter check would be to verify they're in the right order too
+  const allOnPath = selectedLetters.every(cell => cell.isPathCell);
+  
+  return allOnPath;
 }
   
 /**
