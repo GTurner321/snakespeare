@@ -30,9 +30,9 @@ constructor(containerId, options = {}) {
   console.log('GridRenderer options:', this.options);
   
   // Grid state
-  this.fullGridSize = 51;              // 51x51 grid
+  this.fullGridSize = 71;              // 71x71 grid
   this.grid = [];                      // 2D array of cell data
-  this.viewOffset = { x: 19, y: 21 };  // Initial view position
+  this.viewOffset = { x: 29, y: 31 };  // Initial view position
   this.path = [];                      // Current path data
   this.selectedCells = [];             // Array of selected cell coordinates {x, y}
   this.randomLetters = [];             // Store generated random letters
@@ -105,8 +105,8 @@ this.highestIslandReductionLevelUsed = 0;      // Track highest level used
     );
     
     // Set center as start (changed to 25,25 for 51x51 grid)
-    const centerX = 25;
-    const centerY = 25;
+    const centerX = 35;
+    const centerY = 35;
     this.grid[centerY][centerX] = {
       letter: '',
       isPath: true,
@@ -230,8 +230,8 @@ this.highestIslandReductionLevelUsed = 0;      // Track highest level used
    */
   findAndSelectStartCell() {
     // The start cell is at 25,25
-    const centerX = 25;
-    const centerY = 25;
+    const centerX = 35;
+    const centerY = 35;
     
     // Check if it's within the visible area
     const isVisible = (
@@ -392,8 +392,8 @@ handleTouchMove(e) {
     if (this.touchState.selectionIntent === 'select-start' && 
         this.selectedCells.length === 0) {
       // Get the start cell coordinates (25,25)
-      const startX = 25;
-      const startY = 25;
+      const startX = 35;
+      const startY = 35;
       // Select the start cell
       this.handleCellSelection(startX, startY, false);
       console.log('Selected start cell for drag');
@@ -759,8 +759,8 @@ handleCellSelection(x, y, forceSelect = false) {
     this.randomLetters = randomLetterCells;
     
     // Get the center point coordinates (25, 25)
-    const centerX = 25;
-    const centerY = 25;
+    const centerX = 35;
+    const centerY = 35;
     
     // Apply each random letter to the grid
     randomLetterCells.forEach(cell => {
@@ -1263,8 +1263,8 @@ revealPathLetters() {
     // Mark cells as revealed
     for (const index of selectedIndices) {
       const pathCell = this.path[index];
-      const gridX = 25 + pathCell.x; // Convert from path coords to grid coords
-      const gridY = 25 + pathCell.y;
+      const gridX = 35 + pathCell.x; // Convert from path coords to grid coords
+      const gridY = 35 + pathCell.y;
       
       // Store the pathIndex for proper phrase syncing
       this.revealedCells.push({ x: gridX, y: gridY, pathIndex: index });
@@ -1327,8 +1327,8 @@ revealPathLetters() {
     // Mark cells as revealed
     for (const index of allSelectedIndices) {
       const pathCell = this.path[index];
-      const gridX = 25 + pathCell.x; // Convert from path coords to grid coords
-      const gridY = 25 + pathCell.y;
+      const gridX = 35 + pathCell.x; // Convert from path coords to grid coords
+      const gridY = 35 + pathCell.y;
       
       this.revealedCells.push({ x: gridX, y: gridY, pathIndex: index });
       this.grid[gridY][gridX].isRevealed = true;
@@ -1508,8 +1508,8 @@ applyStoredHintLetters() {
     }
     
     const pathCell = this.path[index];
-    const gridX = 25 + pathCell.x; // Convert from path coords to grid coords
-    const gridY = 25 + pathCell.y;
+    const gridX = 35 + pathCell.x; // Convert from path coords to grid coords
+    const gridY = 35 + pathCell.y;
     
     this.revealedCells.push({ x: gridX, y: gridY, pathIndex: index });
     this.grid[gridY][gridX].isRevealed = true;
@@ -1857,8 +1857,8 @@ setPath(path) {
   }
   
   // Set start cell
-  const centerX = 25;
-  const centerY = 25;
+  const centerX = 35;
+  const centerY = 35;
   this.grid[centerY][centerX].isPath = true;
   this.grid[centerY][centerX].isStart = true;
   this.grid[centerY][centerX].pathIndex = 0;
@@ -1924,8 +1924,8 @@ setPath(path) {
     const height = isMobile ? this.options.gridHeightSmall : this.options.gridHeight;
     
     // Calculate offset to center the start cell (which is at 25,25)
-    this.viewOffset.x = 25 - Math.floor(width / 2);
-    this.viewOffset.y = 25 - Math.floor(height / 2);
+    this.viewOffset.x = 35 - Math.floor(width / 2);
+    this.viewOffset.y = 35 - Math.floor(height / 2);
     
     // Ensure offset is within bounds
     this.viewOffset.x = Math.max(0, Math.min(this.fullGridSize - width, this.viewOffset.x));
@@ -2305,7 +2305,7 @@ getSelectedLetters() {
     const cell = this.grid[pos.y][pos.x];
     
     // Skip the start cell at 25,25
-    const isStartCell = (pos.x === 25 && pos.y === 25);
+    const isStartCell = (pos.x === 35 && pos.y === 35);
     if (isStartCell) {
       return; // Skip the start cell
     }
@@ -2363,8 +2363,8 @@ setCompleted(completed, isCorrect = true) {
   if (completed) {
     // Convert all selected cells to completed state
     // Important: Include the start cell only if it has a letter
-    const centerX = 25;
-    const centerY = 25;
+    const centerX = 35;
+    const centerY = 35;
     
     // Mark the start cell as completed if it has a letter
     if (this.grid[centerY][centerX].letter && this.grid[centerY][centerX].letter.trim() !== '') {
