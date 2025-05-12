@@ -404,7 +404,7 @@ handleSelectionChange() {
   if (!this.gridRenderer.isCompleted && this.checkPhraseCompleted()) {
     console.log('Phrase completed! Checking if it is correct...');
     
-    // Check if the completed phrase is correct
+    // Check if the completed phrase is correct by comparing display text
     const isCorrectPhrase = this.isCorrectPhrase();
     
     // Set completed state with correctness flag
@@ -412,15 +412,14 @@ handleSelectionChange() {
     
     if (isCorrectPhrase) {
       console.log('Correct phrase! Turning path green.');
-      // Show success message
-      this.showSuccessMessage();
+      // Do not show success message - Shakespeare response will be shown via the event
     } else {
-      console.log('Phrase length complete but incorrect. Path will not turn green.');
+      console.log('Phrase length complete but incorrect.');
       this.showIncorrectMessage();
     }
   }
 }
-
+  
 /**
  * New method to check if the selected phrase is correct
  * Compares the selected letters against the expected phrase
@@ -429,28 +428,30 @@ handleSelectionChange() {
 isCorrectPhrase() {
   if (!this.currentPhrase) return false;
   
-  // Get the expected phrase letters (excluding spaces and punctuation)
-  const expectedLetters = this.parseExpectedLetters();
+  // Get the current phrase displayed in the UI
+  const displayElement = document.getElementById('phrase-text');
+  if (!displayElement) return false;
   
-  // Get the selected letters
-  const selectedLetters = this.gridRenderer.getSelectedLetters();
+  // Get the current displayed phrase text
+  const currentDisplayText = displayElement.textContent;
   
-  // If the counts don't match, it cannot be correct
-  if (selectedLetters.length !== expectedLetters.length) {
-    console.log(`Letter count mismatch: selected ${selectedLetters.length}, expected ${expectedLetters.length}`);
+  // Check if there are any underscores left (incomplete phrase)
+  if (currentDisplayText.includes('_')) {
+    console.log(`Phrase still has underscores: "${currentDisplayText}"`);
     return false;
   }
   
-  // Check against pre-defined path
-  // This is a stricter check that requires following the exact path
-  const allOnCorrectPath = this.checkIfSelectionFollowsPath(selectedLetters);
+  // Get the expected phrase text - use letterlist which includes spaces and punctuation
+  const expectedText = this.currentPhrase.letterlist;
   
-  // For debugging
-  console.log(`Phrase check - all on correct path: ${allOnCorrectPath}`);
+  // Compare ignoring case - we just need the text to match
+  const isEqual = currentDisplayText.toUpperCase() === expectedText.toUpperCase();
   
-  return allOnCorrectPath;
+  console.log(`Phrase check - current: "${currentDisplayText}", expected: "${expectedText}", isEqual: ${isEqual}`);
+  
+  return isEqual;
 }
-
+  
 /**
  * Extract expected letters from the phrase (excluding spaces and punctuation)
  * @return {Array} Array of expected letters
@@ -770,49 +771,9 @@ checkPhraseCompleted() {
   return validSelectedLetters.length === targetLetterCount;
 }
   
-/**
- * Display a success message when the correct phrase is found
- */
 showSuccessMessage() {
-  // Find or create message container
-  let messageContainer = document.getElementById('message-container');
-  if (!messageContainer) {
-    messageContainer = document.createElement('div');
-    messageContainer.id = 'message-container';
-    messageContainer.style.position = 'absolute';
-    messageContainer.style.top = '10px';
-    messageContainer.style.left = '50%';
-    messageContainer.style.transform = 'translateX(-50%)';
-    messageContainer.style.padding = '10px 20px';
-    messageContainer.style.backgroundColor = 'rgba(0, 180, 0, 0.8)';
-    messageContainer.style.color = 'white';
-    messageContainer.style.borderRadius = '5px';
-    messageContainer.style.fontWeight = 'bold';
-    messageContainer.style.zIndex = '1000';
-    messageContainer.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
-    document.getElementById(this.options.gameContainerId).appendChild(messageContainer);
-  }
-
-  // Set success message
-  messageContainer.textContent = 'Correct! You found the phrase!';
-  
-  // Add meaning if available
-  if (this.currentPhrase.meaning) {
-    const meaningEl = document.createElement('div');
-    meaningEl.className = 'phrase-meaning';
-    meaningEl.textContent = `Meaning: ${this.currentPhrase.meaning}`;
-    meaningEl.style.marginTop = '5px';
-    meaningEl.style.fontSize = '0.9em';
-    messageContainer.appendChild(meaningEl);
-  }
-  
-  // Show message
-  messageContainer.style.display = 'block';
-  
-  // Hide after a delay
-  setTimeout(() => {
-    messageContainer.style.display = 'none';
-  }, 5000);
+  // Do nothing - Shakespeare response will show instead
+  console.log('Success message suppressed - Shakespeare response will be shown instead');
 }
 
 /**
