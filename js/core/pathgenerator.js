@@ -12,8 +12,8 @@ class PathGenerator {
     this.directions = [       // Possible move directions (up, right, down, left)
       [0, -1], [1, 0], [0, 1], [-1, 0]
     ];
-    // Maximum grid limits to ensure path stays within 51x51 bounds
-    this.maxDistance = 25; // Since 51/2 = 25.5
+    // Maximum grid limits to ensure path stays within 71x71 bounds
+    this.maxDistance = 35; // Since 71/2 = 35.5
     
     // Distribution of letters for weighted random selection
     this.letterDistribution = [
