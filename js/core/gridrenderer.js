@@ -943,51 +943,72 @@ clearRandomLetters() {
     }));
   }
 
-  /**
- * Render the currently visible portion of the grid - enhanced for letter updates
+/**
+ * Optimized renderVisibleGrid with buffer zone and DOM preservation
  */
 renderVisibleGrid() {
   const isMobile = window.innerWidth < 768;
   const width = isMobile ? this.options.gridWidthSmall : this.options.gridWidth;
   const height = isMobile ? this.options.gridHeightSmall : this.options.gridHeight;
   
-  // Calculate visible bounds
-  const endX = this.viewOffset.x + width;
-  const endY = this.viewOffset.y + height;
+  // Add buffer zone (1 cell in each direction)
+  const bufferSize = 1;
+  const visibleStartX = Math.max(0, this.viewOffset.x - bufferSize);
+  const visibleStartY = Math.max(0, this.viewOffset.y - bufferSize);
+  const visibleEndX = Math.min(this.fullGridSize, this.viewOffset.x + width + bufferSize);
+  const visibleEndY = Math.min(this.fullGridSize, this.viewOffset.y + height + bufferSize);
   
-  // Check if grid needs to be rebuilt (initial render or after scrolling)
+  // Calculate visible bounds including buffer
+  const visibleWidth = visibleEndX - visibleStartX;
+  const visibleHeight = visibleEndY - visibleStartY;
+  
+  // Check if grid needs a complete rebuild
   const needsRebuild = !this.gridElement.children.length || 
-                       this._lastRenderOffset?.x !== this.viewOffset.x || 
-                       this._lastRenderOffset?.y !== this.viewOffset.y;
+                      this._lastRenderOffset === null ||
+                      Math.abs(this._lastRenderOffset.x - this.viewOffset.x) > 1 ||
+                      Math.abs(this._lastRenderOffset.y - this.viewOffset.y) > 1;
   
   // Save current render offset
   this._lastRenderOffset = { ...this.viewOffset };
   
   // Full rebuild if needed
   if (needsRebuild) {
-    console.log('Full grid rebuild');
+    console.log('Full grid rebuild with buffer zone');
+    
+    // Clear the grid
     this.gridElement.innerHTML = '';
+    
+    // Update grid template with buffer zone
+    this.gridElement.style.gridTemplateColumns = `repeat(${visibleWidth}, ${this.options.cellSize}px)`;
+    this.gridElement.style.gridTemplateRows = `repeat(${visibleHeight}, ${this.options.cellSize}px)`;
+    
     let cellCount = 0;
     
-    // Render visible cells
-    for (let y = this.viewOffset.y; y < endY && y < this.fullGridSize; y++) {
-      for (let x = this.viewOffset.x; x < endX && x < this.fullGridSize; x++) {
+    // Render visible cells including buffer zone
+    for (let y = visibleStartY; y < visibleEndY && y < this.fullGridSize; y++) {
+      for (let x = visibleStartX; x < visibleEndX && x < this.fullGridSize; x++) {
         const cellElement = this.createCellElement(x, y);
+        
+        // Set explicit position for better performance
+        cellElement.style.gridColumn = (x - visibleStartX + 1).toString();
+        cellElement.style.gridRow = (y - visibleStartY + 1).toString();
+        
         this.gridElement.appendChild(cellElement);
         cellCount++;
       }
     }
     
-    console.log(`Created ${cellCount} cells`);
+    console.log(`Created ${cellCount} cells with buffer zone`);
     
     // Notify that grid was rebuilt
     document.dispatchEvent(new CustomEvent('gridRebuilt', { 
       detail: { gridElement: this.gridElement, gridRenderer: this }
     }));
-  }
+  } 
   // Otherwise just update cell states and content
   else {
-    console.log('Updating cell states and content');
+    console.log('Updating cell states and content without rebuild');
+    
     // Update all visible cells without rebuilding DOM
     const cells = this.gridElement.querySelectorAll('.grid-cell');
     cells.forEach(cellElement => {
@@ -997,25 +1018,138 @@ renderVisibleGrid() {
       // Skip if invalid coordinates
       if (isNaN(x) || isNaN(y)) return;
       
-      // ENHANCED: Update cell text content to match grid model
-      // This ensures letters are properly updated when island reduction changes
-      if (y >= 0 && y < this.grid.length && x >= 0 && x < this.grid[0].length) {
-        const cell = this.grid[y][x];
-        // Update the cell content if it's different
-        const currentText = cellElement.textContent;
-        const modelText = cell.letter || '•'; // Use dot if no letter
-        if (currentText !== modelText) {
-          cellElement.textContent = modelText;
+      // Check if cell is still in visible area (including buffer)
+      const isStillVisible = 
+        x >= visibleStartX && x < visibleEndX && 
+        y >= visibleStartY && y < visibleEndY;
+      
+      if (!isStillVisible) {
+        // Cell is outside visible area - remove it
+        cellElement.remove();
+      } else {
+        // Cell is still visible - update content and classes
+        this.updateCellElementContent(cellElement, x, y);
+        this.updateCellElementClasses(cellElement, x, y);
+      }
+    });
+    
+    // Add any new cells that have come into view
+    const existingCellCoords = new Set();
+    cells.forEach(cell => {
+      if (cell.parentNode) { // Only count cells still in the DOM
+        const x = parseInt(cell.dataset.gridX, 10);
+        const y = parseInt(cell.dataset.gridY, 10);
+        if (!isNaN(x) && !isNaN(y)) {
+          existingCellCoords.add(`${x},${y}`);
         }
       }
-      
-      // Update cell classes based on current state
-      this.updateCellElementClasses(cellElement, x, y);
     });
+    
+    // Check for new cells to add
+    let newCellCount = 0;
+    for (let y = visibleStartY; y < visibleEndY && y < this.fullGridSize; y++) {
+      for (let x = visibleStartX; x < visibleEndX && x < this.fullGridSize; x++) {
+        const coordKey = `${x},${y}`;
+        if (!existingCellCoords.has(coordKey)) {
+          // This is a new cell that needs to be added
+          const cellElement = this.createCellElement(x, y);
+          
+          // Set explicit position for better performance
+          cellElement.style.gridColumn = (x - visibleStartX + 1).toString();
+          cellElement.style.gridRow = (y - visibleStartY + 1).toString();
+          
+          this.gridElement.appendChild(cellElement);
+          newCellCount++;
+        }
+      }
+    }
+    
+    if (newCellCount > 0) {
+      console.log(`Added ${newCellCount} new cells that came into view`);
+    }
   }
   
   // Check if we need to update scroll limits
   this.checkScrollLimits();
+}
+
+/**
+ * New helper method to update cell content without changing class state
+ * This helps preserve snake pieces while updating text content
+ */
+updateCellElementContent(cellElement, x, y) {
+  // Only update if within grid bounds
+  if (y >= 0 && y < this.grid.length && x >= 0 && x < this.grid[0].length) {
+    const cell = this.grid[y][x];
+    
+    // Update the cell content if it's different
+    const currentText = cellElement.textContent;
+    const modelText = cell.letter || '•'; // Use dot if no letter
+    if (currentText !== modelText) {
+      cellElement.textContent = modelText;
+    }
+  }
+}
+
+updateCellElementClasses(cellElement, x, y) {
+  // Store references to any existing snake pieces before updating
+  const existingSnakePieces = Array.from(cellElement.querySelectorAll('.snake-piece'));
+  
+  // Clear existing state classes
+  cellElement.classList.remove('start-cell', 'selected-cell', 'path-cell', 'highlight-enabled', 'completed-cell', 'revealed-cell', 'correct-path');
+  
+  // If cell is within grid bounds
+  if (y >= 0 && y < this.grid.length && x >= 0 && x < this.grid[0].length) {
+    const cell = this.grid[y][x];
+    
+    // FIX: First check if the cell has a letter, regardless of isPath
+    if (cell.letter && cell.letter.trim() !== '') {
+      cellElement.classList.add('path-cell');
+    }
+    
+    // Apply additional special states in priority order
+    
+    // 1. Path cell class is applied first as a base state
+    if (cell.isPath) {
+      // Don't add path-cell class again if already added above
+      if (!cellElement.classList.contains('path-cell')) {
+        cellElement.classList.add('path-cell');
+      }
+      
+      // Add highlight-enabled class only if path highlighting is turned on
+      if (this.options.highlightPath) {
+        cellElement.classList.add('highlight-enabled');
+      }
+    }
+    
+    // 2. Revealed state - applied after path but before selection/completion
+    if (cell.isRevealed) {
+      cellElement.classList.add('revealed-cell');
+    }
+    
+    // 3. Completed state has highest precedence
+    if (cell.isCompleted) {
+      cellElement.classList.add('completed-cell');
+      
+      // Add correct-path class for cells that are part of the correct path
+      if (cell.isCorrectPath) {
+        cellElement.classList.add('correct-path');
+      }
+    }
+    
+    // 4. Apply selected state BEFORE start cell state
+    if (cell.isSelected) {
+      cellElement.classList.add('selected-cell');
+    }
+    
+    // 5. Apply start cell state last
+    if (cell.isStart) {
+      cellElement.classList.add('start-cell');
+    }
+    
+    // If there are no snake pieces on this cell and it's supposed to have them,
+    // the SnakePath component will add them during its next update
+  }
 }
   
   /**
@@ -2037,58 +2171,92 @@ cellHasContent(x, y) {
 }
 
   
-  /**
-   * Scroll the grid in the given direction with variable speed
-   * @param {string} direction - 'up', 'down', 'left', or 'right'
-   * @param {boolean} slowMotion - Whether to use slow scrolling speed
-   */
-  scroll(direction, slowMotion = false) {
-    // Calculate new offset based on direction
-    let newOffsetX = this.viewOffset.x;
-    let newOffsetY = this.viewOffset.y;
+/**
+ * Optimized scroll method using CSS transforms for small scrolls
+ * @param {string} direction - 'up', 'down', 'left', or 'right'
+ * @param {boolean} slowMotion - Whether to use slow scrolling speed
+ */
+scroll(direction, slowMotion = false) {
+  // Calculate new offset based on direction
+  let newOffsetX = this.viewOffset.x;
+  let newOffsetY = this.viewOffset.y;
+  
+  const isMobile = window.innerWidth < 768;
+  const width = isMobile ? this.options.gridWidthSmall : this.options.gridWidth;
+  const height = isMobile ? this.options.gridHeightSmall : this.options.gridHeight;
+  
+  switch (direction) {
+    case 'up':
+      newOffsetY = Math.max(0, this.viewOffset.y - 1);
+      break;
+    case 'down':
+      newOffsetY = Math.min(
+        this.fullGridSize - height,
+        this.viewOffset.y + 1
+      );
+      break;
+    case 'left':
+      newOffsetX = Math.max(0, this.viewOffset.x - 1);
+      break;
+    case 'right':
+      newOffsetX = Math.min(
+        this.fullGridSize - width,
+        this.viewOffset.x + 1
+      );
+      break;
+  }
+  
+  // Determine if this is a small scroll (1 unit in any direction)
+  const isSmallScroll = 
+    (Math.abs(newOffsetX - this.viewOffset.x) <= 1 && 
+     Math.abs(newOffsetY - this.viewOffset.y) <= 1);
+  
+  // Apply CSS transition class based on speed
+  if (this.gridElement) {
+    // Remove any existing transition classes
+    this.gridElement.classList.remove('fast-scroll', 'slow-scroll');
     
-    const isMobile = window.innerWidth < 768;
-    const width = isMobile ? this.options.gridWidthSmall : this.options.gridWidth;
-    const height = isMobile ? this.options.gridHeightSmall : this.options.gridHeight;
+    // Add the appropriate transition class
+    this.gridElement.classList.add(slowMotion ? 'slow-scroll' : 'fast-scroll');
+  }
+  
+  // If this is a small scroll and we have DOM cells already rendered, use CSS transform
+  if (isSmallScroll && this.gridElement && this.gridElement.children.length > 0) {
+    // Calculate the actual pixel amount to translate
+    const cellSize = this.options.cellSize;
+    const gapSize = 2; // Gap between cells
     
-    switch (direction) {
-      case 'up':
-        newOffsetY = Math.max(0, this.viewOffset.y - 1);
-        break;
-      case 'down':
-        newOffsetY = Math.min(
-          this.fullGridSize - height,
-          this.viewOffset.y + 1
-        );
-        break;
-      case 'left':
-        newOffsetX = Math.max(0, this.viewOffset.x - 1);
-        break;
-      case 'right':
-        newOffsetX = Math.min(
-          this.fullGridSize - width,
-          this.viewOffset.x + 1
-        );
-        break;
-    }
+    // Calculate translation amounts
+    const translateX = (this.viewOffset.x - newOffsetX) * (cellSize + gapSize);
+    const translateY = (this.viewOffset.y - newOffsetY) * (cellSize + gapSize);
     
-    // Apply CSS transition class based on speed
-    if (this.gridElement) {
-      // Remove any existing transition classes
-      this.gridElement.classList.remove('fast-scroll', 'slow-scroll');
+    // Apply transform to move the grid
+    this.gridElement.style.transform = `translate(${translateX}px, ${translateY}px)`;
+    
+    // After transition completes, reset transform and rebuild grid at new position
+    const transitionDuration = slowMotion ? 400 : 200;
+    setTimeout(() => {
+      // Reset transform
+      this.gridElement.style.transform = 'translate(0, 0)';
       
-      // Add the appropriate transition class
-      this.gridElement.classList.add(slowMotion ? 'slow-scroll' : 'fast-scroll');
-    }
-    
-    // Update view offset
+      // Update the actual view offset
+      this.viewOffset.x = newOffsetX;
+      this.viewOffset.y = newOffsetY;
+      
+      // Force a rebuild with the new offset
+      this._lastRenderOffset = null;
+      this.renderVisibleGrid();
+      
+      // Remove transition classes
+      this.gridElement.classList.remove('fast-scroll', 'slow-scroll');
+    }, transitionDuration);
+  } else {
+    // For larger scrolls or initial render, just update position directly
     this.viewOffset.x = newOffsetX;
     this.viewOffset.y = newOffsetY;
     
-    // Force a rebuild since we've scrolled
+    // Force a rebuild
     this._lastRenderOffset = null;
-    
-    // Re-render grid
     this.renderVisibleGrid();
     
     // After transition is complete, remove the transition classes
@@ -2096,13 +2264,14 @@ cellHasContent(x, y) {
       if (this.gridElement) {
         this.gridElement.classList.remove('fast-scroll', 'slow-scroll');
       }
-    }, slowMotion ? 450 : 250); // Slightly longer than transition to ensure it completes
-    
-    // Dispatch event for scroll
-    document.dispatchEvent(new CustomEvent('gridScrolled', { 
-      detail: { direction, offset: this.viewOffset, gridRenderer: this, slowMotion }
-    }));
+    }, slowMotion ? 450 : 250);
   }
+  
+  // Dispatch event for scroll
+  document.dispatchEvent(new CustomEvent('gridScrolled', { 
+    detail: { direction, offset: this.viewOffset, gridRenderer: this, slowMotion }
+  }));
+}
   
   /**
  * Get selected letters from the grid
