@@ -1109,9 +1109,6 @@ updateCellElementContent(cellElement, x, y) {
  * Updated version of updateCellElementClasses to preserve snake pieces
  */
 updateCellElementClasses(cellElement, x, y) {
-  // Store references to any existing snake pieces before updating
-  const existingSnakePieces = Array.from(cellElement.querySelectorAll('.snake-piece'));
-  
   // Clear existing state classes
   cellElement.classList.remove('start-cell', 'selected-cell', 'path-cell', 'highlight-enabled', 'completed-cell', 'revealed-cell', 'correct-path');
   
@@ -1119,7 +1116,7 @@ updateCellElementClasses(cellElement, x, y) {
   if (y >= 0 && y < this.grid.length && x >= 0 && x < this.grid[0].length) {
     const cell = this.grid[y][x];
     
-    // FIX: First check if the cell has a letter, regardless of isPath
+    // First check if the cell has a letter, regardless of isPath
     if (cell.letter && cell.letter.trim() !== '') {
       cellElement.classList.add('path-cell');
     }
@@ -1148,10 +1145,10 @@ updateCellElementClasses(cellElement, x, y) {
     if (cell.isCompleted) {
       cellElement.classList.add('completed-cell');
       
-      // Add correct-path class for cells that are part of the correct path
-      if (cell.isCorrectPath) {
-        cellElement.classList.add('correct-path');
-      }
+      // REMOVED: Don't add correct-path class to avoid color change
+      // if (cell.isCorrectPath) {
+      //   cellElement.classList.add('correct-path');
+      // }
     }
     
     // 4. Apply selected state BEFORE start cell state
@@ -1164,10 +1161,8 @@ updateCellElementClasses(cellElement, x, y) {
       cellElement.classList.add('start-cell');
     }
     
-    // If there are no snake pieces on this cell and it's supposed to have them,
-    // the SnakePath component will add them during its next update
-
-        // Re-append any existing snake pieces that were removed
+    // Re-append any existing snake pieces that were removed
+    const existingSnakePieces = Array.from(cellElement.querySelectorAll('.snake-piece'));
     if (existingSnakePieces.length > 0) {
       existingSnakePieces.forEach(snakePiece => {
         cellElement.appendChild(snakePiece);
@@ -2375,7 +2370,7 @@ setCompleted(completed, isCorrect = true) {
     if (this.grid[centerY][centerX].letter && this.grid[centerY][centerX].letter.trim() !== '') {
       this.grid[centerY][centerX].isCompleted = true;
       
-      // NEW: Add correctPath class if the phrase is correct
+      // Add correctPath flag without adding the CSS class (which changes color)
       if (isCorrect) {
         this.grid[centerY][centerX].isCorrectPath = true;
       }
@@ -2385,7 +2380,7 @@ setCompleted(completed, isCorrect = true) {
     this.selectedCells.forEach(pos => {
       this.grid[pos.y][pos.x].isCompleted = true;
       
-      // NEW: Add correctPath class if the phrase is correct
+      // Add correctPath flag without adding the CSS class
       if (isCorrect) {
         this.grid[pos.y][pos.x].isCorrectPath = true;
       }
@@ -2393,12 +2388,17 @@ setCompleted(completed, isCorrect = true) {
       // Keep the isSelected property true as well for visual consistency
       this.grid[pos.y][pos.x].isSelected = true;
     });
+    
+    // If correct, trigger the flash animation instead of color change
+    if (isCorrect) {
+      this.triggerFlashAnimation();
+    }
   } else {
     // Reset completion state for all cells
     for (let y = 0; y < this.grid.length; y++) {
       for (let x = 0; x < this.grid[0].length; x++) {
         this.grid[y][x].isCompleted = false;
-        this.grid[y][x].isCorrectPath = false; // NEW: Reset correct path flag
+        this.grid[y][x].isCorrectPath = false;
       }
     }
   }
@@ -2414,6 +2414,87 @@ setCompleted(completed, isCorrect = true) {
       gridRenderer: this 
     }
   }));
+}
+
+/**
+ * New method to trigger flash animation for the snake
+ * Adds necessary CSS and toggles visibility
+ */
+triggerFlashAnimation() {
+  // First, ensure we have the flash animation CSS
+  this.ensureFlashAnimationCSS();
+  
+  // Get all snake pieces currently in the DOM
+  const snakePieces = document.querySelectorAll('.snake-piece');
+  const cellsWithSnake = document.querySelectorAll('.grid-cell .snake-piece');
+  
+  // If no snake pieces found, log and return
+  if (snakePieces.length === 0) {
+    console.log('No snake pieces found to animate');
+    return;
+  }
+  
+  console.log(`Triggering flash animation for ${snakePieces.length} snake pieces`);
+  
+  // Flash the snake twice (off-on, off-on) with 500ms intervals
+  let flashCount = 0;
+  const maxFlashes = 4; // 2 complete cycles (off-on, off-on)
+  
+  const flashInterval = setInterval(() => {
+    // Toggle visibility
+    const isVisible = flashCount % 2 === 0;
+    
+    snakePieces.forEach(piece => {
+      piece.style.visibility = isVisible ? 'hidden' : 'visible';
+    });
+    
+    flashCount++;
+    
+    // Stop after max flashes
+    if (flashCount >= maxFlashes) {
+      clearInterval(flashInterval);
+      
+      // Ensure snake is visible at the end
+      snakePieces.forEach(piece => {
+        piece.style.visibility = 'visible';
+      });
+      
+      console.log('Snake flash animation complete');
+    }
+  }, 500); // 500ms = half a second
+}
+
+/**
+ * Add CSS for flash animation if needed
+ */
+ensureFlashAnimationCSS() {
+  // Check if we've already added the styles
+  if (document.getElementById('snake-flash-animation-styles')) {
+    return;
+  }
+  
+  // Create style element
+  const style = document.createElement('style');
+  style.id = 'snake-flash-animation-styles';
+  style.textContent = `
+    .snake-piece {
+      transition: visibility 0.1s ease;
+    }
+    
+    /* Remove the yellow background from completed cells */
+    .grid-cell.completed-cell {
+      background-color: var(--color-path-bg, #90ee90) !important;
+    }
+    
+    /* Remove the different color for correct path */
+    .grid-cell.correct-path {
+      background-color: var(--color-path-bg, #90ee90) !important;
+    }
+  `;
+  
+  // Add to document
+  document.head.appendChild(style);
+  console.log('Added flash animation styles');
 }
 
   
