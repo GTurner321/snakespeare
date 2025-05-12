@@ -533,8 +533,8 @@ fillPhraseTemplate(template, phrase, selectedLetters) {
   
   // Check if the start cell is selected
   const startCellIsSelected = this.gridRenderer && 
-                             this.gridRenderer.grid[25][25] && 
-                             this.gridRenderer.grid[25][25].isSelected;
+                             this.gridRenderer.grid[35][35] && 
+                             this.gridRenderer.grid[35][35].isSelected;
   
   // Count positions that need letters (underscores) that are not already filled with hints
   const letterPositions = [];
