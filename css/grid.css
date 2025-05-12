@@ -703,7 +703,6 @@ body {
 /* ==========================================================================
    5. Menu System (Replacing Refresh Buttons)
    ========================================================================== */
-
 #menu-button-container {
     position: absolute;
     top: 10px;
@@ -719,6 +718,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    background-color: #f0f0f0; /* Explicit background color */
+    border: 1px solid #cccccc; /* Explicit border */
 }
 
 .menu-icon {
@@ -755,15 +756,18 @@ body {
     position: absolute;
     top: 54px;
     right: 0;
-    background: var(--box-bg-color);
-    border: 2px solid var(--box-border-color);
+    background-color: #ffffff; /* Explicit background color */
+    border: 2px solid #cccccc; /* Explicit border color */
     border-radius: 6px;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
     width: 200px;
     max-width: 90vw;
     display: none;
-    z-index: 101;
+    z-index: 1000; /* Ensure menu appears above other elements */
     overflow: hidden;
+    opacity: 1; /* Ensure it's not transparent */
+    max-height: 80vh;
+    overflow-y: auto;
 }
 
 .menu-dropdown.active {
@@ -779,16 +783,16 @@ body {
     height: 0;
     border-left: 8px solid transparent;
     border-right: 8px solid transparent;
-    border-bottom: 8px solid var(--box-border-color);
+    border-bottom: 8px solid #cccccc; /* Explicit color */
 }
 
 .menu-item {
     width: 100%;
     padding: 12px 15px;
     text-align: left;
-    background: none;
+    background-color: #ffffff; /* Explicit background color */
     border: none;
-    border-bottom: 1px solid var(--box-border-color);
+    border-bottom: 1px solid #cccccc; /* Explicit border color */
     font-family: 'Trebuchet MS', Arial, sans-serif;
     font-size: 0.95rem;
     cursor: pointer;
@@ -805,27 +809,51 @@ body {
     background-color: #e8e8e8;
 }
 
-.menu-item.hint-button {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+/* Separator for menu sections */
+.menu-separator {
+    height: 1px;
+    background-color: #cccccc;
+    margin: 5px 0;
+    opacity: 1;
 }
 
-.disabled-hint {
-  color: grey !important;
-  cursor: not-allowed;
+/* Separate styling for hint level buttons */
+.menu-item.hint-button[id^="hint-level-"] {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
-/* Add your new styles here */
-.menu-item.hint-button.active-hint {
+/* Separate styling for island reduction buttons */
+.menu-item.hint-button[id^="island-level-"] {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Active state for hint level buttons only */
+.menu-item.hint-button[id^="hint-level-"].active-hint {
     background-color: #e0e0e0;
     font-weight: bold;
 }
 
-.menu-dropdown {
-    max-height: 80vh;
-    overflow-y: auto;
-    z-index: 1000; /* Ensure menu appears above other elements */
+/* Active state for island reduction buttons only */
+.menu-item.hint-button[id^="island-level-"].active-island {
+    background-color: #e0e0e0;
+    font-weight: bold;
+}
+
+/* Disabled state for hint level buttons */
+.menu-item.hint-button[id^="hint-level-"].disabled-hint,
+.disabled-hint {
+    color: grey !important;
+    cursor: not-allowed;
+}
+
+/* Disabled state for island reduction buttons */
+.menu-item.hint-button[id^="island-level-"].disabled-island {
+    color: grey !important;
+    cursor: not-allowed;
 }
 
 /* Medium/Small screens */
