@@ -1,6 +1,7 @@
 /**
- * IslandRenderer - Enhanced version to make ALL letter cells green
- * Ensures both path cells and random letter cells are green
+ * IslandRenderer - Modified to move beach effect to sea cells
+ * Ensures both path cells and random letter cells are green but the
+ * yellow border "beach" effect is on the sea cells instead of island cells
  */
 
 class IslandRenderer {
@@ -64,9 +65,10 @@ class IslandRenderer {
   
   /**
    * Key method: Update island appearance by checking all visible cells
+   * MODIFIED to move beach effect to sea cells
    */
   updateIslandAppearance() {
-    console.log('Updating island appearance with all-letters-green enhancement');
+    console.log('Updating island appearance with beach effect on sea cells');
     
     if (!this.gridRenderer || !this.gridRenderer.grid) {
       console.warn('Grid renderer or grid not available');
@@ -86,6 +88,7 @@ class IslandRenderer {
     let letterCellCount = 0;
     let pathCellCount = 0;
     let seaCellCount = 0;
+    let beachCellCount = 0;
     
     // Process each cell
     cells.forEach(cellElement => {
@@ -114,8 +117,13 @@ class IslandRenderer {
             cellElement.classList.add('path-cell');
           }
           
-          // Add island edge classes for yellow borders
-          this.processIslandEdges(cellElement, x, y);
+          // REMOVE island edge classes (yellow borders) from island cells
+          cellElement.classList.remove(
+            'island-edge-top',
+            'island-edge-right',
+            'island-edge-bottom',
+            'island-edge-left'
+          );
         } else {
           // Remove path-cell class from non-letter cells
           if (cellElement.classList.contains('path-cell')) {
@@ -123,11 +131,47 @@ class IslandRenderer {
           }
           
           // Process sea adjacency
-          const isAdjacent = this.isAdjacentToAnyLetterCell(x, y);
-          if (isAdjacent) {
+          const adjacentIslands = this.getAdjacentLetterCells(x, y);
+          
+          if (adjacentIslands.length > 0) {
+            // This is a sea cell adjacent to at least one island
             cellElement.classList.add('sea-adjacent');
+            beachCellCount++;
+            
+            // ADDED: Add shore edge classes to sea cells
+            // Reset previous shore edge classes
+            cellElement.classList.remove(
+              'shore-edge-top',
+              'shore-edge-right',
+              'shore-edge-bottom',
+              'shore-edge-left'
+            );
+            
+            // Add appropriate shore edge classes based on adjacent islands
+            adjacentIslands.forEach(direction => {
+              if (direction === 'top') {
+                cellElement.classList.add('shore-edge-top'); // Bottom border of sea cell facing island
+              }
+              if (direction === 'right') {
+                cellElement.classList.add('shore-edge-right'); // Left border of sea cell facing island
+              }
+              if (direction === 'bottom') {
+                cellElement.classList.add('shore-edge-bottom'); // Top border of sea cell facing island
+              }
+              if (direction === 'left') {
+                cellElement.classList.add('shore-edge-left'); // Right border of sea cell facing island
+              }
+            });
           } else {
+            // Not adjacent to any islands
             cellElement.classList.remove('sea-adjacent');
+            // Remove any shore edge classes
+            cellElement.classList.remove(
+              'shore-edge-top',
+              'shore-edge-right',
+              'shore-edge-bottom',
+              'shore-edge-left'
+            );
           }
         }
       } catch (error) {
@@ -135,11 +179,43 @@ class IslandRenderer {
       }
     });
     
-    console.log(`Island appearance update completed: ${pathCellCount} path cells, ${letterCellCount} random letter cells, ${seaCellCount} sea cells`);
+    console.log(`Island appearance update completed: ${pathCellCount} path cells, ${letterCellCount} random letter cells, ${seaCellCount} sea cells, ${beachCellCount} beach cells`);
   }
   
   /**
-   * NEW: Check if a cell has any letter (path or random)
+   * NEW: Get a list of directions where adjacent cells have letters
+   * @param {number} x - X coordinate
+   * @param {number} y - Y coordinate
+   * @return {Array} Array of directions ('top', 'right', 'bottom', 'left')
+   */
+  getAdjacentLetterCells(x, y) {
+    const directions = [];
+    
+    // Check cell above
+    if (this.cellHasLetter(x, y-1) || this.isCellPath(x, y-1)) {
+      directions.push('top');
+    }
+    
+    // Check cell to the right
+    if (this.cellHasLetter(x+1, y) || this.isCellPath(x+1, y)) {
+      directions.push('right');
+    }
+    
+    // Check cell below
+    if (this.cellHasLetter(x, y+1) || this.isCellPath(x, y+1)) {
+      directions.push('bottom');
+    }
+    
+    // Check cell to the left
+    if (this.cellHasLetter(x-1, y) || this.isCellPath(x-1, y)) {
+      directions.push('left');
+    }
+    
+    return directions;
+  }
+  
+  /**
+   * Check if a cell has any letter (path or random)
    */
   cellHasLetter(x, y) {
     if (!this.gridRenderer || !this.gridRenderer.grid) return false;
@@ -156,43 +232,11 @@ class IslandRenderer {
   }
   
   /**
-   * Process island edges to add yellow borders where needed
-   */
-  processIslandEdges(element, x, y) {
-    // Clear existing edge classes
-    element.classList.remove(
-      'island-edge-top',
-      'island-edge-right',
-      'island-edge-bottom',
-      'island-edge-left'
-    );
-    
-    // Check each direction for sea cells (cells without letters)
-    if (!this.cellHasLetter(x, y-1) && !this.isCellPath(x, y-1)) {
-      element.classList.add('island-edge-top');
-    }
-    
-    if (!this.cellHasLetter(x+1, y) && !this.isCellPath(x+1, y)) {
-      element.classList.add('island-edge-right');
-    }
-    
-    if (!this.cellHasLetter(x, y+1) && !this.isCellPath(x, y+1)) {
-      element.classList.add('island-edge-bottom');
-    }
-    
-    if (!this.cellHasLetter(x-1, y) && !this.isCellPath(x-1, y)) {
-      element.classList.add('island-edge-left');
-    }
-  }
-  
-  /**
    * Check if a cell is adjacent to any cell that has a letter
+   * KEPT for backwards compatibility
    */
   isAdjacentToAnyLetterCell(x, y) {
-    return (this.cellHasLetter(x, y-1) || this.isCellPath(x, y-1)) || 
-           (this.cellHasLetter(x+1, y) || this.isCellPath(x+1, y)) || 
-           (this.cellHasLetter(x, y+1) || this.isCellPath(x, y+1)) || 
-           (this.cellHasLetter(x-1, y) || this.isCellPath(x-1, y));
+    return this.getAdjacentLetterCells(x, y).length > 0;
   }
   
   /**
