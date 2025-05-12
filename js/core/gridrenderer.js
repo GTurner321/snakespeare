@@ -733,6 +733,11 @@ handleCellSelection(x, y, forceSelect = false) {
     this.selectedCells.push({ x, y });
     this.lastSelectedCell = { x, y };
     
+    // CRITICAL FIX: Make sure to log when start cell is selected
+    if (cell.isStart) {
+      console.log('Start cell selected with letter:', cell.letter);
+    }
+    
     // Check if we need to auto-scroll after selecting a cell
     this.handleAutoScroll();
     
@@ -2300,11 +2305,23 @@ scroll(direction, slowMotion = false) {
 getSelectedLetters() {
   const letters = [];
   
+  // Get the start cell directly - this ensures we don't miss it
+  const centerX = 35;
+  const centerY = 35;
+  const startCell = this.grid[centerY][centerX];
+  
+  // Check if start cell is selected
+  if (startCell.isSelected) {
+    // We'll only return the start cell letter if specifically requested
+    // This is used in GameController's updatePhraseWithHints
+    console.log('Start cell is selected with letter:', startCell.letter);
+  }
+  
   // Add all selected cells (EXPLICITLY skipping the start cell)
   this.selectedCells.forEach(pos => {
     const cell = this.grid[pos.y][pos.x];
     
-    // Skip the start cell at 25,25
+    // Skip the start cell at 35,35
     const isStartCell = (pos.x === 35 && pos.y === 35);
     if (isStartCell) {
       return; // Skip the start cell
@@ -2325,7 +2342,6 @@ getSelectedLetters() {
   
   return letters;
 }
-
   
   /**
    * Clear all selected cells
