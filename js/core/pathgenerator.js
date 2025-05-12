@@ -2,6 +2,7 @@
  * Path Generator for Grid Game
  * Creates a snake-like path for letters in a phrase
  * Based on coordinate grid with start at (0,0)
+ * FIXED: Now properly verifies path completion and returns null if incomplete
  */
 
 class PathGenerator {
@@ -57,8 +58,9 @@ class PathGenerator {
   
   /**
    * Generate a path for the given letter sequence
+   * FIXED: Now returns null if the path cannot be fully generated
    * @param {Array|String} letterList - Array of letters or string to be positioned on the grid
-   * @return {Array} Array of {x, y, letter} objects representing the path
+   * @return {Array|null} Array of {x, y, letter} objects representing the path, or null if incomplete
    */
   generatePath(letterList) {
     // Reset state for new path generation
@@ -90,10 +92,10 @@ class PathGenerator {
       // Try to find next valid position
       const nextPos = this.findNextPosition(currentX, currentY);
       
-      // If no valid position found, break out (this shouldn't happen with proper grid size)
+      // If no valid position found, return null to indicate incomplete path
       if (!nextPos) {
         console.error('Could not find valid next position for letter:', letters[i]);
-        break;
+        return null; // FIXED: Return null instead of breaking out to signal incomplete path
       }
       
       // Update current position
@@ -104,6 +106,7 @@ class PathGenerator {
       this.addToPath(currentX, currentY, letters[i]);
     }
     
+    // Only return the path if all letters were placed successfully
     return this.path;
   }
   
