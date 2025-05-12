@@ -875,7 +875,7 @@ initShakespeareComponent() {
 }
 
 updateIslandReductionButtonStyles() {
-  // Get all island reduction buttons by ID pattern
+  // Get all island reduction buttons specifically
   const islandButtons = document.querySelectorAll('[id^="island-level-"]');
   
   // Update each button
@@ -883,24 +883,24 @@ updateIslandReductionButtonStyles() {
     // Extract level from button ID (island-level-X-button)
     const buttonLevel = parseInt(button.id.split('-')[2], 10);
     
-    // Remove any existing state classes
-    button.classList.remove('active-hint', 'disabled-hint');
+    // Remove any existing state classes - use distinct class names to avoid cross-contamination
+    button.classList.remove('active-hint', 'disabled-hint', 'active-island', 'disabled-island');
     
-    // Current level - active
+    // Current level - active (using active-island to distinguish from hint buttons)
     if (buttonLevel === this.gridRenderer.islandReductionLevel) {
-      button.classList.add('active-hint');
+      button.classList.add('active-island');  // Use different class name
     }
     
     // Lower than highest used - disabled
     if (buttonLevel < this.highestIslandReductionLevelUsed) {
-      button.classList.add('disabled-hint');
+      button.classList.add('disabled-island');  // Use different class name
       button.style.color = 'grey';
     } else {
       button.style.color = '';  // Reset to default
     }
   });
 }
-
+  
 /**
  * Modified setIslandReductionLevel method with enhanced updating
  */
@@ -1351,8 +1351,8 @@ setHintLevel(level) {
 }
 
 updateHintButtonStyles() {
-  // Get all hint buttons
-  const hintButtons = document.querySelectorAll('.hint-button');
+  // Get all hint buttons specifically (not island reduction buttons)
+  const hintButtons = document.querySelectorAll('[id^="hint-level-"]');
   
   // Update each button
   hintButtons.forEach(button => {
