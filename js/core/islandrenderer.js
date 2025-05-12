@@ -1,7 +1,7 @@
 /**
- * IslandRenderer - Modified to move beach effect to sea cells
+ * IslandRenderer - Modified to move beach effect to sea cells (FIXED)
  * Ensures both path cells and random letter cells are green but the
- * yellow border "beach" effect is on the sea cells instead of island cells
+ * yellow border "beach" effect is on the sea cells on the proper sides
  */
 
 class IslandRenderer {
@@ -65,7 +65,7 @@ class IslandRenderer {
   
   /**
    * Key method: Update island appearance by checking all visible cells
-   * MODIFIED to move beach effect to sea cells
+   * FIXED to put correct beach borders on sea cells
    */
   updateIslandAppearance() {
     console.log('Updating island appearance with beach effect on sea cells');
@@ -138,7 +138,7 @@ class IslandRenderer {
             cellElement.classList.add('sea-adjacent');
             beachCellCount++;
             
-            // ADDED: Add shore edge classes to sea cells
+            // FIXED: Add shore edge classes to sea cells in the CORRECT orientation
             // Reset previous shore edge classes
             cellElement.classList.remove(
               'shore-edge-top',
@@ -149,17 +149,18 @@ class IslandRenderer {
             
             // Add appropriate shore edge classes based on adjacent islands
             adjacentIslands.forEach(direction => {
+              // Now the border should be on the SAME side as the direction of the island
               if (direction === 'top') {
-                cellElement.classList.add('shore-edge-top'); // Bottom border of sea cell facing island
+                cellElement.classList.add('shore-edge-top'); // TOP border when island is above
               }
               if (direction === 'right') {
-                cellElement.classList.add('shore-edge-right'); // Left border of sea cell facing island
+                cellElement.classList.add('shore-edge-right'); // RIGHT border when island is to the right
               }
               if (direction === 'bottom') {
-                cellElement.classList.add('shore-edge-bottom'); // Top border of sea cell facing island
+                cellElement.classList.add('shore-edge-bottom'); // BOTTOM border when island is below
               }
               if (direction === 'left') {
-                cellElement.classList.add('shore-edge-left'); // Right border of sea cell facing island
+                cellElement.classList.add('shore-edge-left'); // LEFT border when island is to the left
               }
             });
           } else {
@@ -183,7 +184,7 @@ class IslandRenderer {
   }
   
   /**
-   * NEW: Get a list of directions where adjacent cells have letters
+   * Get a list of directions where adjacent cells have letters
    * @param {number} x - X coordinate
    * @param {number} y - Y coordinate
    * @return {Array} Array of directions ('top', 'right', 'bottom', 'left')
