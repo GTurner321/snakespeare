@@ -1091,6 +1091,9 @@ updateCellElementContent(cellElement, x, y) {
   }
 }
 
+/**
+ * Updated version of updateCellElementClasses to preserve snake pieces
+ */
 updateCellElementClasses(cellElement, x, y) {
   // Store references to any existing snake pieces before updating
   const existingSnakePieces = Array.from(cellElement.querySelectorAll('.snake-piece'));
@@ -1149,6 +1152,13 @@ updateCellElementClasses(cellElement, x, y) {
     
     // If there are no snake pieces on this cell and it's supposed to have them,
     // the SnakePath component will add them during its next update
+
+        // Re-append any existing snake pieces that were removed
+    if (existingSnakePieces.length > 0) {
+      existingSnakePieces.forEach(snakePiece => {
+        cellElement.appendChild(snakePiece);
+      });
+    }
   }
 }
   
