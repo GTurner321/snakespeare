@@ -183,21 +183,23 @@ body {
     text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8) !important;
 }
 
-/* NEW CSS: Add beach borders to sea-adjacent cells instead */
 .grid-cell.sea-adjacent.shore-edge-top {
-    border-bottom: 8px solid var(--sandyellow) !important; /* Sand yellow bottom border - facing the island */
+    border-top: 4px solid var(--sandyellow) !important; /* Yellow border on TOP when island is above */
 }
 
+/* When an island is on the RIGHT of a sea cell, we need the RIGHT border on the sea cell */
 .grid-cell.sea-adjacent.shore-edge-right {
-    border-left: 8px solid var(--sandyellow) !important; /* Sand yellow left border - facing the island */
+    border-right: 4px solid var(--sandyellow) !important; /* Yellow border on RIGHT when island is to the right */
 }
 
+/* When an island is on the BOTTOM of a sea cell, we need the BOTTOM border on the sea cell */
 .grid-cell.sea-adjacent.shore-edge-bottom {
-    border-top: 8px solid var(--sandyellow) !important; /* Sand yellow top border - facing the island */
+    border-bottom: 4px solid var(--sandyellow) !important; /* Yellow border on BOTTOM when island is below */
 }
 
+/* When an island is on the LEFT of a sea cell, we need the LEFT border on the sea cell */
 .grid-cell.sea-adjacent.shore-edge-left {
-    border-right: 8px solid var(--sandyellow) !important; /* Sand yellow right border - facing the island */
+    border-left: 4px solid var(--sandyellow) !important; /* Yellow border on LEFT when island is to the left */
 }
 
 /* Start cell style to match island cells for snake path */
