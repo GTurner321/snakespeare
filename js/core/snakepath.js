@@ -495,6 +495,13 @@ setupEventListeners() {
     console.log('Skipping snake path update during scroll');
     return;
   }
+  
+  // Get selected cells - THIS LINE WAS MISSING
+  const selectedCells = this.gridRenderer.selectedCells;
+  if (!selectedCells || selectedCells.length === 0) {
+    console.log('No selected cells, nothing to update');
+    return;
+  }
 
   console.log(`Updating snake path for ${selectedCells.length} selected cells`);
   
