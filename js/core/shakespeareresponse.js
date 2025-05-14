@@ -9,10 +9,11 @@ class ShakespeareResponse {
     this.options = {
       containerId: options.containerId || 'game-container',
       imagePath: options.imagePath || 'https://raw.githubusercontent.com/GTurner321/snakespeare/main/assets/shakespeare.png',
-      displayDuration: options.displayDuration || 10000, // 10 seconds
-      fadeDuration: options.fadeDuration || 1000, // 1 second
+      fadeDuration: options.fadeDuration || 1000, // 1 second fade duration (kept for animations)
       ...options
     };
+    
+    // Note: displayDuration option removed since we don't want auto-closing behavior
     
     this.container = document.getElementById(this.options.containerId);
     if (!this.container) {
@@ -342,11 +343,8 @@ class ShakespeareResponse {
     this.modalOverlay.style.display = 'flex';
     this.modalOverlay.classList.remove('fade-out');
     
-    // Set a timeout to hide after the specified duration
-    clearTimeout(this.hideResponseTimeout);
-    this.hideResponseTimeout = setTimeout(() => {
-      this.hideResponse();
-    }, this.options.displayDuration);
+    // Removed auto-hide timeout
+    // The response will stay visible until manually closed
     
     // Log that we're showing the response
     console.log('Showing Shakespeare response:', response);
@@ -364,11 +362,8 @@ class ShakespeareResponse {
     this.infoBoxContainer.style.display = 'flex';
     this.infoBoxContainer.classList.remove('fade-out');
     
-    // Set a timeout to hide after the specified duration
-    clearTimeout(this.hideInfoTimeout);
-    this.hideInfoTimeout = setTimeout(() => {
-      this.hideInfoBox();
-    }, this.options.displayDuration);
+    // Removed auto-hide timeout
+    // The info box will stay visible until manually closed
     
     // Log that we're showing the info
     console.log('Showing info box:', info);
@@ -385,9 +380,6 @@ class ShakespeareResponse {
     setTimeout(() => {
       this.modalOverlay.style.display = 'none';
     }, this.options.fadeDuration);
-    
-    // Clear any existing timeout
-    clearTimeout(this.hideResponseTimeout);
   }
   
   /**
@@ -401,9 +393,6 @@ class ShakespeareResponse {
     setTimeout(() => {
       this.infoBoxContainer.style.display = 'none';
     }, this.options.fadeDuration);
-    
-    // Clear any existing timeout
-    clearTimeout(this.hideInfoTimeout);
   }
   
   /**
