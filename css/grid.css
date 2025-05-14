@@ -11,6 +11,7 @@
    5. Menu System (Replacing Refresh Buttons)
    6. Menu Animations
    7. Animation and Touch Handling
+   8. Erosion and Animation Effects
    ========================================================================== */
 
 /* ==========================================================================
@@ -964,4 +965,82 @@ body {
 /* Hide the refresh button container (replaced by menu) */
 .refresh-button-container {
     display: none;
+}
+
+/* ==========================================================================
+   8. Erosion Animation Effects 
+   ========================================================================== */
+
+/* Styling for cells that are about to be eroded */
+.grid-cell.eroding-cell {
+    animation: eroding-pulse 1s infinite alternate;
+    transition: background-color 0.3s ease, opacity 0.3s ease, transform 0.3s ease;
+    z-index: 8; /* Ensure eroding cells appear above regular cells */
+}
+
+/* Flashing animation for cells about to be eroded */
+@keyframes eroding-pulse {
+    0% {
+        opacity: 1;
+        background-color: var(--defaultblue-light);
+        border-color: var(--defaultblue);
+    }
+    100% {
+        opacity: 0.5;
+        background-color: var(--maingreen-light);
+        border-color: var(--maingreen-dark);
+    }
+}
+
+/* Class toggled for flash animation */
+.grid-cell.eroding-cell.flash-visible {
+    opacity: 1;
+    background-color: var(--sandyellow);
+    border-color: var(--sandyellow);
+}
+
+/* Path cells flashing as final warning is higher priority */
+.grid-cell.eroding-cell.path-cell.flash-visible {
+    z-index: 10;
+    background-color: #ff6b6b !important;
+    color: white !important;
+    font-weight: bold !important;
+    box-shadow: 0 0 8px rgba(255, 0, 0, 0.6) !important;
+    transform: scale(1.05);
+}
+
+/* Game over message styling */
+#message-container {
+    font-family: 'Trebuchet MS', Arial, sans-serif;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+    max-width: 90%;
+    line-height: 1.4;
+    z-index: 1000;
+}
+
+#retry-button {
+    margin-top: 15px;
+    padding: 8px 15px;
+    background: #fff;
+    color: #d32f2f;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+#retry-button:hover {
+    background-color: #f8f8f8;
+    transform: scale(1.05);
+}
+
+#retry-button:active {
+    transform: scale(0.98);
+}
+
+/* Ensure eroding cells flashing takes priority over other states */
+.grid-cell.eroding-cell.path-cell {
+    z-index: 9;
 }
