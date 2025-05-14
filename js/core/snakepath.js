@@ -15,6 +15,7 @@ window.SnakePath = class SnakePath {
   constructor(gridRenderer) {
     this.gridRenderer = gridRenderer;
     this.initialized = false;
+    this._scrollInProgress = false; // Add this line to initialize the flag
     
     // Add critical CSS to ensure things work
     this.injectCriticalStyles();
