@@ -86,12 +86,12 @@ window.SnakePath = class SnakePath {
     };
     
     // Head piece mappings - direction indicates where the head is coming FROM
-this.headMappings = {
-  0: { piece: 'head_tb', description: 'Head facing top (coming from top)' },
-  1: { piece: 'head_rl', description: 'Head facing right (coming from right)' }, // SWAPPED: Now using rl
-  2: { piece: 'head_bt', description: 'Head facing bottom (coming from bottom)' },
-  3: { piece: 'head_lr', description: 'Head facing left (coming from left)' }    // SWAPPED: Now using lr
-};
+    this.headMappings = {
+      0: { piece: 'head_tb', description: 'Head facing top (coming from top)' },
+      1: { piece: 'head_rl', description: 'Head facing right (coming from right)' }, // SWAPPED: Now using rl
+      2: { piece: 'head_bt', description: 'Head facing bottom (coming from bottom)' },
+      3: { piece: 'head_lr', description: 'Head facing left (coming from left)' }    // SWAPPED: Now using lr
+    };
     
     // Tail piece mappings - direction indicates where the tail is going TO
     this.tailMappings = {
@@ -160,108 +160,105 @@ this.headMappings = {
   }
   
   /**
-   * Set up event listeners for path changes
+   * Set up event listeners for path changes and scrolling
    */
-/**
- * Set up event listeners for path changes and scrolling
- */
-setupEventListeners() {
-  // Listen for cell selection changes directly
-  if (this.gridRenderer) {
-    // Hook into handleCellSelection
-    if (this.gridRenderer.handleCellSelection) {
-      const originalHandleCellSelection = this.gridRenderer.handleCellSelection;
-      this.gridRenderer.handleCellSelection = (x, y, forceSelect) => {
-        const result = originalHandleCellSelection.call(this.gridRenderer, x, y, forceSelect);
-        console.log(`Cell selection handled (${x},${y}), result: ${result}`);
-        
-        // Only update if not scrolling
-        if (!this._scrollInProgress) {
-          // Update snake path after a short delay
-          setTimeout(() => this.updateSnakePath(), 50);
-        }
-        
-        return result;
-      };
-      console.log('Hooked into GridRenderer.handleCellSelection');
-    }
-    
-    // Also try to hook into handleSelectionChange if it exists
-    if (this.gridRenderer.handleSelectionChange) {
-      const originalHandleSelectionChange = this.gridRenderer.handleSelectionChange;
-      this.gridRenderer.handleSelectionChange = (...args) => {
-        const result = originalHandleSelectionChange.apply(this.gridRenderer, args);
-        console.log('handleSelectionChange called, updating snake path');
-        
-        // Only update if not scrolling
-        if (!this._scrollInProgress) {
-          setTimeout(() => this.updateSnakePath(), 50);
-        }
-        
-        return result;
-      };
-      console.log('Hooked into GridRenderer.handleSelectionChange');
-    }
-  }
-  
-  // Listen for cell clicks
-  document.addEventListener('click', (e) => {
-    if (e.target.classList.contains('grid-cell') && !this._scrollInProgress) {
-      console.log('Cell clicked, updating snake path');
-      setTimeout(() => this.updateSnakePath(), 100);
-    }
-  });
-  
-  // Listen for deselection events
-  document.addEventListener('selectionsCleared', () => {
-    console.log('Selections cleared, updating snake path');
-    if (!this._scrollInProgress) {
-      setTimeout(() => this.updateSnakePath(), 100);
-    }
-  });
-  
-  // ADD THIS NEW CODE: Listen for grid scroll events
-  document.addEventListener('gridScrolled', (e) => {
-    // Mark that scrolling is in progress
-    this._scrollInProgress = true;
-    
-    // Don't update during scroll animation - wait for completion
-    console.log('Grid scrolling in progress, delaying snake path update');
-  });
-
-  document.addEventListener('gridScrollComplete', (e) => {
-    // Scrolling is complete, update the snake path
-    this._scrollInProgress = false;
-    console.log('Grid scroll completed, updating snake path');
-    
-    // Use requestAnimationFrame for smooth performance
-    requestAnimationFrame(() => this.refreshSnakePath(false));
-  });
-
-  // Listen for grid rebuilds
-  document.addEventListener('gridRebuilt', (e) => {
-    // Only update if not in the middle of scrolling
-    if (!this._scrollInProgress) {
-      console.log('Grid rebuilt (not during scroll), updating snake path');
+  setupEventListeners() {
+    // Listen for cell selection changes directly
+    if (this.gridRenderer) {
+      // Hook into handleCellSelection
+      if (this.gridRenderer.handleCellSelection) {
+        const originalHandleCellSelection = this.gridRenderer.handleCellSelection;
+        this.gridRenderer.handleCellSelection = (x, y, forceSelect) => {
+          const result = originalHandleCellSelection.call(this.gridRenderer, x, y, forceSelect);
+          console.log(`Cell selection handled (${x},${y}), result: ${result}`);
+          
+          // Only update if not scrolling
+          if (!this._scrollInProgress) {
+            // Update snake path after a short delay
+            setTimeout(() => this.updateSnakePath(), 50);
+          }
+          
+          return result;
+        };
+        console.log('Hooked into GridRenderer.handleCellSelection');
+      }
       
-      // Use requestAnimationFrame for smoother performance
+      // Also try to hook into handleSelectionChange if it exists
+      if (this.gridRenderer.handleSelectionChange) {
+        const originalHandleSelectionChange = this.gridRenderer.handleSelectionChange;
+        this.gridRenderer.handleSelectionChange = (...args) => {
+          const result = originalHandleSelectionChange.apply(this.gridRenderer, args);
+          console.log('handleSelectionChange called, updating snake path');
+          
+          // Only update if not scrolling
+          if (!this._scrollInProgress) {
+            setTimeout(() => this.updateSnakePath(), 50);
+          }
+          
+          return result;
+        };
+        console.log('Hooked into GridRenderer.handleSelectionChange');
+      }
+    }
+    
+    // Listen for cell clicks
+    document.addEventListener('click', (e) => {
+      if (e.target.classList.contains('grid-cell') && !this._scrollInProgress) {
+        console.log('Cell clicked, updating snake path');
+        setTimeout(() => this.updateSnakePath(), 100);
+      }
+    });
+    
+    // Listen for deselection events
+    document.addEventListener('selectionsCleared', () => {
+      console.log('Selections cleared, updating snake path');
+      if (!this._scrollInProgress) {
+        setTimeout(() => this.updateSnakePath(), 100);
+      }
+    });
+    
+    // ADD THIS NEW CODE: Listen for grid scroll events
+    document.addEventListener('gridScrolled', (e) => {
+      // Mark that scrolling is in progress
+      this._scrollInProgress = true;
+      
+      // Don't update during scroll animation - wait for completion
+      console.log('Grid scrolling in progress, delaying snake path update');
+    });
+
+    document.addEventListener('gridScrollComplete', (e) => {
+      // Scrolling is complete, update the snake path
+      this._scrollInProgress = false;
+      console.log('Grid scroll completed, updating snake path');
+      
+      // Use requestAnimationFrame for smooth performance
       requestAnimationFrame(() => this.refreshSnakePath(false));
-    }
-  });
-  
-  // Set a regular update interval (backup in case other methods fail)
-  // Only update if not scrolling and has selected cells
-  setInterval(() => {
-    if (!this._scrollInProgress && 
-        this.gridRenderer && 
-        this.gridRenderer.selectedCells && 
-        this.gridRenderer.selectedCells.length > 0) {
-      this.updateSnakePath();
-    }
-  }, 2000);
-  
-  console.log('SnakePath event listeners set up with scroll optimization');
-}
+    });
+
+    // Listen for grid rebuilds
+    document.addEventListener('gridRebuilt', (e) => {
+      // Only update if not in the middle of scrolling
+      if (!this._scrollInProgress) {
+        console.log('Grid rebuilt (not during scroll), updating snake path');
+        
+        // Use requestAnimationFrame for smoother performance
+        requestAnimationFrame(() => this.refreshSnakePath(false));
+      }
+    });
+    
+    // Set a regular update interval (backup in case other methods fail)
+    // Only update if not scrolling and has selected cells
+    setInterval(() => {
+      if (!this._scrollInProgress && 
+          this.gridRenderer && 
+          this.gridRenderer.selectedCells && 
+          this.gridRenderer.selectedCells.length > 0) {
+        this.updateSnakePath();
+      }
+    }, 2000);
+    
+    console.log('SnakePath event listeners set up with scroll optimization');
+  }
   
   /**
    * Clear all snake images from the grid
@@ -487,159 +484,160 @@ setupEventListeners() {
   /**
    * Update the full snake path visualization
    */
- updateSnakePath() {
-  console.log('\n🐍 UPDATE SNAKE PATH CALLED');
-  
-  // Skip updates if scrolling is in progress - will be handled on completion
-  if (this._scrollInProgress) {
-    console.log('Skipping snake path update during scroll');
-    return;
-  }
-  
-  // Get selected cells - THIS LINE WAS MISSING
-  const selectedCells = this.gridRenderer.selectedCells;
-  if (!selectedCells || selectedCells.length === 0) {
-    console.log('No selected cells, nothing to update');
-    return;
-  }
-
-  console.log(`Updating snake path for ${selectedCells.length} selected cells`);
-  
-  // Track existing snake pieces to avoid unnecessary DOM operations
-  const existingPieces = new Map();
-  document.querySelectorAll('.snake-piece').forEach(piece => {
-    const cell = piece.closest('.grid-cell');
-    if (cell) {
-      const x = parseInt(cell.dataset.gridX, 10);
-      const y = parseInt(cell.dataset.gridY, 10);
-      if (!isNaN(x) && !isNaN(y)) {
-        existingPieces.set(`${x},${y}`, {
-          element: piece,
-          type: piece.getAttribute('data-piece-type')
-        });
-      }
-    }
-  });
-  
-  // Track which cells need updates
-  const cellsToUpdate = new Set();
-  
-  // For each selected cell, determine if it needs a new piece
-  selectedCells.forEach((cell, index) => {
-    // Find the corresponding DOM element
-    const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
+  updateSnakePath() {
+    console.log('\n🐍 UPDATE SNAKE PATH CALLED');
     
-    if (!cellElement) {
-      console.warn(`Cell element not found for selected cell at (${cell.x}, ${cell.y})`);
+    // Skip updates if scrolling is in progress - will be handled on completion
+    if (this._scrollInProgress) {
+      console.log('Skipping snake path update during scroll');
       return;
     }
     
-    // Determine if this is the last cell
-    const isLastCell = index === selectedCells.length - 1;
-    
-    // Get the configuration for this piece
-    const pieceConfig = this.determinePiece(index, selectedCells, isLastCell);
-    
-    // Check if we already have the correct piece for this cell
-    const existingPiece = existingPieces.get(`${cell.x},${cell.y}`);
-    if (existingPiece && existingPiece.type === pieceConfig.piece) {
-      // Piece already exists and is correct - nothing to do
-      console.log(`Piece ${pieceConfig.piece} already exists at (${cell.x}, ${cell.y}) - skipping update`);
-      // Remove from the map to mark as processed
-      existingPieces.delete(`${cell.x},${cell.y}`);
-    } else {
-      // Need to update this cell
-      cellsToUpdate.add(`${cell.x},${cell.y}`);
-      
-      // CRITICAL: Force position relative
-      cellElement.style.position = 'relative';
-      
-      // Remove any existing piece from this cell
-      const existingElements = cellElement.querySelectorAll('.snake-piece');
-      existingElements.forEach(el => el.remove());
-      
-      // Create and add the new image to the cell
-      const pieceImage = this.createPieceImage(pieceConfig);
-      cellElement.appendChild(pieceImage);
-      
-      console.log(`Added ${pieceConfig.piece} piece to cell (${cell.x}, ${cell.y})`);
+    // Get selected cells - THIS LINE WAS MISSING
+    const selectedCells = this.gridRenderer.selectedCells;
+    if (!selectedCells || selectedCells.length === 0) {
+      console.log('No selected cells, nothing to update');
+      return;
     }
-  });
-  
-  // Any pieces left in the existingPieces map are no longer needed
-  // However, we'll only remove pieces that aren't in the current view
-  // This prevents pieces from disappearing during scrolling
-  existingPieces.forEach((piece, coords) => {
-    const [x, y] = coords.split(',').map(Number);
+
+    console.log(`Updating snake path for ${selectedCells.length} selected cells`);
     
-    // Check if this cell is likely to be off-screen
-    // We use the viewOffset from gridRenderer to determine this
-    const isOffScreen = 
-      x < this.gridRenderer.viewOffset.x || 
-      x >= this.gridRenderer.viewOffset.x + (this.gridRenderer.options.gridWidth || 15) ||
-      y < this.gridRenderer.viewOffset.y || 
-      y >= this.gridRenderer.viewOffset.y + (this.gridRenderer.options.gridHeight || 11);
-    
-    if (isOffScreen) {
-      // Remove piece if it's off-screen
-      if (piece.element) {
-        piece.element.remove();
+    // Track existing snake pieces to avoid unnecessary DOM operations
+    const existingPieces = new Map();
+    document.querySelectorAll('.snake-piece').forEach(piece => {
+      const cell = piece.closest('.grid-cell');
+      if (cell) {
+        const x = parseInt(cell.dataset.gridX, 10);
+        const y = parseInt(cell.dataset.gridY, 10);
+        if (!isNaN(x) && !isNaN(y)) {
+          existingPieces.set(`${x},${y}`, {
+            element: piece,
+            type: piece.getAttribute('data-piece-type')
+          });
+        }
       }
-    }
-  });
-  
-  // Handle the special case for start cell (first cell)
-  if (selectedCells.length > 0) {
-    const startCell = selectedCells[0];
-    const startCellElement = document.querySelector(`.grid-cell[data-grid-x="${startCell.x}"][data-grid-y="${startCell.y}"]`);
+    });
     
-    if (startCellElement && !cellsToUpdate.has(`${startCell.x},${startCell.y}`)) {
-      if (!startCellElement.classList.contains('selected-cell')) {
-        console.log('Start cell does not have selected-cell class, adding snake piece manually');
+    // Track which cells need updates
+    const cellsToUpdate = new Set();
+    
+    // For each selected cell, determine if it needs a new piece
+    selectedCells.forEach((cell, index) => {
+      // Find the corresponding DOM element
+      const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
+      
+      if (!cellElement) {
+        console.warn(`Cell element not found for selected cell at (${cell.x}, ${cell.y})`);
+        return;
+      }
+      
+      // Determine if this is the last cell
+      const isLastCell = index === selectedCells.length - 1;
+      
+      // Get the configuration for this piece
+      const pieceConfig = this.determinePiece(index, selectedCells, isLastCell);
+      
+      // Check if we already have the correct piece for this cell
+      const existingPiece = existingPieces.get(`${cell.x},${cell.y}`);
+      if (existingPiece && existingPiece.type === pieceConfig.piece) {
+        // Piece already exists and is correct - nothing to do
+        console.log(`Piece ${pieceConfig.piece} already exists at (${cell.x}, ${cell.y}) - skipping update`);
+        // Remove from the map to mark as processed
+        existingPieces.delete(`${cell.x},${cell.y}`);
+      } else {
+        // Need to update this cell
+        cellsToUpdate.add(`${cell.x},${cell.y}`);
         
-        // Force position relative
-        startCellElement.style.position = 'relative';
+        // CRITICAL: Force position relative
+        cellElement.style.position = 'relative';
         
-        // Check if it already has the correct piece
-        const existingStartPiece = existingPieces.get(`${startCell.x},${startCell.y}`);
-        const pieceConfig = this.determinePiece(0, selectedCells, false);
+        // Remove any existing piece from this cell
+        const existingElements = cellElement.querySelectorAll('.snake-piece');
+        existingElements.forEach(el => el.remove());
         
-        if (!existingStartPiece || existingStartPiece.type !== pieceConfig.piece) {
-          // Clear any existing pieces
-          const existingPieces = startCellElement.querySelectorAll('.snake-piece');
-          existingPieces.forEach(piece => piece.remove());
+        // Create and add the new image to the cell
+        const pieceImage = this.createPieceImage(pieceConfig);
+        cellElement.appendChild(pieceImage);
+        
+        console.log(`Added ${pieceConfig.piece} piece to cell (${cell.x}, ${cell.y})`);
+      }
+    });
+    
+    // Any pieces left in the existingPieces map are no longer needed
+    // However, we'll only remove pieces that aren't in the current view
+    // This prevents pieces from disappearing during scrolling
+    existingPieces.forEach((piece, coords) => {
+      const [x, y] = coords.split(',').map(Number);
+      
+      // Check if this cell is likely to be off-screen
+      // We use the viewOffset from gridRenderer to determine this
+      const isOffScreen = 
+        x < this.gridRenderer.viewOffset.x || 
+        x >= this.gridRenderer.viewOffset.x + (this.gridRenderer.options.gridWidth || 15) ||
+        y < this.gridRenderer.viewOffset.y || 
+        y >= this.gridRenderer.viewOffset.y + (this.gridRenderer.options.gridHeight || 11);
+      
+      if (isOffScreen) {
+        // Remove piece if it's off-screen
+        if (piece.element) {
+          piece.element.remove();
+        }
+      }
+    });
+    
+    // Handle the special case for start cell (first cell)
+    if (selectedCells.length > 0) {
+      const startCell = selectedCells[0];
+      const startCellElement = document.querySelector(`.grid-cell[data-grid-x="${startCell.x}"][data-grid-y="${startCell.y}"]`);
+      
+      if (startCellElement && !cellsToUpdate.has(`${startCell.x},${startCell.y}`)) {
+        if (!startCellElement.classList.contains('selected-cell')) {
+          console.log('Start cell does not have selected-cell class, adding snake piece manually');
           
-          // Add the tail piece
-          const pieceImage = this.createPieceImage(pieceConfig);
-          startCellElement.appendChild(pieceImage);
+          // Force position relative
+          startCellElement.style.position = 'relative';
           
-          console.log(`Added ${pieceConfig.piece} piece to start cell (${startCell.x}, ${startCell.y})`);
+          // Check if it already has the correct piece
+          const existingStartPiece = existingPieces.get(`${startCell.x},${startCell.y}`);
+          const pieceConfig = this.determinePiece(0, selectedCells, false);
+          
+          if (!existingStartPiece || existingStartPiece.type !== pieceConfig.piece) {
+            // Clear any existing pieces
+            const existingPieces = startCellElement.querySelectorAll('.snake-piece');
+            existingPieces.forEach(piece => piece.remove());
+            
+            // Add the tail piece
+            const pieceImage = this.createPieceImage(pieceConfig);
+            startCellElement.appendChild(pieceImage);
+            
+            console.log(`Added ${pieceConfig.piece} piece to start cell (${startCell.x}, ${startCell.y})`);
+          }
         }
       }
     }
+    
+    console.log(`Snake path update complete with ${selectedCells.length} pieces`);
   }
   
-  console.log(`Snake path update complete with ${selectedCells.length} pieces`);
-}
- 
   /**
    * Public method to force a snake path update
    * Can be called from other components
    */
-refreshSnakePath(forceFullRefresh = false) {
-  console.log(`Manual refresh of snake path triggered (forceFullRefresh: ${forceFullRefresh})`);
-  
-  if (forceFullRefresh) {
-    // Clear existing snake images for a full refresh
-    this.clearSnakeImages();
+  refreshSnakePath(forceFullRefresh = false) {
+    console.log(`Manual refresh of snake path triggered (forceFullRefresh: ${forceFullRefresh})`);
+    
+    if (forceFullRefresh) {
+      // Clear existing snake images for a full refresh
+      this.clearSnakeImages();
+    }
+    
+    this.updateSnakePath();
   }
-  
-  this.updateSnakePath();
-}
-  
+};
+
 // Auto-initialize when the page loads
 window.addEventListener('load', () => {
-  // Check if we already have a snake path instance
+// Check if we already have a snake path instance
   if (!window.snakePath && window.gameController && window.gameController.gridRenderer) {
     console.log('Auto-initializing snake path...');
     window.snakePath = new window.SnakePath(window.gameController.gridRenderer);
