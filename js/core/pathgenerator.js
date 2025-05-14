@@ -1,8 +1,8 @@
 /**
  * Path Generator for Grid Game
  * Creates a snake-like path for letters in a phrase
+ * Includes enhanced two-layer island generation with erosion support
  * Based on coordinate grid with start at (0,0)
- * FIXED: Now properly verifies path completion and returns null if incomplete
  */
 
 class PathGenerator {
@@ -45,12 +45,11 @@ class PathGenerator {
       'Z'
     ];
     
-    // Store pre-generated random cell selections for each level
-    this.preGeneratedCells = {
-      0: [], // Level 0: 100% selection
-      1: [], // Level 1: 40% initial + 70% secondary
-      2: []  // Level 2: 30% initial + 60% secondary
-    };
+    // Store pre-generated island cells
+    this.islandCells = [];
+    
+    // NEW: Store cells that are adjacent to shore for erosion
+    this.erodableCells = [];
     
     // NEW: Store cells with 3 adjacent edges to path
     this.highPriorityCornerCells = [];
@@ -58,7 +57,6 @@ class PathGenerator {
   
   /**
    * Generate a path for the given letter sequence
-   * FIXED: Now returns null if the path cannot be fully generated
    * @param {Array|String} letterList - Array of letters or string to be positioned on the grid
    * @return {Array|null} Array of {x, y, letter} objects representing the path, or null if incomplete
    */
@@ -68,13 +66,8 @@ class PathGenerator {
     this.path = [];
     
     // Reset pre-generated cells
-    this.preGeneratedCells = {
-      0: [],
-      1: [],
-      2: []
-    };
-    
-    // Reset high priority corner cells
+    this.islandCells = [];
+    this.erodableCells = [];
     this.highPriorityCornerCells = [];
     
     // Parse letter list to ensure it's in the right format (skipping spaces)
@@ -95,7 +88,7 @@ class PathGenerator {
       // If no valid position found, return null to indicate incomplete path
       if (!nextPos) {
         console.error('Could not find valid next position for letter:', letters[i]);
-        return null; // FIXED: Return null instead of breaking out to signal incomplete path
+        return null; // Return null to signal incomplete path
       }
       
       // Update current position
@@ -119,16 +112,12 @@ class PathGenerator {
     // Define a regex pattern for characters to include (letters and numbers only)
     const includePattern = /[a-zA-Z0-9]/;
     
-    // Log the input for debugging
-    console.log('Parsing letter list:', letterList);
-    
     // Always treat it as a single string
     if (typeof letterList === 'string') {
       // Filter out non-alphanumeric characters when splitting the string
       const filtered = letterList.split('')
         .filter(char => includePattern.test(char));
       
-      console.log('Filtered letter list:', filtered);
       return filtered;
     }
     // If it's already an array
@@ -261,11 +250,12 @@ class PathGenerator {
    * @return {Array} Shuffled array
    */
   shuffleArray(array) {
-    for (let i = array.length - 1; i > 0; i--) {
+    const newArray = [...array]; // Create a copy to avoid modifying original
+    for (let i = newArray.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [array[i], array[j]] = [array[j], array[i]];
+      [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
     }
-    return array;
+    return newArray;
   }
 
   /**
@@ -291,7 +281,7 @@ class PathGenerator {
   }
 
   /**
-   * NEW: Check if a cell has 3 adjacent edges to the path
+   * Check if a cell has 3 adjacent edges to the path
    * @param {number} x - X coordinate to check
    * @param {number} y - Y coordinate to check
    * @param {Map} pathCellMap - Map of path cells for lookup
@@ -312,21 +302,28 @@ class PathGenerator {
   }
 
   /**
-   * Find cells adjacent to the path, excluding congested areas and marking high-priority corner cells
-   * @return {Object} Object with adjacentCells array and highPriorityCornerCells array
+   * NEW: Find cells to include in two-layer system
+   * Layer 1: Cells adjacent to the path
+   * Layer 2: Cells adjacent to layer 1
+   * @return {Object} Object with islandCells and erodableCells
    */
-  findAdjacentCells() {
-    const adjacentCells = new Set();
-    const excludedCells = new Set();
-    this.highPriorityCornerCells = []; // Reset the corner cells
+  generateTwoLayerIsland() {
+    // Reset our collections
+    this.islandCells = [];
+    this.erodableCells = [];
+    this.highPriorityCornerCells = [];
     
-    // First, build a map of all path cells for quick lookup
+    // Maps for quicker lookups
     const pathCellMap = new Map();
+    const layer1CellMap = new Map();
+    
+    // Step 1: Map all path cells for quick reference
     for (const pathCell of this.path) {
       pathCellMap.set(`${pathCell.x},${pathCell.y}`, pathCell);
     }
     
-    // Iterate through each cell in the path
+    // Step 2: Generate Layer 1 (cells directly adjacent to path)
+    // First, find all valid adjacent cells (excluding congested areas)
     for (const pathCell of this.path) {
       // For each path cell, check all four adjacent directions
       for (const [dx, dy] of this.directions) {
@@ -335,7 +332,7 @@ class PathGenerator {
         const key = `${newX},${newY}`;
         
         // Skip if the cell is already in the path
-        if (this.visited.has(key)) {
+        if (pathCellMap.has(key)) {
           continue;
         }
         
@@ -344,315 +341,225 @@ class PathGenerator {
           continue;
         }
         
-        // Check if this cell has 3 adjacent edges to the path (corner/turn case)
-        if (this.hasThreeAdjacentEdges(newX, newY, pathCellMap)) {
-          // This is a high-priority corner cell - add to special list
-          this.highPriorityCornerCells.push({ x: newX, y: newY });
-          // Also add to adjacent cells
-          adjacentCells.add(key);
-          continue;
-        }
-        
-        // Check if this adjacent cell would create congestion
+        // Skip if this cell would create congestion
         if (this.isCellCongested(newX, newY, pathCellMap)) {
-          // This cell is between two path cells - exclude it
-          excludedCells.add(key);
           continue;
         }
         
-        // Otherwise, it's a valid adjacent cell
-        adjacentCells.add(key);
+        // Special case: Check if this cell has 3 adjacent edges to path (high priority)
+        if (this.hasThreeAdjacentEdges(newX, newY, pathCellMap)) {
+          this.highPriorityCornerCells.push({ x: newX, y: newY });
+        }
+        
+        // This is a valid Layer 1 cell
+        const letter = this.getWeightedRandomLetter();
+        const cell = { x: newX, y: newY, letter, layer: 1 };
+        this.islandCells.push(cell);
+        layer1CellMap.set(key, cell);
       }
     }
     
-    // Remove any excluded cells from the adjacentCells set
-    for (const key of excludedCells) {
-      adjacentCells.delete(key);
+    console.log(`Generated ${this.islandCells.length} Layer 1 cells adjacent to path`);
+    
+    // Step 3: Generate Layer 2 (cells adjacent to Layer 1 but not path)
+    const layer2Cells = [];
+    
+    for (const layer1Cell of this.islandCells) {
+      // For each Layer 1 cell, check all four adjacent directions
+      for (const [dx, dy] of this.directions) {
+        const newX = layer1Cell.x + dx;
+        const newY = layer1Cell.y + dy;
+        const key = `${newX},${newY}`;
+        
+        // Skip if already in path or Layer 1
+        if (pathCellMap.has(key) || layer1CellMap.has(key)) {
+          continue;
+        }
+        
+        // Skip if already added to Layer 2
+        if (layer2Cells.some(cell => cell.x === newX && cell.y === newY)) {
+          continue;
+        }
+        
+        // Skip if outside bounds
+        if (Math.abs(newX) > this.maxDistance || Math.abs(newY) > this.maxDistance) {
+          continue;
+        }
+        
+        // This is a valid Layer 2 cell
+        const letter = this.getWeightedRandomLetter();
+        layer2Cells.push({ x: newX, y: newY, letter, layer: 2 });
+      }
     }
     
-    // Convert adjacentCells Set to array of {x, y} objects
-    const adjacentCellsList = Array.from(adjacentCells).map(key => {
-      const [x, y] = key.split(',').map(Number);
-      return { x, y };
+    console.log(`Generated ${layer2Cells.length} Layer 2 cells`);
+    
+    // Step 4: Combine layers and mark all erodable cells
+    this.islandCells = [...this.islandCells, ...layer2Cells];
+    
+    // Step 5: Remove ~20% of the island cells in adjacent pairs
+    this.removeIslandCellPairs();
+    
+    // Step 6: Identify which cells are erodable (adjacent to sea)
+    this.identifyErodableCells();
+    
+    console.log(`Final island has ${this.islandCells.length} cells (${this.erodableCells.length} erodable)`);
+    
+    return {
+      islandCells: this.islandCells,
+      erodableCells: this.erodableCells
+    };
+  }
+  
+  /**
+   * NEW: Remove ~20% of island cells in adjacent pairs
+   * This makes the island shape more natural
+   */
+  removeIslandCellPairs() {
+    if (this.islandCells.length <= 4) {
+      console.log('Not enough island cells to remove pairs');
+      return;
+    }
+    
+    // Calculate how many cells to remove (20% rounded up to nearest 2)
+    const removeCount = Math.ceil(this.islandCells.length * 0.2);
+    const adjustedRemoveCount = Math.ceil(removeCount / 2) * 2; // Ensure it's an even number
+    const pairsToRemove = adjustedRemoveCount / 2;
+    
+    console.log(`Removing ${pairsToRemove} pairs (${adjustedRemoveCount} cells) from island`);
+    
+    // Find all possible adjacent pairs (preference for layer 2)
+    const possiblePairs = [];
+    
+    // Create a map for quick lookups
+    const cellMap = new Map();
+    this.islandCells.forEach(cell => {
+      cellMap.set(`${cell.x},${cell.y}`, cell);
     });
     
-    console.log(`Found ${this.highPriorityCornerCells.length} high-priority corner cells (3 adjacent edges)`);
+    // Find all pairs
+    for (const cell of this.islandCells) {
+      for (const [dx, dy] of this.directions) {
+        const adjX = cell.x + dx;
+        const adjY = cell.y + dy;
+        const key = `${adjX},${adjY}`;
+        
+        // Check if adjacent cell exists in the island
+        if (cellMap.has(key)) {
+          const adjacentCell = cellMap.get(key);
+          
+          // Skip pairs that involve high priority corner cells
+          if (this.highPriorityCornerCells.some(
+              c => (c.x === cell.x && c.y === cell.y) || (c.x === adjX && c.y === adjY))) {
+            continue;
+          }
+          
+          // Prefer pairs where both cells are in layer 2
+          const pairLayer = (cell.layer === 2 && adjacentCell.layer === 2) ? 2 : 1;
+          
+          // Create a pair object with a unique ID to avoid duplicates
+          const pairId = [
+            `${Math.min(cell.x, adjX)},${Math.min(cell.y, adjY)}`,
+            `${Math.max(cell.x, adjX)},${Math.max(cell.y, adjY)}`
+          ].join('-');
+          
+          possiblePairs.push({
+            id: pairId,
+            cells: [{ x: cell.x, y: cell.y }, { x: adjX, y: adjY }],
+            layer: pairLayer
+          });
+        }
+      }
+    }
     
-    return adjacentCellsList;
+    // Remove duplicates by ID
+    const uniquePairs = [];
+    const seenIds = new Set();
+    for (const pair of possiblePairs) {
+      if (!seenIds.has(pair.id)) {
+        uniquePairs.push(pair);
+        seenIds.add(pair.id);
+      }
+    }
+    
+    // Sort pairs: layer 2 first
+    uniquePairs.sort((a, b) => b.layer - a.layer);
+    
+    // Shuffle the first groups to ensure randomness
+    const layer2Pairs = uniquePairs.filter(p => p.layer === 2);
+    const layer1Pairs = uniquePairs.filter(p => p.layer === 1);
+    
+    const shuffledLayer2 = this.shuffleArray(layer2Pairs);
+    const shuffledLayer1 = this.shuffleArray(layer1Pairs);
+    
+    const shuffledPairs = [...shuffledLayer2, ...shuffledLayer1];
+    
+    // Select pairs to remove
+    const pairsToKeep = Math.max(0, shuffledPairs.length - pairsToRemove);
+    const selectedPairs = shuffledPairs.slice(pairsToKeep);
+    
+    // Create a set of cell coordinates to remove
+    const cellsToRemove = new Set();
+    for (const pair of selectedPairs) {
+      for (const cell of pair.cells) {
+        cellsToRemove.add(`${cell.x},${cell.y}`);
+      }
+    }
+    
+    // Filter out the cells to remove
+    this.islandCells = this.islandCells.filter(
+      cell => !cellsToRemove.has(`${cell.x},${cell.y}`)
+    );
+    
+    console.log(`Removed ${cellsToRemove.size} cells in ${selectedPairs.length} pairs`);
   }
-
+  
   /**
-   * Pre-generate random letter cells for all reduction levels
-   * Will be called after path generation is complete
+   * NEW: Identify which cells are erodable (adjacent to sea)
+   * These are cells that can be removed during erosion
    */
-  preGenerateRandomLetterCells() {
-    // First, build a map of all path cells for quick lookup (used throughout)
+  identifyErodableCells() {
+    this.erodableCells = [];
+    
+    // Create maps for quick lookups
     const pathCellMap = new Map();
-    for (const pathCell of this.path) {
-      pathCellMap.set(`${pathCell.x},${pathCell.y}`, pathCell);
-    }
+    this.path.forEach(cell => {
+      pathCellMap.set(`${cell.x},${cell.y}`, cell);
+    });
     
-    // Step 1: Find all cells adjacent to the path (excluding congested areas)
-    const adjacentCellList = this.findAdjacentCells();
-    console.log(`Found ${adjacentCellList.length} valid cells adjacent to the path (excluding congested areas)`);
-    console.log(`Including ${this.highPriorityCornerCells.length} high-priority corner cells`);
+    const islandCellMap = new Map();
+    this.islandCells.forEach(cell => {
+      islandCellMap.set(`${cell.x},${cell.y}`, cell);
+    });
     
-    // Generate cells for Level 0 (100% selection)
-    this.preGeneratedCells[0] = this.generateLevel0Cells(adjacentCellList);
-    
-    // Generate cells for Level 1 (40% initial + 70% secondary)
-    this.preGeneratedCells[1] = this.generateLevel1Cells(adjacentCellList, pathCellMap);
-    
-    // Generate cells for Level 2 (30% initial + 60% secondary) - should be subset of Level 1
-    this.preGeneratedCells[2] = this.generateLevel2Cells(this.preGeneratedCells[1], adjacentCellList, pathCellMap);
-    
-    console.log('Pre-generated random letter cells for all levels:');
-    console.log(`Level 0: ${this.preGeneratedCells[0].length} cells`);
-    console.log(`Level 1: ${this.preGeneratedCells[1].length} cells`);
-    console.log(`Level 2: ${this.preGeneratedCells[2].length} cells`);
-
-    console.log('Details of pre-generated cells:');
-    console.log(`Level 0: ${JSON.stringify(this.preGeneratedCells[0].slice(0, 3))}... (total: ${this.preGeneratedCells[0].length})`);
-    console.log(`Level 1: ${JSON.stringify(this.preGeneratedCells[1].slice(0, 3))}... (total: ${this.preGeneratedCells[1].length})`);
-    console.log(`Level 2: ${JSON.stringify(this.preGeneratedCells[2].slice(0, 3))}... (total: ${this.preGeneratedCells[2].length})`);
-    
-    // Make sure Level 1 is more than Level 2
-    if (this.preGeneratedCells[1].length <= this.preGeneratedCells[2].length) {
-      console.error('Error: Level 1 should have more cells than Level 2!');
-    }
-    
-    // Make sure Level 0 is more than Level 1
-    if (this.preGeneratedCells[0].length <= this.preGeneratedCells[1].length) {
-      console.error('Error: Level 0 should have more cells than Level 1!');
-    }
-    
-    return true;
-  }
-  
-  /**
-   * Generate cells for Level 0 (100% selection)
-   * @param {Array} adjacentCellList - List of all valid adjacent cells
-   * @return {Array} Array of {x, y, letter} objects
-   */
-  generateLevel0Cells(adjacentCellList) {
-    // For level 0, select all adjacent cells
-    return adjacentCellList.map(cell => ({
-      x: cell.x,
-      y: cell.y,
-      letter: this.getWeightedRandomLetter()
-    }));
-  }
-  
-  /**
-   * Generate cells for Level 1 (40% initial + 70% secondary)
-   * @param {Array} adjacentCellList - List of all valid adjacent cells
-   * @param {Map} pathCellMap - Map of path cells for lookup
-   * @return {Array} Array of {x, y, letter} objects
-   */
-  generateLevel1Cells(adjacentCellList, pathCellMap) {
-    // Create a map of high-priority corner cells for fast lookup
-    const cornerCellsMap = new Map();
-    for (const cell of this.highPriorityCornerCells) {
-      cornerCellsMap.set(`${cell.x},${cell.y}`, cell);
-    }
-    
-    // Filter out high-priority corner cells from the adjacent cells list
-    // They'll be added separately to ensure they're always included
-    const regularAdjacentCells = adjacentCellList.filter(cell => 
-      !cornerCellsMap.has(`${cell.x},${cell.y}`)
-    );
-    
-    // Step 1: Randomly select 40% of adjacent cells
-    const selectedCount = Math.max(1, Math.ceil(regularAdjacentCells.length * 0.4));
-    const shuffledAdjacentCells = this.shuffleArray([...regularAdjacentCells]);
-    const primarySelectedCells = shuffledAdjacentCells.slice(0, selectedCount);
-    
-    // Create a set for fast lookups of selected cells
-    const selectedCellsSet = new Set(
-      primarySelectedCells.map(cell => `${cell.x},${cell.y}`)
-    );
-    
-    // Step 2: Find cells adjacent to the 40% selected cells but still adjacent to the path
-    const adjacentToSelected = [];
-    
-    for (const cell of regularAdjacentCells) {
-      const cellKey = `${cell.x},${cell.y}`;
+    // Check each island cell to see if it's adjacent to a "sea" cell
+    for (const cell of this.islandCells) {
+      let isAdjacentToSea = false;
       
-      // Skip if this cell is already in the 40% selected
-      if (selectedCellsSet.has(cellKey)) {
+      // Skip path cells - they can't be eroded
+      if (pathCellMap.has(`${cell.x},${cell.y}`)) {
         continue;
       }
       
-      // Skip if this cell would create congestion
-      if (this.isCellCongested(cell.x, cell.y, pathCellMap)) {
-        continue;
-      }
-      
-      // Check if this cell is adjacent to any of the 40% selected cells
-      let isAdjacentToSelected = false;
-      for (const selectedCell of primarySelectedCells) {
-        const isAdjacent = (
-          (Math.abs(cell.x - selectedCell.x) === 1 && cell.y === selectedCell.y) ||
-          (Math.abs(cell.y - selectedCell.y) === 1 && cell.x === selectedCell.x)
-        );
+      // Check all adjacent cells
+      for (const [dx, dy] of this.directions) {
+        const adjX = cell.x + dx;
+        const adjY = cell.y + dy;
+        const key = `${adjX},${adjY}`;
         
-        if (isAdjacent) {
-          isAdjacentToSelected = true;
+        // If this adjacent spot is not in the path and not in the island, it's sea
+        if (!pathCellMap.has(key) && !islandCellMap.has(key)) {
+          isAdjacentToSea = true;
           break;
         }
       }
       
-      // If it's adjacent to one of the 40% selected cells, add it to our list
-      if (isAdjacentToSelected) {
-        adjacentToSelected.push(cell);
+      if (isAdjacentToSea) {
+        this.erodableCells.push({ ...cell, isErodable: true });
       }
     }
     
-    // Step 3: Randomly select 70% of cells adjacent to the 40% selected
-    const secondarySelectedCount = Math.ceil(adjacentToSelected.length * 0.7);
-    const shuffledSecondary = this.shuffleArray([...adjacentToSelected]);
-    const secondarySelectedCells = shuffledSecondary.slice(0, secondarySelectedCount);
-    
-    // Step 4: Combine both lists and assign random letters
-    const allSelectedCells = [
-      ...primarySelectedCells,
-      ...secondarySelectedCells,
-      ...this.highPriorityCornerCells // Add ALL high-priority corner cells
-    ];
-    
-    return allSelectedCells.map(cell => ({
-      x: cell.x,
-      y: cell.y,
-      letter: this.getWeightedRandomLetter()
-    }));
-  }
-  
-  /**
-   * Generate cells for Level 2 (30% initial + 60% secondary)
-   * @param {Array} level1Cells - The cells selected for Level 1
-   * @param {Array} adjacentCellList - List of all valid adjacent cells
-   * @param {Map} pathCellMap - Map of path cells for lookup
-   * @return {Array} Array of {x, y, letter} objects
-   */
-  generateLevel2Cells(level1Cells, adjacentCellList, pathCellMap) {
-    // Create a map of high-priority corner cells for fast lookup
-    const cornerCellsMap = new Map();
-    for (const cell of this.highPriorityCornerCells) {
-      cornerCellsMap.set(`${cell.x},${cell.y}`, cell);
-    }
-    
-    // Create a map of Level 1 cells for fast lookup
-    const level1CellMap = new Map();
-    for (const cell of level1Cells) {
-      level1CellMap.set(`${cell.x},${cell.y}`, cell);
-    }
-    
-    // Filter out high-priority corner cells from the adjacent cells list
-    const regularAdjacentCells = adjacentCellList.filter(cell => 
-      !cornerCellsMap.has(`${cell.x},${cell.y}`)
-    );
-    
-    // Step 1: Randomly select 30% of adjacent cells
-    const selectedCount = Math.max(1, Math.ceil(regularAdjacentCells.length * 0.3));
-    const shuffledAdjacentCells = this.shuffleArray([...regularAdjacentCells]);
-    const primarySelectedCells = shuffledAdjacentCells.slice(0, selectedCount);
-    
-    // Step 2: Find cells adjacent to the 30% selected cells but still adjacent to the path
-    const adjacentToSelected = [];
-    const selectedCellsSet = new Set(
-      primarySelectedCells.map(cell => `${cell.x},${cell.y}`)
-    );
-    
-    for (const cell of regularAdjacentCells) {
-      const cellKey = `${cell.x},${cell.y}`;
-      
-      // Skip if this cell is already in the 30% selected
-      if (selectedCellsSet.has(cellKey)) {
-        continue;
-      }
-      
-      // Skip if this cell would create congestion
-      if (this.isCellCongested(cell.x, cell.y, pathCellMap)) {
-        continue;
-      }
-      
-      // Check if this cell is adjacent to any of the 30% selected cells
-      let isAdjacentToSelected = false;
-      for (const selectedCell of primarySelectedCells) {
-        const isAdjacent = (
-          (Math.abs(cell.x - selectedCell.x) === 1 && cell.y === selectedCell.y) ||
-          (Math.abs(cell.y - selectedCell.y) === 1 && cell.x === selectedCell.x)
-        );
-        
-        if (isAdjacent) {
-          isAdjacentToSelected = true;
-          break;
-        }
-      }
-      
-      // If it's adjacent to one of the 30% selected cells, add it to our list
-      if (isAdjacentToSelected) {
-        adjacentToSelected.push(cell);
-      }
-    }
-    
-    // Step 3: Randomly select 60% of cells adjacent to the 30% selected
-    const secondarySelectedCount = Math.ceil(adjacentToSelected.length * 0.6);
-    const shuffledSecondary = this.shuffleArray([...adjacentToSelected]);
-    const secondarySelectedCells = shuffledSecondary.slice(0, secondarySelectedCount);
-    
-    // Step 4: Combine both lists and assign random letters
-    const allSelectedCells = [
-      ...primarySelectedCells,
-      ...secondarySelectedCells,
-      ...this.highPriorityCornerCells // Add ALL high-priority corner cells
-    ];
-    
-    // Step 5: Ensure all selected cells are also in Level 1
-    const level2Cells = allSelectedCells.filter(cell => {
-      const key = `${cell.x},${cell.y}`;
-      return level1CellMap.has(key) || cornerCellsMap.has(key);
-    });
-    
-    // Map to include letters
-    return level2Cells.map(cell => {
-      // Use the same letter that was assigned at Level 1
-      const key = `${cell.x},${cell.y}`;
-      const level1Cell = level1CellMap.get(key);
-      return {
-        x: cell.x,
-        y: cell.y,
-        letter: level1Cell ? level1Cell.letter : this.getWeightedRandomLetter()
-      };
-    });
-  }
-  
-  getRandomLettersForLevel(level) {
-    if (level < 0 || level > 2) {
-      console.error(`Invalid island reduction level: ${level}. Using level 0.`);
-      level = 0;
-    }
-    
-    const cellCount = this.preGeneratedCells[level].length;
-    console.log(`Getting ${cellCount} pre-generated cells for island reduction level ${level}`);
-    
-    // Deep clone the cells to prevent modification of the originals
-    return JSON.parse(JSON.stringify(this.preGeneratedCells[level]));
-  }
-  
-  /**
-   * Legacy method for backward compatibility
-   * Now uses pre-generated cells for the default level (2)
-   * @return {Array} Array of {x, y, letter} objects with random letters
-   */
-  generateAdjacentRandomLetters() {
-    // If we haven't pre-generated cells yet, do it now
-    if (this.preGeneratedCells[0].length === 0) {
-      this.preGenerateRandomLetterCells();
-    }
-    
-    // Return the cells for level 2 (default)
-    return this.preGeneratedCells[2];
+    console.log(`Identified ${this.erodableCells.length} erodable cells`);
   }
   
   /**
@@ -662,6 +569,27 @@ class PathGenerator {
   getWeightedRandomLetter() {
     const randomIndex = Math.floor(Math.random() * this.letterDistribution.length);
     return this.letterDistribution[randomIndex];
+  }
+  
+  /**
+   * Get the current island cells including path and random letters
+   * @return {Array} Array of all island cells with letters
+   */
+  getIslandCells() {
+    // If we haven't generated the island yet, do so now
+    if (this.islandCells.length === 0) {
+      this.generateTwoLayerIsland();
+    }
+    
+    return this.islandCells;
+  }
+  
+  /**
+   * Get the current erodable cells
+   * @return {Array} Array of cells that can be eroded
+   */
+  getErodableCells() {
+    return this.erodableCells;
   }
   
   /**
