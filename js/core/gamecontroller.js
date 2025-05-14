@@ -12,7 +12,11 @@ import ArrowButtons from './arrowbuttons.js';
 // Note: We're using PapaParse loaded from CDN in index.html
 
 class GameController {
-  constructor(options = {}) {
+  /**
+ * Modified constructor for GameController
+ * Adds initialization of erosion controller
+ */
+constructor(options = {}) {
   // Default options with proper structure for gridSize
   this.options = {
     gameContainerId: options.gameContainerId || 'game-container',
@@ -23,20 +27,15 @@ class GameController {
     },
     cellSize: options.cellSize || 50,
     randomFillPercentage: options.randomFillPercentage !== undefined ? options.randomFillPercentage : 0,
-    // Random fill percentage is now used for the adjacent-cell filling algorithm
-    // A value of 0 means no random filling at all
   };
   
   // Override default gridSize if provided with correct structure
   if (options.gridSize) {
-    // Make sure we have proper objects with width/height properties
     if (options.gridSize.mobile) {
-      // If it's already an object with width/height, use it
       if (typeof options.gridSize.mobile.width === 'number' && 
           typeof options.gridSize.mobile.height === 'number') {
         this.options.gridSize.mobile = options.gridSize.mobile;
       } 
-      // If it's just a number, convert to object (backwards compatibility)
       else if (typeof options.gridSize.mobile === 'number') {
         console.warn('Deprecated: gridSize.mobile should be an object with width/height properties');
         this.options.gridSize.mobile = { 
@@ -47,12 +46,10 @@ class GameController {
     }
     
     if (options.gridSize.desktop) {
-      // If it's already an object with width/height, use it
       if (typeof options.gridSize.desktop.width === 'number' && 
           typeof options.gridSize.desktop.height === 'number') {
         this.options.gridSize.desktop = options.gridSize.desktop;
       } 
-      // If it's just a number, convert to object (backwards compatibility)
       else if (typeof options.gridSize.desktop === 'number') {
         console.warn('Deprecated: gridSize.desktop should be an object with width/height properties');
         this.options.gridSize.desktop = { 
@@ -72,7 +69,6 @@ class GameController {
   this.phrases = [];
   this.phraseTemplate = null; // Store the underscores template
   this.highestHintLevelUsed = 0; // Track the highest hint level used for the current phrase
-  this.highestIslandReductionLevelUsed = 0; // Track the highest island reduction level used
     
   // Initialize components
   this.pathGenerator = new PathGenerator();
@@ -100,7 +96,6 @@ class GameController {
   });
     
   // Initialize scroll areas AFTER grid renderer is fully created
-  // This ensures the grid element exists for proper positioning
   this.scrollHandler = new ArrowButtons(this.gridRenderer, {
     gameContainerId: this.options.gameContainerId
   });
@@ -113,7 +108,7 @@ class GameController {
     levelDisplay.textContent = this.gridRenderer.hintLevel;
   }
     
-  // NEW: Add event listener for revealed letters
+  // Add event listener for revealed letters
   document.addEventListener('revealedLettersUpdated', (e) => {
     this.updatePhraseWithHints();
   });
@@ -122,6 +117,9 @@ class GameController {
   window.addEventListener('resize', () => {
     this.handleResize();
   });
+
+  // Initialize Erosion Controller
+  this.initErosionController();
 
   // Dispatch custom event for initialization complete
   document.dispatchEvent(new CustomEvent('gameInitialized', { 
@@ -133,8 +131,8 @@ class GameController {
 }
   
 /**
- * Sets up the menu handlers for the hamburger menu
- * Creates 5 menu options: New Phrase, Reset Selections, and 3 hint levels
+ * Modified setupMenuHandlers for GameController.js
+ * Removes island reduction buttons from the menu
  */
 setupMenuHandlers() {
   console.log('Setting up menu handlers');
@@ -151,18 +149,16 @@ setupMenuHandlers() {
   // Step 2: Clear existing menu content
   menuDropdown.innerHTML = '';
   
-  // Step 3: Create menu items - UPDATED with island reduction levels
-const menuItems = [
-  { id: 'new-phrase-button', text: 'New Phrase', action: () => this.loadRandomPhrase() },
-  { id: 'reset-selections-button', text: 'Reset Selections', action: () => this.resetSelections() },
-  { id: 'separator-1', text: 'divider', type: 'separator' },
-  { id: 'hint-level-1-button', text: 'Hint Level 1 (15%)', action: () => this.setHintLevel(1), hintLevel: 1 },
-  { id: 'hint-level-2-button', text: 'Hint Level 2 (25%)', action: () => this.setHintLevel(2), hintLevel: 2 },
-  { id: 'hint-level-3-button', text: 'Hint Level 3 (35%)', action: () => this.setHintLevel(3), hintLevel: 3 },
-  { id: 'separator-2', text: 'divider', type: 'separator' },
-  { id: 'island-level-1-button', text: 'Reduce Islands 1', action: () => this.setIslandReductionLevel(1), islandLevel: 1 },
-  { id: 'island-level-2-button', text: 'Reduce Islands 2', action: () => this.setIslandReductionLevel(2), islandLevel: 2 }
-];
+  // Step 3: Create menu items - UPDATED to remove island reduction levels
+  const menuItems = [
+    { id: 'new-phrase-button', text: 'New Phrase', action: () => this.loadRandomPhrase() },
+    { id: 'reset-selections-button', text: 'Reset Selections', action: () => this.resetSelections() },
+    { id: 'separator-1', text: 'divider', type: 'separator' },
+    { id: 'hint-level-1-button', text: 'Hint Level 1 (15%)', action: () => this.setHintLevel(1), hintLevel: 1 },
+    { id: 'hint-level-2-button', text: 'Hint Level 2 (25%)', action: () => this.setHintLevel(2), hintLevel: 2 },
+    { id: 'hint-level-3-button', text: 'Hint Level 3 (35%)', action: () => this.setHintLevel(3), hintLevel: 3 }
+    // Island reduction buttons removed
+  ];
   
   // Step 4: Add to menu and set up click handlers
   menuItems.forEach(item => {
@@ -179,12 +175,10 @@ const menuItems = [
     button.id = item.id;
     button.className = 'menu-item';
     
-    // Add special classes for hint and island reduction buttons
-if (item.hintLevel) {
-  button.classList.add('hint-button');
-} else if (item.islandLevel !== undefined) {
-  button.classList.add('hint-button'); // Use hint-button instead of island-button
-}
+    // Add special classes for hint buttons
+    if (item.hintLevel) {
+      button.classList.add('hint-button');
+    }
     
     button.textContent = item.text;
     
@@ -198,23 +192,14 @@ if (item.hintLevel) {
         return; // Don't execute the action
       }
       
-      // For island reduction buttons, check if they're disabled
-      if (item.islandLevel !== undefined && 
-          item.islandLevel < this.highestIslandReductionLevelUsed) {
-        console.log(`Island reduction level ${item.islandLevel} is disabled`);
-        return; // Don't execute the action
-      }
-      
       // Execute the action
       item.action();
       
       // Update button styles
       if (item.hintLevel) {
         this.updateHintButtonStyles();
-      } else if (item.islandLevel !== undefined) {
-        this.updateIslandReductionButtonStyles();
       } else {
-        // Close the menu for non-hint/non-island buttons
+        // Close the menu for non-hint buttons
         menuDropdown.classList.remove('active');
         menuToggle.classList.remove('active');
       }
@@ -238,7 +223,7 @@ if (item.hintLevel) {
     }
   });
   
-  // Step 7: Initialize hint level and island reduction level
+  // Step 7: Initialize hint level
   this.resetHintLevel = () => {
     if (this.gridRenderer) {
       console.log('Resetting hint level to 0');
@@ -251,24 +236,9 @@ if (item.hintLevel) {
     }
   };
   
-  this.resetIslandReductionLevel = () => {
-    if (this.gridRenderer) {
-      console.log('Resetting island reduction level to 0');
-      this.gridRenderer.islandReductionLevel = 0;
-      this.gridRenderer.highestIslandReductionLevelUsed = 0;
-      this.highestIslandReductionLevelUsed = 0;
-      
-      // Update island reduction button styles
-      document.querySelectorAll('.island-button').forEach(btn => {
-        btn.classList.remove('active-island');
-      });
-    }
-  };
-  
-  // Initialize with no hints and default island reduction level
+  // Initialize with no hints
   if (this.gridRenderer) {
     this.gridRenderer.setHintLevel(0);
-    this.gridRenderer.islandReductionLevel = 0;
   }
   
   console.log('Menu handlers setup complete');
@@ -870,6 +840,32 @@ initShakespeareComponent() {
     });
 }
 
+/**
+ * Initialize the erosion controller
+ * This should be called after PathGenerator and GridRenderer are initialized
+ */
+initErosionController() {
+  // Import the ErosionController module
+  import('./erosioncontroller.js')
+    .then(module => {
+      const ErosionController = module.default;
+      
+      // Create instance with gridRenderer and pathGenerator
+      this.erosionController = new ErosionController(
+        this.gridRenderer,
+        this.pathGenerator
+      );
+      
+      console.log('Erosion controller initialized');
+      
+      // Make it globally accessible for debugging
+      window.erosionController = this.erosionController;
+    })
+    .catch(error => {
+      console.error('Failed to load Erosion Controller:', error);
+    });
+}
+  
 updateIslandReductionButtonStyles() {
   // Get all island reduction buttons specifically
   const islandButtons = document.querySelectorAll('[id^="island-level-"]');
@@ -1021,7 +1017,6 @@ showHintMismatchMessage(conflict) {
  * Fixes both the path generation validation and async/await usage
  */
 
-// Add the async keyword to make this function asynchronous
 async loadPhrase(phraseData) {
   this.currentPhrase = phraseData;
   
@@ -1051,7 +1046,7 @@ async loadPhrase(phraseData) {
   // Track generation attempts
   let generationSuccessful = false;
   let attempts = 0;
-  const MAX_ATTEMPTS = 10; // INCREASED from 5 to 10 for better chance of success
+  const MAX_ATTEMPTS = 10;
   
   // Try generating the path up to MAX_ATTEMPTS times
   while (!generationSuccessful && attempts < MAX_ATTEMPTS) {
@@ -1061,7 +1056,7 @@ async loadPhrase(phraseData) {
     // Generate path using path generator (will filter out non-alphanumerics)
     this.currentPath = this.pathGenerator.generatePath(letterList);
     
-    // FIXED: Check if path is null (incomplete) before setting
+    // Check if path is null (incomplete) before setting
     if (this.currentPath === null) {
       console.warn(`Path generation attempt #${attempts} failed - path was incomplete`);
       
@@ -1092,8 +1087,6 @@ async loadPhrase(phraseData) {
   
   if (!generationSuccessful) {
     console.error(`Failed to generate valid path after ${MAX_ATTEMPTS} attempts. Phrase may be too long.`);
-    
-    // IMPROVED: Load a different phrase instead of continuing with a broken one
     console.log('Loading a different phrase instead...');
     setTimeout(() => this.loadRandomPhrase(), 100);
     return; // Exit this method early
@@ -1102,48 +1095,23 @@ async loadPhrase(phraseData) {
   // Only proceed with the rest of the setup if generation was successful
   console.log('Path generation successful after', attempts, 'attempts');
   
-  // NEW: Generate and apply adjacent random letters
-  // Pre-generate random letter cells for all island reduction levels
-  if (this.options.randomFillPercentage > 0) {
-    // Pre-generate cells for all levels
-    this.pathGenerator.preGenerateRandomLetterCells();
-    
-    // Reset the island reduction level to 0 (default)
-    this.highestIslandReductionLevelUsed = 0;
-    this.gridRenderer.islandReductionLevel = 0;
-    this.gridRenderer.highestIslandReductionLevelUsed = 0;
-
-    // Update the button styles
-    this.updateIslandReductionButtonStyles();
-
-    console.log('Island reduction level reset to 0 for new phrase');
-    
-    // Apply default level (0)
-    this.gridRenderer.applyIslandReductionLetters(this.pathGenerator);
-    console.log(`Applied random letters for default island reduction level 0`);
-    
-    // Update the button styles
-    this.updateIslandReductionButtonStyles();
-    
-    // Apply hints after random letters are added
-    setTimeout(() => {
-      this.gridRenderer.revealPathLetters();
-    }, 50);
-  } else {
-    // If no random letters or generation failed, reveal hints immediately
-    // After the path is set, explicitly regenerate hint indices
-    this.gridRenderer.preGenerateHintIndices();
-    console.log("Hint indices generated after path was set");
-  }
+  // NEW: Generate island with the two-layer system
+  this.pathGenerator.generateTwoLayerIsland();
+  
+  // Apply the island cells to the grid
+  const islandCells = this.pathGenerator.getIslandCells();
+  this.gridRenderer.applyRandomLetters(islandCells);
+  
+  console.log(`Applied ${islandCells.length} island cells to grid`);
   
   // Center the grid on the start cell
   this.gridRenderer.centerGridOnStartCell();
   
-  // NEW: Optimize the grid view after random letters are applied and before showing the template
+  // Optimize the grid view
   setTimeout(() => {
     this.gridRenderer.optimizeGridView();
     console.log("Grid view optimized to minimize empty space");
-  }, 300); // Wait a bit to ensure all letters are applied
+  }, 300);
   
   // Update scroll area states
   if (this.scrollHandler && this.scrollHandler.updateScrollAreaStates) {
@@ -1163,11 +1131,19 @@ async loadPhrase(phraseData) {
     }
   }
   
-  // Clear any additional elements
-  const meaningEl = document.querySelector('.phrase-meaning');
-  if (meaningEl) {
-    meaningEl.remove();
-  }
+  // NEW: Start the erosion process after a short delay
+  setTimeout(() => {
+    if (this.erosionController) {
+      // First stop any current erosion
+      this.erosionController.stopErosion();
+      
+      // Then start new erosion for this phrase
+      this.erosionController.startErosion();
+      console.log('Started erosion process for new phrase');
+    } else {
+      console.warn('Erosion controller not available, skipping erosion start');
+    }
+  }, 2000); // 2 second delay before starting erosion
 }
   
 /**
