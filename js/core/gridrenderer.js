@@ -755,36 +755,47 @@ handleCellSelection(x, y, forceSelect = false) {
   return false;
 }
   
-  /**
-   * Apply random letters to the grid from the list of adjacent cells 
-   * @param {Array} randomLetterCells - Array of {x, y, letter} objects to apply
-   */
-  applyAdjacentRandomLetters(randomLetterCells) {
-    // Reset current random letters
-    this.randomLetters = randomLetterCells;
+applyRandomLetters(cells) {
+  // Reset any existing random cells first
+  this.clearRandomLetters();
+  
+  // Store the provided random cells
+  this.randomLetters = cells;
+  
+  // Get the center point coordinates (35, 35)
+  const centerX = 35;
+  const centerY = 35;
+  
+  // Apply each cell to the grid
+  cells.forEach(cell => {
+    // Convert from coordinate system (centered at 0,0) to grid indices (centered at 35,35)
+    const gridX = centerX + cell.x;
+    const gridY = centerY + cell.y;
     
-    // Get the center point coordinates (25, 25)
-    const centerX = 35;
-    const centerY = 35;
-    
-    // Apply each random letter to the grid
-    randomLetterCells.forEach(cell => {
-      // Convert from coordinate system (centered at 0,0) to grid indices (centered at 25,25)
-      const gridX = centerX + cell.x;
-      const gridY = centerY + cell.y;
-      
-      // Check if within grid bounds
-      if (gridY >= 0 && gridY < this.grid.length && gridX >= 0 && gridX < this.grid[0].length) {
-        // Only apply if cell is not part of the path
-        if (!this.grid[gridY][gridX].isPath) {
-          this.grid[gridY][gridX].letter = cell.letter;
-        }
+    // Check if within grid bounds
+    if (gridY >= 0 && gridY < this.grid.length && gridX >= 0 && gridX < this.grid[0].length) {
+      // Apply letter (don't overwrite path cells if they have a letter)
+      if (!this.grid[gridY][gridX].isPath || !this.grid[gridY][gridX].letter) {
+        this.grid[gridY][gridX].letter = cell.letter;
       }
-    });
-    
-    console.log(`Applied ${randomLetterCells.length} adjacent random letters to grid`);
-  }
-
+    }
+  });
+  
+  console.log(`Applied ${cells.length} random letter cells to grid`);
+  
+  // Trigger a grid rebuild
+  this._lastRenderOffset = null;
+  this.renderVisibleGrid();
+  
+  // Notify about the updated island appearance
+  document.dispatchEvent(new CustomEvent('islandLettersUpdated', { 
+    detail: { 
+      letterCount: cells.length,
+      gridRenderer: this 
+    }
+  }));
+}
+  
 clearRandomLetters() {
   // Keep track of how many cells were cleared
   let clearedCount = 0;
@@ -1599,7 +1610,7 @@ applyIslandReductionLetters(pathGenerator) {
   console.log(`Retrieved ${randomLetters.length} random letters for island reduction level ${this.islandReductionLevel}`);
   
   // Apply these letters to the grid
-  this.applyAdjacentRandomLetters(randomLetters);
+  this.applyRandomLetters(randomLetters);
   
   // CRITICAL: Set _lastRenderOffset to null to force a complete grid rebuild
   this._lastRenderOffset = null;
@@ -1740,72 +1751,6 @@ updatePhraseWithRevealedLetters() {
     
     return cellElement;
   }
-  
-/**
- * Updated version of updateCellElementClasses method
- * This ensures:
- * 1. Cluster cells with letters stay green when other cells are selected
- * 2. Correct path cells are visually distinct when completed
- */
-updateCellElementClasses(cellElement, x, y) {
-  // Clear existing state classes
-  cellElement.classList.remove('start-cell', 'selected-cell', 'path-cell', 'highlight-enabled', 'completed-cell', 'revealed-cell', 'correct-path');
-  
-  // If cell is within grid bounds
-  if (y >= 0 && y < this.grid.length && x >= 0 && x < this.grid[0].length) {
-    const cell = this.grid[y][x];
-    
-    // FIX: First check if the cell has a letter, regardless of isPath
-    // This ensures any cell with a letter gets the path-cell class for green styling
-    if (cell.letter && cell.letter.trim() !== '') {
-      cellElement.classList.add('path-cell');
-    }
-    
-    // Apply additional special states in priority order
-    
-    // 1. Path cell class is applied first as a base state
-    if (cell.isPath) {
-      // Don't add path-cell class again if already added above
-      if (!cellElement.classList.contains('path-cell')) {
-        cellElement.classList.add('path-cell');
-      }
-      
-      // Add highlight-enabled class only if path highlighting is turned on
-      if (this.options.highlightPath) {
-        cellElement.classList.add('highlight-enabled');
-      }
-    }
-    
-    // 2. Revealed state - applied after path but before selection/completion
-    if (cell.isRevealed) {
-      cellElement.classList.add('revealed-cell');
-    }
-    
-    // 3. Completed state has highest precedence
-    if (cell.isCompleted) {
-      cellElement.classList.add('completed-cell');
-      
-      // NEW: Add correct-path class for cells that are part of the correct path
-      // This allows for special styling while keeping the completed-cell styling
-      if (cell.isCorrectPath) {
-        cellElement.classList.add('correct-path');
-      }
-      
-      return; // No need to check other states when completed
-    }
-    
-    // 4. Apply selected state BEFORE start cell state
-    //    This ensures selected state overrides start cell appearance
-    if (cell.isSelected) {
-      cellElement.classList.add('selected-cell');
-    }
-    
-    // 5. Apply start cell state last (but will be overridden by selected-cell if present)
-    if (cell.isStart) {
-      cellElement.classList.add('start-cell');
-    }
-  }
-}
   
   /**
    * Check if two cells are adjacent
@@ -2513,6 +2458,252 @@ ensureFlashAnimationCSS() {
   console.log('Added flash animation styles');
 }
 
+  /**
+ * Start flashing cells to indicate imminent erosion
+ * @param {Array} cells - Array of cells to flash
+ */
+startFlashingCells(cells) {
+  // Add CSS for flashing if it doesn't exist yet
+  this.ensureErosionCSSExists();
+  
+  // Mark cells as flashing in the data model
+  cells.forEach(cell => {
+    const gridX = 35 + cell.x; // Convert from path coords to grid coords
+    const gridY = 35 + cell.y;
+    
+    // Check if coordinates are within bounds
+    if (gridY >= 0 && gridY < this.grid.length && 
+        gridX >= 0 && gridX < this.grid[0].length) {
+      // Add flashing flag to the cell data
+      this.grid[gridY][gridX].isFlashing = true;
+    }
+  });
+  
+  // Update the DOM cells to show flashing
+  this.updateFlashingCellsInDOM();
+  
+  // Start flashing animation interval if not already running
+  if (!this.flashingAnimationInterval) {
+    this.flashingAnimationInterval = setInterval(() => {
+      this.updateFlashingCellsInDOM();
+    }, 500); // Flash every 500ms
+  }
+}
+
+/**
+ * Stop flashing all cells
+ */
+stopFlashingCells() {
+  // Stop the animation interval
+  if (this.flashingAnimationInterval) {
+    clearInterval(this.flashingAnimationInterval);
+    this.flashingAnimationInterval = null;
+  }
+  
+  // Clear flashing state for all cells
+  for (let y = 0; y < this.grid.length; y++) {
+    for (let x = 0; x < this.grid[0].length; x++) {
+      if (this.grid[y][x].isFlashing) {
+        this.grid[y][x].isFlashing = false;
+      }
+    }
+  }
+  
+  // Update DOM to stop flashing
+  this.updateFlashingCellsInDOM(true);
+}
+
+/**
+ * Update flashing cells in the DOM
+ * @param {boolean} forceVisible - Force cells to be visible (for stopping flash)
+ */
+updateFlashingCellsInDOM(forceVisible = false) {
+  // Find all currently visible cell elements
+  const cellElements = document.querySelectorAll('.grid-cell');
+  
+  cellElements.forEach(cellElement => {
+    const x = parseInt(cellElement.dataset.gridX, 10);
+    const y = parseInt(cellElement.dataset.gridY, 10);
+    
+    // Skip if invalid coordinates
+    if (isNaN(x) || isNaN(y) || y >= this.grid.length || x >= this.grid[0].length) {
+      return;
+    }
+    
+    // Get cell data
+    const cell = this.grid[y][x];
+    
+    // Handle flashing cells
+    if (cell.isFlashing) {
+      if (forceVisible) {
+        // Force visible and stop flashing
+        cellElement.style.visibility = 'visible';
+        cellElement.classList.remove('eroding-cell');
+        cell.isFlashing = false;
+      } else {
+        // Toggle visibility for flashing effect
+        cellElement.classList.add('eroding-cell');
+        
+        // Toggle the flashing class for better visual effect
+        if (cellElement.classList.contains('flash-visible')) {
+          cellElement.classList.remove('flash-visible');
+        } else {
+          cellElement.classList.add('flash-visible');
+        }
+      }
+    } else {
+      // Ensure non-flashing cells have normal styles
+      cellElement.classList.remove('eroding-cell', 'flash-visible');
+    }
+  });
+}
+
+/**
+ * Remove cells from the grid
+ * @param {Array} cells - Array of cells to remove
+ */
+removeCells(cells) {
+  // Mark cells for removal in the data model
+  cells.forEach(cell => {
+    const gridX = 35 + cell.x; // Convert from path coords to grid coords
+    const gridY = 35 + cell.y;
+    
+    // Check if coordinates are within bounds
+    if (gridY >= 0 && gridY < this.grid.length && 
+        gridX >= 0 && gridX < this.grid[0].length) {
+      // Clear flashing state
+      this.grid[gridY][gridX].isFlashing = false;
+      
+      // Clear the cell's letter (the main visual indicator it's gone)
+      this.grid[gridY][gridX].letter = '';
+      
+      // If this is a path cell, only remove letter but keep path flag
+      // This ensures path integrity for game logic
+    }
+  });
+  
+  // Re-render grid to show removed cells
+  this.renderVisibleGrid();
+  
+  // After a short delay, dispatch an event for island appearance update
+  setTimeout(() => {
+    document.dispatchEvent(new CustomEvent('updateIslandStyling', { 
+      detail: { gridRenderer: this }
+    }));
+  }, 100);
+}
+
+/**
+ * Get all island cells (with letters)
+ * @return {Array} Array of all cells with letters
+ */
+getIslandCells() {
+  const cells = [];
+  
+  // Get the center point coordinates (35, 35)
+  const centerX = 35;
+  const centerY = 35;
+  
+  // Find all cells with letters
+  for (let y = 0; y < this.grid.length; y++) {
+    for (let x = 0; x < this.grid[0].length; x++) {
+      if (this.grid[y][x].letter && this.grid[y][x].letter.trim() !== '') {
+        cells.push({
+          x: x - centerX, // Convert to coordinate system centered at (0,0)
+          y: y - centerY,
+          letter: this.grid[y][x].letter,
+          isPath: this.grid[y][x].isPath
+        });
+      }
+    }
+  }
+  
+  return cells;
+}
+
+/**
+ * Get all path cells
+ * @return {Array} Array of path cells
+ */
+getPathCells() {
+  const cells = [];
+  
+  // Get the center point coordinates (35, 35)
+  const centerX = 35;
+  const centerY = 35;
+  
+  // Find all path cells
+  for (let y = 0; y < this.grid.length; y++) {
+    for (let x = 0; x < this.grid[0].length; x++) {
+      if (this.grid[y][x].isPath) {
+        cells.push({
+          x: x - centerX, // Convert to coordinate system centered at (0,0)
+          y: y - centerY,
+          letter: this.grid[y][x].letter
+        });
+      }
+    }
+  }
+  
+  return cells;
+}
+
+/**
+ * Ensure CSS for erosion animation exists
+ */
+ensureErosionCSSExists() {
+  // Check if erosion CSS already exists
+  if (document.getElementById('erosion-animation-css')) {
+    return;
+  }
+  
+  // Create and add CSS for erosion animation
+  const style = document.createElement('style');
+  style.id = 'erosion-animation-css';
+  style.textContent = `
+    /* Styling for cells that are about to be eroded */
+    .grid-cell.eroding-cell {
+      animation: eroding-pulse 1s infinite alternate;
+      transition: background-color 0.3s ease, opacity 0.3s ease, transform 0.3s ease;
+      z-index: 8; /* Ensure eroding cells appear above regular cells */
+    }
+    
+    /* Flashing animation */
+    @keyframes eroding-pulse {
+      0% {
+        opacity: 1;
+        background-color: var(--defaultblue-light);
+        border-color: var(--defaultblue);
+      }
+      100% {
+        opacity: 0.5;
+        background-color: var(--maingreen-light);
+        border-color: var(--maingreen-dark);
+      }
+    }
+    
+    /* Class toggled for flash animation */
+    .grid-cell.eroding-cell.flash-visible {
+      opacity: 1;
+      background-color: var(--sandyellow);
+      border-color: var(--sandyellow);
+    }
+    
+    /* Path cells flashing as final warning is higher priority */
+    .grid-cell.eroding-cell.path-cell.flash-visible {
+      z-index: 10;
+      background-color: #ff6b6b !important;
+      color: white !important;
+      font-weight: bold !important;
+      box-shadow: 0 0 8px rgba(255, 0, 0, 0.6) !important;
+      transform: scale(1.05);
+    }
+  `;
+  
+  // Add to document head
+  document.head.appendChild(style);
+  console.log('Added erosion animation CSS');
+}
   
   /**
    * Handle responsive layout changes
