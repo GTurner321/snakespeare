@@ -162,61 +162,106 @@ this.headMappings = {
   /**
    * Set up event listeners for path changes
    */
-  setupEventListeners() {
-    // Listen for cell selection changes directly
-    if (this.gridRenderer) {
-      // Hook into handleCellSelection
-      if (this.gridRenderer.handleCellSelection) {
-        const originalHandleCellSelection = this.gridRenderer.handleCellSelection;
-        this.gridRenderer.handleCellSelection = (x, y, forceSelect) => {
-          const result = originalHandleCellSelection.call(this.gridRenderer, x, y, forceSelect);
-          console.log(`Cell selection handled (${x},${y}), result: ${result}`);
-          
+/**
+ * Set up event listeners for path changes and scrolling
+ */
+setupEventListeners() {
+  // Listen for cell selection changes directly
+  if (this.gridRenderer) {
+    // Hook into handleCellSelection
+    if (this.gridRenderer.handleCellSelection) {
+      const originalHandleCellSelection = this.gridRenderer.handleCellSelection;
+      this.gridRenderer.handleCellSelection = (x, y, forceSelect) => {
+        const result = originalHandleCellSelection.call(this.gridRenderer, x, y, forceSelect);
+        console.log(`Cell selection handled (${x},${y}), result: ${result}`);
+        
+        // Only update if not scrolling
+        if (!this._scrollInProgress) {
           // Update snake path after a short delay
           setTimeout(() => this.updateSnakePath(), 50);
-          
-          return result;
-        };
-        console.log('Hooked into GridRenderer.handleCellSelection');
-      }
-      
-      // Also try to hook into handleSelectionChange if it exists
-      if (this.gridRenderer.handleSelectionChange) {
-        const originalHandleSelectionChange = this.gridRenderer.handleSelectionChange;
-        this.gridRenderer.handleSelectionChange = (...args) => {
-          const result = originalHandleSelectionChange.apply(this.gridRenderer, args);
-          console.log('handleSelectionChange called, updating snake path');
-          setTimeout(() => this.updateSnakePath(), 50);
-          return result;
-        };
-        console.log('Hooked into GridRenderer.handleSelectionChange');
-      }
+        }
+        
+        return result;
+      };
+      console.log('Hooked into GridRenderer.handleCellSelection');
     }
     
-    // Listen for cell clicks
-    document.addEventListener('click', (e) => {
-      if (e.target.classList.contains('grid-cell')) {
-        console.log('Cell clicked, updating snake path');
-        setTimeout(() => this.updateSnakePath(), 100);
-      }
-    });
-    
-    // Listen for deselection events
-    document.addEventListener('selectionsCleared', () => {
-      console.log('Selections cleared, updating snake path');
-      setTimeout(() => this.updateSnakePath(), 100);
-    });
-    
-    // Set a regular update interval (backup in case other methods fail)
-    setInterval(() => {
-      if (this.gridRenderer && this.gridRenderer.selectedCells && 
-          this.gridRenderer.selectedCells.length > 0) {
-        this.updateSnakePath();
-      }
-    }, 2000);
-    
-    console.log('SnakePath event listeners set up');
+    // Also try to hook into handleSelectionChange if it exists
+    if (this.gridRenderer.handleSelectionChange) {
+      const originalHandleSelectionChange = this.gridRenderer.handleSelectionChange;
+      this.gridRenderer.handleSelectionChange = (...args) => {
+        const result = originalHandleSelectionChange.apply(this.gridRenderer, args);
+        console.log('handleSelectionChange called, updating snake path');
+        
+        // Only update if not scrolling
+        if (!this._scrollInProgress) {
+          setTimeout(() => this.updateSnakePath(), 50);
+        }
+        
+        return result;
+      };
+      console.log('Hooked into GridRenderer.handleSelectionChange');
+    }
   }
+  
+  // Listen for cell clicks
+  document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('grid-cell') && !this._scrollInProgress) {
+      console.log('Cell clicked, updating snake path');
+      setTimeout(() => this.updateSnakePath(), 100);
+    }
+  });
+  
+  // Listen for deselection events
+  document.addEventListener('selectionsCleared', () => {
+    console.log('Selections cleared, updating snake path');
+    if (!this._scrollInProgress) {
+      setTimeout(() => this.updateSnakePath(), 100);
+    }
+  });
+  
+  // ADD THIS NEW CODE: Listen for grid scroll events
+  document.addEventListener('gridScrolled', (e) => {
+    // Mark that scrolling is in progress
+    this._scrollInProgress = true;
+    
+    // Don't update during scroll animation - wait for completion
+    console.log('Grid scrolling in progress, delaying snake path update');
+  });
+
+  document.addEventListener('gridScrollComplete', (e) => {
+    // Scrolling is complete, update the snake path
+    this._scrollInProgress = false;
+    console.log('Grid scroll completed, updating snake path');
+    
+    // Use requestAnimationFrame for smooth performance
+    requestAnimationFrame(() => this.refreshSnakePath(false));
+  });
+
+  // Listen for grid rebuilds
+  document.addEventListener('gridRebuilt', (e) => {
+    // Only update if not in the middle of scrolling
+    if (!this._scrollInProgress) {
+      console.log('Grid rebuilt (not during scroll), updating snake path');
+      
+      // Use requestAnimationFrame for smoother performance
+      requestAnimationFrame(() => this.refreshSnakePath(false));
+    }
+  });
+  
+  // Set a regular update interval (backup in case other methods fail)
+  // Only update if not scrolling and has selected cells
+  setInterval(() => {
+    if (!this._scrollInProgress && 
+        this.gridRenderer && 
+        this.gridRenderer.selectedCells && 
+        this.gridRenderer.selectedCells.length > 0) {
+      this.updateSnakePath();
+    }
+  }, 2000);
+  
+  console.log('SnakePath event listeners set up with scroll optimization');
+}
   
   /**
    * Clear all snake images from the grid
@@ -445,13 +490,12 @@ this.headMappings = {
  updateSnakePath() {
   console.log('\n🐍 UPDATE SNAKE PATH CALLED');
   
-  // Get selected cells
-  const selectedCells = this.gridRenderer.selectedCells;
-  if (!selectedCells || selectedCells.length === 0) {
-    console.log('No selected cells, nothing to update');
+  // Skip updates if scrolling is in progress - will be handled on completion
+  if (this._scrollInProgress) {
+    console.log('Skipping snake path update during scroll');
     return;
   }
-  
+
   console.log(`Updating snake path for ${selectedCells.length} selected cells`);
   
   // Track existing snake pieces to avoid unnecessary DOM operations
