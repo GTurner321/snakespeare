@@ -873,8 +873,7 @@ clearRandomLetters() {
   
 /**
  * Handles automatic scrolling when the last selected cell is touching an edge
- * Only triggers when buffer is 0, and checks adjacent edges for buffer < 4
- * Fixed to be consistent across all four edges
+ * Completely rewritten for simplicity and consistency
  */
 handleAutoScroll() {
   // Only proceed if we have selected cells
@@ -891,15 +890,22 @@ handleAutoScroll() {
   const viewWidth = isMobile ? this.options.gridWidthSmall : this.options.gridWidth;
   const viewHeight = isMobile ? this.options.gridHeightSmall : this.options.gridHeight;
   
-  // Calculate distances to each edge - FIXED to be consistent
-  // For all edges, a distance of 0 means the cell is at the edge
-  const distToLeftEdge = lastCell.x - this.viewOffset.x;
-  const distToRightEdge = (this.viewOffset.x + viewWidth) - lastCell.x - 1; // -1 to get the exact distance
-  const distToTopEdge = lastCell.y - this.viewOffset.y;
-  const distToBottomEdge = (this.viewOffset.y + viewHeight) - lastCell.y - 1; // -1 to get the exact distance
+  // Get the edge positions directly
+  const leftEdge = this.viewOffset.x;
+  const rightEdge = this.viewOffset.x + viewWidth - 1;
+  const topEdge = this.viewOffset.y;
+  const bottomEdge = this.viewOffset.y + viewHeight - 1;
   
-  // Debug distances
-  console.log('Edge distances:', {
+  // Calculate distances - simpler, direct calculation
+  // For all edges, a distance of 0 means the cell is exactly at the edge
+  const distToLeftEdge = lastCell.x - leftEdge;
+  const distToRightEdge = rightEdge - lastCell.x;
+  const distToTopEdge = lastCell.y - topEdge;
+  const distToBottomEdge = bottomEdge - lastCell.y;
+  
+  // Debug log all distances
+  console.log('Cell position and edge distances:', {
+    cell: `(${lastCell.x}, ${lastCell.y})`,
     left: distToLeftEdge,
     right: distToRightEdge,
     top: distToTopEdge,
@@ -917,37 +923,35 @@ handleAutoScroll() {
   // PRIMARY SCROLL CHECK: Only trigger scroll when buffer is exactly 0
   
   // Check left edge
-  if (distToLeftEdge === 0 && this.viewOffset.x > 0) {
-    // Calculate scroll distance to ensure targetBufferSize cells from edge
+  if (distToLeftEdge === 0) {
+    // Cell is at the left edge - scroll left by targetBufferSize
     const leftAdjustment = targetBufferSize;
     newOffsetX = Math.max(0, this.viewOffset.x - leftAdjustment);
     needsHorizontalScroll = true;
     console.log(`Left edge reached. Scrolling left by ${leftAdjustment} cells`);
     
-    // Check adjacent edges (top and bottom) only when horizontal scroll needed
-    // Top edge check
-    if (distToTopEdge < targetBufferSize && distToTopEdge > 0 && this.viewOffset.y > 0) {
+    // Check adjacent edges (top and bottom) when horizontal scroll needed
+    if (distToTopEdge > 0 && distToTopEdge < targetBufferSize) {
+      // Top edge is close - scroll up to maintain buffer
       const topAdjustment = targetBufferSize - distToTopEdge;
       newOffsetY = Math.max(0, this.viewOffset.y - topAdjustment);
       needsVerticalScroll = true;
-      console.log(`Adjacent top edge buffer (${distToTopEdge}) < ${targetBufferSize}. Scrolling up by ${topAdjustment} cells`);
+      console.log(`Top edge is close (${distToTopEdge}). Scrolling up by ${topAdjustment} cells`);
     }
-    // Bottom edge check
-    else if (distToBottomEdge < targetBufferSize && distToBottomEdge > 0 && 
-             this.viewOffset.y + viewHeight < this.fullGridSize) {
+    else if (distToBottomEdge > 0 && distToBottomEdge < targetBufferSize) {
+      // Bottom edge is close - scroll down to maintain buffer
       const bottomAdjustment = targetBufferSize - distToBottomEdge;
       newOffsetY = Math.min(
         this.fullGridSize - viewHeight,
         this.viewOffset.y + bottomAdjustment
       );
       needsVerticalScroll = true;
-      console.log(`Adjacent bottom edge buffer (${distToBottomEdge}) < ${targetBufferSize}. Scrolling down by ${bottomAdjustment} cells`);
+      console.log(`Bottom edge is close (${distToBottomEdge}). Scrolling down by ${bottomAdjustment} cells`);
     }
   }
-  
-  // Check right edge 
-  else if (distToRightEdge === 0 && this.viewOffset.x + viewWidth < this.fullGridSize) {
-    // Calculate scroll distance to ensure targetBufferSize cells from edge
+  // Check right edge
+  else if (distToRightEdge === 0) {
+    // Cell is at the right edge - scroll right by targetBufferSize
     const rightAdjustment = targetBufferSize;
     newOffsetX = Math.min(
       this.fullGridSize - viewWidth,
@@ -956,59 +960,55 @@ handleAutoScroll() {
     needsHorizontalScroll = true;
     console.log(`Right edge reached. Scrolling right by ${rightAdjustment} cells`);
     
-    // Check adjacent edges (top and bottom) only when horizontal scroll needed
-    // Top edge check
-    if (distToTopEdge < targetBufferSize && distToTopEdge > 0 && this.viewOffset.y > 0) {
+    // Check adjacent edges (top and bottom) when horizontal scroll needed
+    if (distToTopEdge > 0 && distToTopEdge < targetBufferSize) {
+      // Top edge is close - scroll up to maintain buffer
       const topAdjustment = targetBufferSize - distToTopEdge;
       newOffsetY = Math.max(0, this.viewOffset.y - topAdjustment);
       needsVerticalScroll = true;
-      console.log(`Adjacent top edge buffer (${distToTopEdge}) < ${targetBufferSize}. Scrolling up by ${topAdjustment} cells`);
+      console.log(`Top edge is close (${distToTopEdge}). Scrolling up by ${topAdjustment} cells`);
     }
-    // Bottom edge check
-    else if (distToBottomEdge < targetBufferSize && distToBottomEdge > 0 && 
-             this.viewOffset.y + viewHeight < this.fullGridSize) {
+    else if (distToBottomEdge > 0 && distToBottomEdge < targetBufferSize) {
+      // Bottom edge is close - scroll down to maintain buffer
       const bottomAdjustment = targetBufferSize - distToBottomEdge;
       newOffsetY = Math.min(
         this.fullGridSize - viewHeight,
         this.viewOffset.y + bottomAdjustment
       );
       needsVerticalScroll = true;
-      console.log(`Adjacent bottom edge buffer (${distToBottomEdge}) < ${targetBufferSize}. Scrolling down by ${bottomAdjustment} cells`);
+      console.log(`Bottom edge is close (${distToBottomEdge}). Scrolling down by ${bottomAdjustment} cells`);
     }
   }
-  
   // Check top edge
-  else if (distToTopEdge === 0 && this.viewOffset.y > 0) {
-    // Calculate scroll distance to ensure targetBufferSize cells from edge
+  else if (distToTopEdge === 0) {
+    // Cell is at the top edge - scroll up by targetBufferSize
     const topAdjustment = targetBufferSize;
     newOffsetY = Math.max(0, this.viewOffset.y - topAdjustment);
     needsVerticalScroll = true;
     console.log(`Top edge reached. Scrolling up by ${topAdjustment} cells`);
     
-    // Check adjacent edges (left and right) only when vertical scroll needed
-    // Left edge check
-    if (distToLeftEdge < targetBufferSize && distToLeftEdge > 0 && this.viewOffset.x > 0) {
+    // Check adjacent edges (left and right) when vertical scroll needed
+    if (distToLeftEdge > 0 && distToLeftEdge < targetBufferSize) {
+      // Left edge is close - scroll left to maintain buffer
       const leftAdjustment = targetBufferSize - distToLeftEdge;
       newOffsetX = Math.max(0, this.viewOffset.x - leftAdjustment);
       needsHorizontalScroll = true;
-      console.log(`Adjacent left edge buffer (${distToLeftEdge}) < ${targetBufferSize}. Scrolling left by ${leftAdjustment} cells`);
+      console.log(`Left edge is close (${distToLeftEdge}). Scrolling left by ${leftAdjustment} cells`);
     }
-    // Right edge check
-    else if (distToRightEdge < targetBufferSize && distToRightEdge > 0 && 
-             this.viewOffset.x + viewWidth < this.fullGridSize) {
+    else if (distToRightEdge > 0 && distToRightEdge < targetBufferSize) {
+      // Right edge is close - scroll right to maintain buffer
       const rightAdjustment = targetBufferSize - distToRightEdge;
       newOffsetX = Math.min(
         this.fullGridSize - viewWidth,
         this.viewOffset.x + rightAdjustment
       );
       needsHorizontalScroll = true;
-      console.log(`Adjacent right edge buffer (${distToRightEdge}) < ${targetBufferSize}. Scrolling right by ${rightAdjustment} cells`);
+      console.log(`Right edge is close (${distToRightEdge}). Scrolling right by ${rightAdjustment} cells`);
     }
   }
-  
   // Check bottom edge
-  else if (distToBottomEdge === 0 && this.viewOffset.y + viewHeight < this.fullGridSize) {
-    // Calculate scroll distance to ensure targetBufferSize cells from edge
+  else if (distToBottomEdge === 0) {
+    // Cell is at the bottom edge - scroll down by targetBufferSize
     const bottomAdjustment = targetBufferSize;
     newOffsetY = Math.min(
       this.fullGridSize - viewHeight,
@@ -1017,24 +1017,23 @@ handleAutoScroll() {
     needsVerticalScroll = true;
     console.log(`Bottom edge reached. Scrolling down by ${bottomAdjustment} cells`);
     
-    // Check adjacent edges (left and right) only when vertical scroll needed
-    // Left edge check
-    if (distToLeftEdge < targetBufferSize && distToLeftEdge > 0 && this.viewOffset.x > 0) {
+    // Check adjacent edges (left and right) when vertical scroll needed
+    if (distToLeftEdge > 0 && distToLeftEdge < targetBufferSize) {
+      // Left edge is close - scroll left to maintain buffer
       const leftAdjustment = targetBufferSize - distToLeftEdge;
       newOffsetX = Math.max(0, this.viewOffset.x - leftAdjustment);
       needsHorizontalScroll = true;
-      console.log(`Adjacent left edge buffer (${distToLeftEdge}) < ${targetBufferSize}. Scrolling left by ${leftAdjustment} cells`);
+      console.log(`Left edge is close (${distToLeftEdge}). Scrolling left by ${leftAdjustment} cells`);
     }
-    // Right edge check
-    else if (distToRightEdge < targetBufferSize && distToRightEdge > 0 && 
-             this.viewOffset.x + viewWidth < this.fullGridSize) {
+    else if (distToRightEdge > 0 && distToRightEdge < targetBufferSize) {
+      // Right edge is close - scroll right to maintain buffer
       const rightAdjustment = targetBufferSize - distToRightEdge;
       newOffsetX = Math.min(
         this.fullGridSize - viewWidth,
         this.viewOffset.x + rightAdjustment
       );
       needsHorizontalScroll = true;
-      console.log(`Adjacent right edge buffer (${distToRightEdge}) < ${targetBufferSize}. Scrolling right by ${rightAdjustment} cells`);
+      console.log(`Right edge is close (${distToRightEdge}). Scrolling right by ${rightAdjustment} cells`);
     }
   }
   
@@ -1056,6 +1055,10 @@ handleAutoScroll() {
       this.gridElement.classList.add('slow-scroll');
     }
     
+    // Store old offsets for event reporting
+    const oldOffsetX = this.viewOffset.x;
+    const oldOffsetY = this.viewOffset.y;
+    
     // Update the view offset for both axes at once
     this.viewOffset.x = newOffsetX;
     this.viewOffset.y = newOffsetY;
@@ -1073,7 +1076,8 @@ handleAutoScroll() {
         lastCell, 
         gridRenderer: this,
         horizontalScroll: needsHorizontalScroll,
-        verticalScroll: needsVerticalScroll
+        verticalScroll: needsVerticalScroll,
+        oldOffset: { x: oldOffsetX, y: oldOffsetY }
       }
     }));
     
