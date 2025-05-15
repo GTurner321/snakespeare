@@ -457,50 +457,40 @@ _scheduleInitialUpdates() {
   }, 500);
 }
   
-  /**
-   * Show visual feedback for auto-scrolling to indicate direction
-   * @param {Object} detail - Event detail with offset and lastCell
-   */
-  showAutoScrollFeedback(detail) {
-    if (!detail || !detail.lastCell) return;
-    
-    // Determine which edges the cell was close to
-    const lastCell = detail.lastCell;
-    const oldOffset = this._lastKnownOffset || { x: 0, y: 0 };
-    const newOffset = detail.offset;
-    
-    // Store current offset for next comparison
+/**
+ * Show visual feedback for auto-scrolling to indicate direction
+ * @param {Object} detail - Event detail with offset and lastCell
+ */
+showAutoScrollFeedback(detail) {
+  if (!detail || !detail.offset) return;
+  
+  // Determine which edges the cell was close to
+  const oldOffset = this._lastKnownOffset || { x: 0, y: 0 };
+  const newOffset = detail.offset;
+  
+  // If this is the first time, just save the offset without feedback
+  if (!this._hadPreviousOffset) {
     this._lastKnownOffset = { ...newOffset };
-    
-    // If this is the first time, just save the offset without feedback
-    if (!this._hadPreviousOffset) {
-      this._hadPreviousOffset = true;
-      return;
-    }
-    
-    // Determine scroll directions
-    const scrolledUp = newOffset.y < oldOffset.y;
-    const scrolledDown = newOffset.y > oldOffset.y;
-    const scrolledLeft = newOffset.x < oldOffset.x;
-    const scrolledRight = newOffset.x > oldOffset.x;
-    
-    // Apply visual feedback to corresponding scroll areas
-    if (scrolledUp && this.scrollAreas.top) {
-      this.showScrollFeedback(this.scrollAreas.top);
-    }
-    
-    if (scrolledDown && this.scrollAreas.bottom) {
-      this.showScrollFeedback(this.scrollAreas.bottom);
-    }
-    
-    if (scrolledLeft && this.scrollAreas.left) {
-      this.showScrollFeedback(this.scrollAreas.left);
-    }
-    
-    if (scrolledRight && this.scrollAreas.right) {
-      this.showScrollFeedback(this.scrollAreas.right);
-    }
+    this._hadPreviousOffset = true;
+    return;
   }
+  
+  // Determine scroll directions and provide feedback
+  if (newOffset.y < oldOffset.y) {
+    this._highlightScrollArea('up');
+  } else if (newOffset.y > oldOffset.y) {
+    this._highlightScrollArea('down');
+  }
+  
+  if (newOffset.x < oldOffset.x) {
+    this._highlightScrollArea('left');
+  } else if (newOffset.x > oldOffset.x) {
+    this._highlightScrollArea('right');
+  }
+  
+  // Store current offset for next comparison
+  this._lastKnownOffset = { ...newOffset };
+}
   
   /**
    * Display brief highlight animation on a scroll area
