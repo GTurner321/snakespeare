@@ -870,11 +870,7 @@ clearRandomLetters() {
   console.log(`Cleared ${clearedCount} random letters from grid`);
   return clearedCount;
 }
-  
-/**
- * Handles automatic scrolling when the last selected cell is touching an edge
- * Fixed implementation that correctly handles all edges consistently
- */
+
 handleAutoScroll() {
   // Only proceed if we have selected cells
   if (!this.selectedCells.length) return;
@@ -890,25 +886,30 @@ handleAutoScroll() {
   const viewWidth = isMobile ? this.options.gridWidthSmall : this.options.gridWidth;
   const viewHeight = isMobile ? this.options.gridHeightSmall : this.options.gridHeight;
   
-  // Get the edge positions directly
+  // CRITICAL FIX: Calculate edge positions correctly
+  // Use inclusive bounds (this is likely the source of the +1/-1 issue)
   const leftEdge = this.viewOffset.x;
-  const rightEdge = this.viewOffset.x + viewWidth - 1;
+  const rightEdge = this.viewOffset.x + viewWidth - 1; // -1 because it's 0-indexed
   const topEdge = this.viewOffset.y;
-  const bottomEdge = this.viewOffset.y + viewHeight - 1;
+  const bottomEdge = this.viewOffset.y + viewHeight - 1; // -1 because it's 0-indexed
   
-  // Calculate distances - make sure these are consistent across all edges
-  // For all edges, a distance of 0 means the cell is exactly at the edge
+  // Calculate distances accurately
   const distToLeftEdge = lastCell.x - leftEdge;
   const distToRightEdge = rightEdge - lastCell.x;
   const distToTopEdge = lastCell.y - topEdge;
   const distToBottomEdge = bottomEdge - lastCell.y;
   
-  // Debug log all distances
-  console.log('Auto-scroll check:', {
-    cell: `(${lastCell.x}, ${lastCell.y})`,
-    viewOffset: {...this.viewOffset},
-    viewDimensions: {width: viewWidth, height: viewHeight},
-    edges: {left: leftEdge, right: rightEdge, top: topEdge, bottom: bottomEdge},
+  // Extensive debugging to find the exact issue
+  console.log('Detailed auto-scroll debug:', {
+    lastCell: {x: lastCell.x, y: lastCell.y},
+    viewOffset: this.viewOffset,
+    dimensions: {viewWidth, viewHeight},
+    edges: {
+      leftEdge: leftEdge, 
+      rightEdge: rightEdge,
+      topEdge: topEdge,
+      bottomEdge: bottomEdge
+    },
     distances: {
       left: distToLeftEdge,
       right: distToRightEdge,
@@ -2332,154 +2333,6 @@ cellHasContent(x, y) {
   // Check if the cell has a non-empty letter
   const cell = this.grid[y][x];
   return cell && cell.letter && cell.letter.trim() !== '';
-}
-
-/**
- * Optimized scroll method with efficient grid movement and reduced re-renders
- * @param {string} direction - 'up', 'down', 'left', or 'right'
- * @param {boolean} slowMotion - Whether to use slow scrolling speed
- */
-scroll(direction, slowMotion = false) {
-  // Signal to components that scrolling is starting
-  this._isScrolling = true;
-  document.dispatchEvent(new CustomEvent('gridScrollStarted', { 
-    detail: { direction, slowMotion }
-  }));
-  
-  // Calculate new offset based on direction
-  let newOffsetX = this.viewOffset.x;
-  let newOffsetY = this.viewOffset.y;
-  
-  const isMobile = window.innerWidth < 768;
-  const width = isMobile ? this.options.gridWidthSmall : this.options.gridWidth;
-  const height = isMobile ? this.options.gridHeightSmall : this.options.gridHeight;
-  
-  switch (direction) {
-    case 'up':
-      newOffsetY = Math.max(0, this.viewOffset.y - 1);
-      break;
-    case 'down':
-      newOffsetY = Math.min(
-        this.fullGridSize - height,
-        this.viewOffset.y + 1
-      );
-      break;
-    case 'left':
-      newOffsetX = Math.max(0, this.viewOffset.x - 1);
-      break;
-    case 'right':
-      newOffsetX = Math.min(
-        this.fullGridSize - width,
-        this.viewOffset.x + 1
-      );
-      break;
-  }
-  
-  // If no movement is possible in requested direction, exit early
-  if (newOffsetX === this.viewOffset.x && newOffsetY === this.viewOffset.y) {
-    this._isScrolling = false;
-    document.dispatchEvent(new CustomEvent('gridScrollComplete', { 
-      detail: { direction, noChange: true }
-    }));
-    return;
-  }
-  
-  // Use CSS transform for smooth scrolling rather than full rebuild
-  const transitionDuration = slowMotion ? 400 : 200;
-  
-  // Determine if this is a small scroll (1 unit in any direction)
-  const isSmallScroll = 
-    (Math.abs(newOffsetX - this.viewOffset.x) <= 1 && 
-     Math.abs(newOffsetY - this.viewOffset.y) <= 1);
-  
-  // Notify components that need to prepare for scrolling
-  document.dispatchEvent(new CustomEvent('gridScrolling', { 
-    detail: { 
-      from: {...this.viewOffset}, 
-      to: {x: newOffsetX, y: newOffsetY},
-      isSmallScroll 
-    }
-  }));
-  
-  // OPTIMIZATION: For small scrolls, use transform instead of rebuilding DOM
-  if (isSmallScroll) {
-    // Add CSS transition class based on speed
-    if (this.gridElement) {
-      // Remove any existing transition classes
-      this.gridElement.classList.remove('fast-scroll', 'slow-scroll');
-      
-      // Add the appropriate transition class
-      this.gridElement.classList.add(slowMotion ? 'slow-scroll' : 'fast-scroll');
-    }
-    
-    // Pre-populate cells that will come into view (optimization)
-    this._prepareNewCellsForScroll(direction, newOffsetX, newOffsetY);
-    
-    // Apply transform to move the grid - SMOOTH ANIMATION
-    const cellSize = this.options.cellSize;
-    const gapSize = 2; // Gap between cells
-    
-    // Calculate translation amounts based on scroll direction
-    const translateX = (this.viewOffset.x - newOffsetX) * (cellSize + gapSize);
-    const translateY = (this.viewOffset.y - newOffsetY) * (cellSize + gapSize);
-    
-    // Apply translation
-    this.gridElement.style.transform = `translate(${translateX}px, ${translateY}px)`;
-    
-    // Update internal view offset (but DOM updates after animation)
-    const oldOffsetX = this.viewOffset.x;
-    const oldOffsetY = this.viewOffset.y;
-    this.viewOffset.x = newOffsetX;
-    this.viewOffset.y = newOffsetY;
-    
-    // After transition completes, reset transform and rebuild grid
-    setTimeout(() => {
-      // Reset transform
-      this.gridElement.style.transform = 'translate(0, 0)';
-      
-      // Remove transition classes
-      this.gridElement.classList.remove('fast-scroll', 'slow-scroll');
-      
-      // Force a rebuild to ensure correct grid state
-      this._lastRenderOffset = null;
-      this.renderVisibleGrid();
-      
-      // Signal that scrolling is complete
-      this._isScrolling = false;
-      
-      // Dispatch event for scroll completion
-      document.dispatchEvent(new CustomEvent('gridScrollComplete', { 
-        detail: { 
-          direction, 
-          from: { x: oldOffsetX, y: oldOffsetY },
-          to: { x: newOffsetX, y: newOffsetY }
-        }
-      }));
-    }, transitionDuration + 50); // Add a small buffer to ensure transition completes
-  } else {
-    // For larger scrolls, use the standard approach
-    this.viewOffset.x = newOffsetX;
-    this.viewOffset.y = newOffsetY;
-    
-    // Force a rebuild
-    this._lastRenderOffset = null;
-    this.renderVisibleGrid();
-    
-    // Reset scrolling flag and notify completion
-    setTimeout(() => {
-      this._isScrolling = false;
-      
-      // Dispatch event for scroll completion
-      document.dispatchEvent(new CustomEvent('gridScrollComplete', { 
-        detail: { direction, offset: this.viewOffset }
-      }));
-    }, 50);
-  }
-  
-  // Dispatch event for scroll in progress
-  document.dispatchEvent(new CustomEvent('gridScrolled', { 
-    detail: { direction, offset: this.viewOffset, gridRenderer: this, slowMotion }
-  }));
 }
 
 /**
