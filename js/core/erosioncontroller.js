@@ -174,7 +174,7 @@ class ErosionController {
     }, 3000); // 3 seconds of flashing before removal
   }
   
-  /**
+/**
  * Identify which cells are currently erodable (adjacent to sea)
  * Modified to exclude currently selected cells
  * @return {Array} Array of erodable cell coordinates
@@ -196,14 +196,26 @@ identifyCurrentErodableCells() {
     pathMap.set(`${cell.x},${cell.y}`, cell);
   });
   
-  // NEW: Create a map of currently selected cells to exclude
+  // Create a map of currently selected cells
   const selectedCellMap = new Map();
-  if (this.gridRenderer.selectedCells && this.gridRenderer.selectedCells.length > 0) {
-    this.gridRenderer.selectedCells.forEach(cell => {
-      selectedCellMap.set(`${cell.x},${cell.y}`, cell);
+  
+  // Check if gridRenderer has selected cells
+  if (this.gridRenderer && this.gridRenderer.selectedCells) {
+    // Convert grid coordinates (35,35 centered) to path coordinates (0,0 centered)
+    const centerX = 35;
+    const centerY = 35;
+    
+    // Add all selected cells to the map
+    this.gridRenderer.selectedCells.forEach(selectedCell => {
+      // Convert to path coordinates (centered at 0,0)
+      const pathX = selectedCell.x - centerX;
+      const pathY = selectedCell.y - centerY;
+      // Create a key in the same format as other cell maps
+      const key = `${pathX},${pathY}`;
       
-      // Also log selected cells for debugging
-      console.log(`Excluding selected cell at (${cell.x}, ${cell.y}) from erosion`);
+      // Store in map and log for debugging
+      selectedCellMap.set(key, true);
+      console.log(`Excluding selected cell at grid(${selectedCell.x}, ${selectedCell.y}) / path(${pathX}, ${pathY}) from erosion`);
     });
   }
   
@@ -214,9 +226,9 @@ identifyCurrentErodableCells() {
       continue;
     }
     
-    // NEW: Skip currently selected cells - they shouldn't be eroded
+    // NEW: Skip cells that are currently selected by the user
     if (selectedCellMap.has(`${cell.x},${cell.y}`)) {
-      console.log(`Skipping selected cell at (${cell.x}, ${cell.y}) - protected from erosion`);
+      console.log(`Skipping selected cell at path(${cell.x}, ${cell.y}) - protected from erosion`);
       continue;
     }
     
@@ -246,6 +258,7 @@ identifyCurrentErodableCells() {
     }
   }
   
+  console.log(`Found ${erodableCells.length} erodable cells (excluding selected cells)`);
   return erodableCells;
 }
   
