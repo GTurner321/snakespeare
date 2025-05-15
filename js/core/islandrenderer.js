@@ -167,34 +167,60 @@ _setupEventListeners() {
     });
   });
 }
-  
+
 /**
- * Apply shore/beach specific styles to cell element
- * @param {HTMLElement} cellElement - Cell DOM element
- * @param {Object} styleConfig - Style configuration
+ * Apply beach/shore cell styles during scrolling
+ * This method is specifically called during scroll operations to ensure
+ * beach cells maintain their styling during transitions
  * @private
  */
-_applyShoreStyles(cellElement, styleConfig) {
-  // Reset shore-specific classes first
-  cellElement.classList.remove(
-    'sea-adjacent',
-    'shore-edge-top',
-    'shore-edge-right',
-    'shore-edge-bottom',
-    'shore-edge-left'
-  );
-  
-  // Apply sea adjacent styling
-  cellElement.classList.add('sea-adjacent');
-  
-  // Apply shore edge classes
-  if (styleConfig.shoreEdges && styleConfig.shoreEdges.length > 0) {
-    styleConfig.shoreEdges.forEach(direction => {
-      cellElement.classList.add(`shore-edge-${direction}`);
-    });
+_applyBeachCellsDuringScroll() {
+  // Skip if no grid renderer or grid
+  if (!this.gridRenderer || !this.gridRenderer.grid) {
+    return;
   }
+  
+  // Get current visible cells
+  const cells = document.querySelectorAll('.grid-cell');
+  
+  // Find sea-adjacent cells needing shore styling
+  cells.forEach(cellElement => {
+    // Get cell coordinates
+    const x = parseInt(cellElement.dataset.gridX, 10);
+    const y = parseInt(cellElement.dataset.gridY, 10);
+    
+    if (isNaN(x) || isNaN(y)) {
+      return;
+    }
+    
+    // Check if this is a sea cell (not a path/island cell)
+    if (!cellElement.classList.contains('path-cell')) {
+      // Get cached style if available
+      const cacheKey = `${x},${y}`;
+      const cachedStyle = this.cellStyleCache.get(cacheKey);
+      
+      if (cachedStyle && cachedStyle.isSeaAdjacent) {
+        // Use cached style data if available
+        this._applyShoreStyles(cellElement, cachedStyle);
+      } else {
+        // Otherwise calculate on the fly for this cell
+        const adjacentDirections = this.getAdjacentLetterCells(x, y);
+        if (adjacentDirections.length > 0) {
+          // Apply sea-adjacent and shore edge classes
+          const styleConfig = {
+            isSeaAdjacent: true,
+            shoreEdges: adjacentDirections
+          };
+          this._applyShoreStyles(cellElement, styleConfig);
+          
+          // Cache this result for future use
+          this.cellStyleCache.set(cacheKey, styleConfig);
+        }
+      }
+    }
+  });
 }
-
+  
   /**
    * Calculate current visible bounds of the grid
    * @private
