@@ -787,6 +787,32 @@ handleCellSelection(x, y, forceSelect = false) {
     cell.isSelected = true;
     this.selectedCells.push({ x, y });
     this.lastSelectedCell = { x, y };
+
+// Add this after: this.lastSelectedCell = { x, y };
+
+// Calculate and display buffer values even without auto-scroll
+if (this.selectedCells.length > 0) {
+  const lastCell = this.selectedCells[this.selectedCells.length - 1];
+  const isMobile = window.innerWidth < 768;
+  const viewWidth = isMobile ? this.options.gridWidthSmall : this.options.gridWidth;
+  const viewHeight = isMobile ? this.options.gridHeightSmall : this.options.gridHeight;
+  
+  const viewBounds = {
+    left: this.viewOffset.x,
+    right: this.viewOffset.x + viewWidth - 1,
+    top: this.viewOffset.y,
+    bottom: this.viewOffset.y + viewHeight - 1
+  };
+  
+  const buffer = {
+    left: lastCell.x - viewBounds.left,
+    right: viewBounds.right - lastCell.x,
+    top: lastCell.y - viewBounds.top,
+    bottom: viewBounds.bottom - lastCell.y
+  };
+  
+  this.updateBufferDisplay(buffer);
+}
     
     // CRITICAL FIX: Make sure to log when start cell is selected
     if (cell.isStart) {
@@ -872,7 +898,7 @@ clearRandomLetters() {
 }
 
 /**
- * Completely revised handleAutoScroll method to ensure consistent behavior
+ * Simplified handleAutoScroll with no adjacent edge checks
  */
 handleAutoScroll() {
   // Only proceed if we have selected cells
@@ -889,34 +915,13 @@ handleAutoScroll() {
   const viewWidth = isMobile ? this.options.gridWidthSmall : this.options.gridWidth;
   const viewHeight = isMobile ? this.options.gridHeightSmall : this.options.gridHeight;
   
-  // Define view boundaries explicitly
+  // Calculate view boundaries
   const viewBounds = {
     left: this.viewOffset.x,
     right: this.viewOffset.x + viewWidth - 1,  // -1 for 0-indexed grid
     top: this.viewOffset.y,
     bottom: this.viewOffset.y + viewHeight - 1 // -1 for 0-indexed grid
   };
-  
-  // SUPER VERBOSE DEBUGGING for all coordinates
-  console.log('DETAILED AUTOSCROLL DEBUG:', {
-    lastCell: `(${lastCell.x}, ${lastCell.y})`,
-    viewOffset: `(${this.viewOffset.x}, ${this.viewOffset.y})`,
-    viewWidth: viewWidth,
-    viewHeight: viewHeight,
-    viewBounds: {
-      left: viewBounds.left,
-      right: viewBounds.right,
-      top: viewBounds.top,
-      bottom: viewBounds.bottom
-    },
-    // Calculate buffer for each edge
-    buffer: {
-      left: lastCell.x - viewBounds.left,
-      right: viewBounds.right - lastCell.x,
-      top: lastCell.y - viewBounds.top,
-      bottom: viewBounds.bottom - lastCell.y
-    }
-  });
   
   // Calculate buffer for each edge - distance from cell to view boundary
   const buffer = {
@@ -926,127 +931,60 @@ handleAutoScroll() {
     bottom: viewBounds.bottom - lastCell.y
   };
   
-  // New approach: Create scroll plans for each direction
-  let scrollPlan = {
-    horizontal: {
-      direction: null,
-      amount: 0,
-      needed: false
-    },
-    vertical: {
-      direction: null,
-      amount: 0,
-      needed: false
-    }
-  };
+  // Update buffer display
+  this.updateBufferDisplay(buffer);
   
-  // Check each edge in sequence - CRITICAL: Only scroll when buffer is EXACTLY 0
+  // Track if we need to scroll in any direction
+  let needsHorizontalScroll = false;
+  let needsVerticalScroll = false;
   
-  // Left edge
-  if (buffer.left === 0) {
-    scrollPlan.horizontal.direction = 'left';
-    scrollPlan.horizontal.amount = targetBufferSize;
-    scrollPlan.horizontal.needed = true;
-    console.log(`LEFT EDGE REACHED (buffer = ${buffer.left}). Will scroll left by ${targetBufferSize}`);
-  }
-  // Right edge
-  else if (buffer.right === 0) {
-    scrollPlan.horizontal.direction = 'right';
-    scrollPlan.horizontal.amount = targetBufferSize;
-    scrollPlan.horizontal.needed = true;
-    console.log(`RIGHT EDGE REACHED (buffer = ${buffer.right}). Will scroll right by ${targetBufferSize}`);
-  }
-  
-  // Top edge
-  if (buffer.top === 0) {
-    scrollPlan.vertical.direction = 'up';
-    scrollPlan.vertical.amount = targetBufferSize;
-    scrollPlan.vertical.needed = true;
-    console.log(`TOP EDGE REACHED (buffer = ${buffer.top}). Will scroll up by ${targetBufferSize}`);
-  }
-  // Bottom edge
-  else if (buffer.bottom === 0) {
-    scrollPlan.vertical.direction = 'down';
-    scrollPlan.vertical.amount = targetBufferSize;
-    scrollPlan.vertical.needed = true;
-    console.log(`BOTTOM EDGE REACHED (buffer = ${buffer.bottom}). Will scroll down by ${targetBufferSize}`);
-  }
-  
-  // If we have primary scrolling in one direction, check for adjacent edge proximity
-  if (scrollPlan.horizontal.needed && !scrollPlan.vertical.needed) {
-    // Check top and bottom adjacent edges when scrolling horizontally
-    if (buffer.top > 0 && buffer.top < targetBufferSize) {
-      scrollPlan.vertical.direction = 'up';
-      scrollPlan.vertical.amount = targetBufferSize - buffer.top;
-      scrollPlan.vertical.needed = true;
-      console.log(`ADJACENT TOP EDGE CLOSE (buffer = ${buffer.top}). Will scroll up by ${scrollPlan.vertical.amount}`);
-    }
-    else if (buffer.bottom > 0 && buffer.bottom < targetBufferSize) {
-      scrollPlan.vertical.direction = 'down';
-      scrollPlan.vertical.amount = targetBufferSize - buffer.bottom;
-      scrollPlan.vertical.needed = true;
-      console.log(`ADJACENT BOTTOM EDGE CLOSE (buffer = ${buffer.bottom}). Will scroll down by ${scrollPlan.vertical.amount}`);
-    }
-  }
-  else if (scrollPlan.vertical.needed && !scrollPlan.horizontal.needed) {
-    // Check left and right adjacent edges when scrolling vertically
-    if (buffer.left > 0 && buffer.left < targetBufferSize) {
-      scrollPlan.horizontal.direction = 'left';
-      scrollPlan.horizontal.amount = targetBufferSize - buffer.left;
-      scrollPlan.horizontal.needed = true;
-      console.log(`ADJACENT LEFT EDGE CLOSE (buffer = ${buffer.left}). Will scroll left by ${scrollPlan.horizontal.amount}`);
-    }
-    else if (buffer.right > 0 && buffer.right < targetBufferSize) {
-      scrollPlan.horizontal.direction = 'right';
-      scrollPlan.horizontal.amount = targetBufferSize - buffer.right;
-      scrollPlan.horizontal.needed = true;
-      console.log(`ADJACENT RIGHT EDGE CLOSE (buffer = ${buffer.right}). Will scroll right by ${scrollPlan.horizontal.amount}`);
-    }
-  }
-  
-  // Calculate new offset based on scroll plan
+  // Calculate new offset positions (start with current)
   let newOffsetX = this.viewOffset.x;
   let newOffsetY = this.viewOffset.y;
   
-  // Apply horizontal scroll if needed
-  if (scrollPlan.horizontal.needed) {
-    if (scrollPlan.horizontal.direction === 'left') {
-      newOffsetX = Math.max(0, this.viewOffset.x - scrollPlan.horizontal.amount);
-    } else {
-      newOffsetX = Math.min(
-        this.fullGridSize - viewWidth,
-        this.viewOffset.x + scrollPlan.horizontal.amount
-      );
-    }
+  // SIMPLIFIED APPROACH: Only check for buffer === 0 for each edge
+  
+  // Left edge check
+  if (buffer.left === 0) {
+    // Cell is at the left edge - scroll left by targetBufferSize
+    newOffsetX = Math.max(0, this.viewOffset.x - targetBufferSize);
+    needsHorizontalScroll = true;
+    console.log(`LEFT EDGE REACHED (buffer = ${buffer.left}). Scrolling left by ${targetBufferSize}`);
+  }
+  // Right edge check
+  else if (buffer.right === 0) {
+    // Cell is at the right edge - scroll right by targetBufferSize
+    newOffsetX = Math.min(
+      this.fullGridSize - viewWidth,
+      this.viewOffset.x + targetBufferSize
+    );
+    needsHorizontalScroll = true;
+    console.log(`RIGHT EDGE REACHED (buffer = ${buffer.right}). Scrolling right by ${targetBufferSize}`);
   }
   
-  // Apply vertical scroll if needed
-  if (scrollPlan.vertical.needed) {
-    if (scrollPlan.vertical.direction === 'up') {
-      newOffsetY = Math.max(0, this.viewOffset.y - scrollPlan.vertical.amount);
-    } else {
-      newOffsetY = Math.min(
-        this.fullGridSize - viewHeight,
-        this.viewOffset.y + scrollPlan.vertical.amount
-      );
-    }
+  // Top edge check
+  if (buffer.top === 0) {
+    // Cell is at the top edge - scroll up by targetBufferSize
+    newOffsetY = Math.max(0, this.viewOffset.y - targetBufferSize);
+    needsVerticalScroll = true;
+    console.log(`TOP EDGE REACHED (buffer = ${buffer.top}). Scrolling up by ${targetBufferSize}`);
+  }
+  // Bottom edge check
+  else if (buffer.bottom === 0) {
+    // Cell is at the bottom edge - scroll down by targetBufferSize
+    newOffsetY = Math.min(
+      this.fullGridSize - viewHeight,
+      this.viewOffset.y + targetBufferSize
+    );
+    needsVerticalScroll = true;
+    console.log(`BOTTOM EDGE REACHED (buffer = ${buffer.bottom}). Scrolling down by ${targetBufferSize}`);
   }
   
   // If we need to scroll in either direction, apply the combined scroll
-  if (scrollPlan.horizontal.needed || scrollPlan.vertical.needed) {
-    console.log('EXECUTING SCROLL:', {
-      from: { x: this.viewOffset.x, y: this.viewOffset.y },
-      to: { x: newOffsetX, y: newOffsetY },
-      horizontal: scrollPlan.horizontal,
-      vertical: scrollPlan.vertical
-    });
-    
+  if (needsHorizontalScroll || needsVerticalScroll) {
     // Add the slow-scroll class to enable smooth animation
     if (this.gridElement) {
-      // Remove any existing transition classes first
       this.gridElement.classList.remove('fast-scroll', 'slow-scroll');
-      
-      // Add the slow animation class
       this.gridElement.classList.add('slow-scroll');
     }
     
@@ -1054,24 +992,22 @@ handleAutoScroll() {
     const oldOffsetX = this.viewOffset.x;
     const oldOffsetY = this.viewOffset.y;
     
-    // Update the view offset for both axes at once
+    // Update the view offset
     this.viewOffset.x = newOffsetX;
     this.viewOffset.y = newOffsetY;
     
     // Force a full rebuild
     this._lastRenderOffset = null;
-    
-    // Re-render the grid
     this.renderVisibleGrid();
     
-    // Notify about the scroll with both coordinates
+    // Notify about the scroll
     document.dispatchEvent(new CustomEvent('gridAutoScrolled', { 
       detail: { 
         offset: this.viewOffset, 
         lastCell, 
         gridRenderer: this,
-        horizontalScroll: scrollPlan.horizontal.needed,
-        verticalScroll: scrollPlan.vertical.needed,
+        horizontalScroll: needsHorizontalScroll,
+        verticalScroll: needsVerticalScroll,
         oldOffset: { x: oldOffsetX, y: oldOffsetY }
       }
     }));
@@ -1081,12 +1017,58 @@ handleAutoScroll() {
       if (this.gridElement) {
         this.gridElement.classList.remove('slow-scroll');
       }
-    }, 450); // Slightly longer than transition to ensure it completes
+    }, 450);
     
     return true; // Scrolling happened
   }
   
   return false; // No scrolling needed
+}
+
+/**
+ * Update buffer display to show current edge distances
+ * @param {Object} buffer - Buffer values for each edge
+ */
+updateBufferDisplay(buffer) {
+  // Create or get the buffer display element
+  let bufferDisplay = document.getElementById('buffer-display');
+  
+  if (!bufferDisplay) {
+    // Create the buffer display if it doesn't exist
+    bufferDisplay = document.createElement('div');
+    bufferDisplay.id = 'buffer-display';
+    bufferDisplay.style.position = 'fixed';
+    bufferDisplay.style.top = '10px';
+    bufferDisplay.style.left = '10px';
+    bufferDisplay.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+    bufferDisplay.style.color = 'white';
+    bufferDisplay.style.padding = '10px';
+    bufferDisplay.style.borderRadius = '5px';
+    bufferDisplay.style.fontFamily = 'monospace';
+    bufferDisplay.style.fontSize = '14px';
+    bufferDisplay.style.zIndex = '9999';
+    document.body.appendChild(bufferDisplay);
+  }
+  
+  // Update the content
+  bufferDisplay.innerHTML = `
+    <div style="text-align: center; font-weight: bold; margin-bottom: 5px;">BUFFER VALUES</div>
+    <div style="display: grid; grid-template-columns: auto auto; gap: 5px;">
+      <div style="text-align: right;">Left:</div>
+      <div style="text-align: left; ${buffer.left === 0 ? 'color: red; font-weight: bold;' : ''}">${buffer.left}</div>
+      
+      <div style="text-align: right;">Right:</div>
+      <div style="text-align: left; ${buffer.right === 0 ? 'color: red; font-weight: bold;' : ''}">${buffer.right}</div>
+      
+      <div style="text-align: right;">Top:</div>
+      <div style="text-align: left; ${buffer.top === 0 ? 'color: red; font-weight: bold;' : ''}">${buffer.top}</div>
+      
+      <div style="text-align: right;">Bottom:</div>
+      <div style="text-align: left; ${buffer.bottom === 0 ? 'color: red; font-weight: bold;' : ''}">${buffer.bottom}</div>
+    </div>
+    <div style="margin-top: 5px; font-size: 12px;">Selected: (${this.selectedCells.length > 0 ? this.selectedCells[this.selectedCells.length-1].x : 'none'}, ${this.selectedCells.length > 0 ? this.selectedCells[this.selectedCells.length-1].y : 'none'})</div>
+    <div style="margin-top: 5px; font-size: 12px;">View: (${this.viewOffset.x}, ${this.viewOffset.y})</div>
+  `;
 }
   
   /**
