@@ -874,6 +874,7 @@ clearRandomLetters() {
 /**
  * Handles automatic scrolling when the last selected cell is touching an edge
  * Only triggers when buffer is 0, and checks adjacent edges for buffer < 4
+ * Fixed to be consistent across all four edges
  */
 handleAutoScroll() {
   // Only proceed if we have selected cells
@@ -890,11 +891,20 @@ handleAutoScroll() {
   const viewWidth = isMobile ? this.options.gridWidthSmall : this.options.gridWidth;
   const viewHeight = isMobile ? this.options.gridHeightSmall : this.options.gridHeight;
   
-  // Calculate distances to each edge
+  // Calculate distances to each edge - FIXED to be consistent
+  // For all edges, a distance of 0 means the cell is at the edge
   const distToLeftEdge = lastCell.x - this.viewOffset.x;
-  const distToRightEdge = (this.viewOffset.x + viewWidth - 1) - lastCell.x;
+  const distToRightEdge = (this.viewOffset.x + viewWidth) - lastCell.x - 1; // -1 to get the exact distance
   const distToTopEdge = lastCell.y - this.viewOffset.y;
-  const distToBottomEdge = (this.viewOffset.y + viewHeight - 1) - lastCell.y;
+  const distToBottomEdge = (this.viewOffset.y + viewHeight) - lastCell.y - 1; // -1 to get the exact distance
+  
+  // Debug distances
+  console.log('Edge distances:', {
+    left: distToLeftEdge,
+    right: distToRightEdge,
+    top: distToTopEdge,
+    bottom: distToBottomEdge
+  });
   
   // Track if we need to scroll in any direction
   let needsHorizontalScroll = false;
@@ -1030,7 +1040,12 @@ handleAutoScroll() {
   
   // If we need to scroll in either direction, apply the combined scroll
   if (needsHorizontalScroll || needsVerticalScroll) {
-    console.log('Auto-scrolling grid with combined scrolling in both directions');
+    console.log('Auto-scrolling grid with combined scrolling:', {
+      from: { x: this.viewOffset.x, y: this.viewOffset.y },
+      to: { x: newOffsetX, y: newOffsetY },
+      horizontal: needsHorizontalScroll,
+      vertical: needsVerticalScroll
+    });
     
     // Add the slow-scroll class to enable smooth animation
     if (this.gridElement) {
