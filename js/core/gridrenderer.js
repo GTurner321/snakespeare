@@ -804,11 +804,12 @@ if (this.selectedCells.length > 0) {
     bottom: this.viewOffset.y + viewHeight - 1
   };
   
+  // Use the same corrected buffer calculation as in handleAutoScroll
   const buffer = {
-    left: lastCell.x - viewBounds.left,
-    right: viewBounds.right - lastCell.x,
-    top: lastCell.y - viewBounds.top,
-    bottom: viewBounds.bottom - lastCell.y
+    left: lastCell.x - viewBounds.left + 1,     // +1 correction for left
+    right: viewBounds.right - lastCell.x - 1,   // -1 correction for right
+    top: lastCell.y - viewBounds.top + 1,       // +1 correction for top
+    bottom: viewBounds.bottom - lastCell.y - 1  // -1 correction for bottom
   };
   
   this.updateBufferDisplay(buffer);
@@ -898,7 +899,7 @@ clearRandomLetters() {
 }
 
 /**
- * Simplified handleAutoScroll with no adjacent edge checks
+ * Simplified handleAutoScroll with corrected buffer calculations
  */
 handleAutoScroll() {
   // Only proceed if we have selected cells
@@ -915,7 +916,7 @@ handleAutoScroll() {
   const viewWidth = isMobile ? this.options.gridWidthSmall : this.options.gridWidth;
   const viewHeight = isMobile ? this.options.gridHeightSmall : this.options.gridHeight;
   
-  // Calculate view boundaries
+  // Calculate view boundaries (FIXED to match actual viewport behavior)
   const viewBounds = {
     left: this.viewOffset.x,
     right: this.viewOffset.x + viewWidth - 1,  // -1 for 0-indexed grid
@@ -923,15 +924,16 @@ handleAutoScroll() {
     bottom: this.viewOffset.y + viewHeight - 1 // -1 for 0-indexed grid
   };
   
-  // Calculate buffer for each edge - distance from cell to view boundary
+  // Calculate buffer for each edge with corrections
+  // CRITICAL FIX: Apply +1 or -1 correction to each buffer calculation to match actual displayed values
   const buffer = {
-    left: lastCell.x - viewBounds.left,
-    right: viewBounds.right - lastCell.x,
-    top: lastCell.y - viewBounds.top,
-    bottom: viewBounds.bottom - lastCell.y
+    left: lastCell.x - viewBounds.left + 1,     // +1 correction for left
+    right: viewBounds.right - lastCell.x - 1,   // -1 correction for right
+    top: lastCell.y - viewBounds.top + 1,       // +1 correction for top
+    bottom: viewBounds.bottom - lastCell.y - 1  // -1 correction for bottom
   };
   
-  // Update buffer display
+  // Update buffer display with the corrected values
   this.updateBufferDisplay(buffer);
   
   // Track if we need to scroll in any direction
@@ -1024,7 +1026,7 @@ handleAutoScroll() {
   
   return false; // No scrolling needed
 }
-
+  
 /**
  * Update buffer display to show current edge distances
  * @param {Object} buffer - Buffer values for each edge
