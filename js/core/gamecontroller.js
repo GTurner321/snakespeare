@@ -128,6 +128,25 @@ constructor(options = {}) {
 
   // Initialize Shakespeare component
   this.initShakespeareComponent();
+
+  // Add event listener to coordinate scroll completion and snake/island updates
+  document.addEventListener('gridScrollComplete', () => {
+    // Notify all components that need to know scrolling is complete
+    if (window.snakePath) {
+      window.snakePath._scrollInProgress = false;
+    }
+    
+    if (window.islandRenderer) {
+      window.islandRenderer._scrollInProgress = false;
+    }
+    
+    // Update island appearance
+    setTimeout(() => {
+      if (window.islandRenderer && window.islandRenderer.refreshIsland) {
+        window.islandRenderer.refreshIsland();
+      }
+    }, 50);
+  });
 }
   
 /**
