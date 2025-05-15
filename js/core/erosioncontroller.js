@@ -175,61 +175,79 @@ class ErosionController {
   }
   
   /**
-   * Identify which cells are currently erodable (adjacent to sea)
-   * @return {Array} Array of erodable cell coordinates
-   */
-  identifyCurrentErodableCells() {
-    // Get all island cells from the grid renderer
-    const allCells = this.gridRenderer.getIslandCells();
-    const erodableCells = [];
-    
-    // Create a map of all cells in the grid for adjacency checks
-    const cellMap = new Map();
-    allCells.forEach(cell => {
-      cellMap.set(`${cell.x},${cell.y}`, cell);
+ * Identify which cells are currently erodable (adjacent to sea)
+ * Modified to exclude currently selected cells
+ * @return {Array} Array of erodable cell coordinates
+ */
+identifyCurrentErodableCells() {
+  // Get all island cells from the grid renderer
+  const allCells = this.gridRenderer.getIslandCells();
+  const erodableCells = [];
+  
+  // Create a map of all cells in the grid for adjacency checks
+  const cellMap = new Map();
+  allCells.forEach(cell => {
+    cellMap.set(`${cell.x},${cell.y}`, cell);
+  });
+  
+  // Get path cells to exclude
+  const pathMap = new Map();
+  this.gridRenderer.getPathCells().forEach(cell => {
+    pathMap.set(`${cell.x},${cell.y}`, cell);
+  });
+  
+  // NEW: Create a map of currently selected cells to exclude
+  const selectedCellMap = new Map();
+  if (this.gridRenderer.selectedCells && this.gridRenderer.selectedCells.length > 0) {
+    this.gridRenderer.selectedCells.forEach(cell => {
+      selectedCellMap.set(`${cell.x},${cell.y}`, cell);
+      
+      // Also log selected cells for debugging
+      console.log(`Excluding selected cell at (${cell.x}, ${cell.y}) from erosion`);
     });
+  }
+  
+  // Check each cell to see if it's adjacent to a sea cell
+  for (const cell of allCells) {
+    // Skip path cells - they can't be eroded yet
+    if (pathMap.has(`${cell.x},${cell.y}`)) {
+      continue;
+    }
     
-    // Get path cells to exclude
-    const pathMap = new Map();
-    this.gridRenderer.getPathCells().forEach(cell => {
-      pathMap.set(`${cell.x},${cell.y}`, cell);
-    });
+    // NEW: Skip currently selected cells - they shouldn't be eroded
+    if (selectedCellMap.has(`${cell.x},${cell.y}`)) {
+      console.log(`Skipping selected cell at (${cell.x}, ${cell.y}) - protected from erosion`);
+      continue;
+    }
     
-    // Check each cell to see if it's adjacent to a sea cell
-    for (const cell of allCells) {
-      // Skip path cells - they can't be eroded yet
-      if (pathMap.has(`${cell.x},${cell.y}`)) {
-        continue;
-      }
+    // Skip cells that are already flashing/scheduled for removal
+    if (this.flashingCells.has(`${cell.x},${cell.y}`)) {
+      continue;
+    }
+    
+    // Check if this cell is adjacent to sea (or a soon-to-be sea cell)
+    let adjacentToSea = false;
+    const directions = [[0, -1], [1, 0], [0, 1], [-1, 0]]; // Up, right, down, left
+    
+    for (const [dx, dy] of directions) {
+      const adjX = cell.x + dx;
+      const adjY = cell.y + dy;
+      const key = `${adjX},${adjY}`;
       
-      // Skip cells that are already flashing/scheduled for removal
-      if (this.flashingCells.has(`${cell.x},${cell.y}`)) {
-        continue;
-      }
-      
-      // Check if this cell is adjacent to sea (or a soon-to-be sea cell)
-      let adjacentToSea = false;
-      const directions = [[0, -1], [1, 0], [0, 1], [-1, 0]]; // Up, right, down, left
-      
-      for (const [dx, dy] of directions) {
-        const adjX = cell.x + dx;
-        const adjY = cell.y + dy;
-        const key = `${adjX},${adjY}`;
-        
-        // If adjacent cell is not in our cellMap, it's a sea cell
-        if (!cellMap.has(key)) {
-          adjacentToSea = true;
-          break;
-        }
-      }
-      
-      if (adjacentToSea) {
-        erodableCells.push(cell);
+      // If adjacent cell is not in our cellMap, it's a sea cell
+      if (!cellMap.has(key)) {
+        adjacentToSea = true;
+        break;
       }
     }
     
-    return erodableCells;
+    if (adjacentToSea) {
+      erodableCells.push(cell);
+    }
   }
+  
+  return erodableCells;
+}
   
   /**
    * Select cells to erode, with some pairs selection
