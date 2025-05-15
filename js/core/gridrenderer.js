@@ -1031,6 +1031,9 @@ smoothScrollToOffset(newOffset, slowAnimation = false) {
   // Capture initial offset for dispatch event
   const initialOffset = {...this.viewOffset};
   
+  // Set scrolling flag to prevent concurrent scrolls
+  this._isScrolling = true;
+  
   // Dispatch event BEFORE scroll starts
   document.dispatchEvent(new CustomEvent('gridScrollStarted', {
     detail: {
@@ -1044,7 +1047,10 @@ smoothScrollToOffset(newOffset, slowAnimation = false) {
   
   // Get the grid element
   const gridElement = document.querySelector('.grid-container');
-  if (!gridElement) return;
+  if (!gridElement) {
+    this._isScrolling = false; // Clear flag in case element not found
+    return;
+  }
   
   // Remove any existing transition class
   gridElement.classList.remove('fast-scroll', 'slow-scroll');
@@ -1069,23 +1075,48 @@ smoothScrollToOffset(newOffset, slowAnimation = false) {
     }
   }));
   
-  // Set timeout to dispatch scroll complete event
+  // Calculate transition duration - add a small buffer for reliability
+  const transitionDuration = slowAnimation ? 1000 : 400;
+  
+  // Set timeout to handle scroll completion
   setTimeout(() => {
     // Clear scrolling flag
     this._isScrolling = false;
     
     // Re-render once more to ensure all cells are showing correctly
+    this._lastRenderOffset = null; // Force a complete rebuild
     this.renderVisibleGrid();
+    
+    // Important: Update revealed letters in the phrase after scrolling
+    // This ensures that hint letters remain properly visible in the phrase display
+    if (this.hintLevel > 0) {
+      // Check if we have any revealed cells that need updating
+      if (this.revealedCells && this.revealedCells.length > 0) {
+        console.log('Updating revealed letters after scroll completion');
+        this.updatePhraseWithRevealedLetters();
+      }
+    }
     
     // Dispatch scroll complete event
     document.dispatchEvent(new CustomEvent('gridScrollComplete', {
       detail: {
-        offset: newOffset
+        offset: newOffset,
+        initialOffset: initialOffset,
+        duration: transitionDuration
       }
     }));
-  }, slowAnimation ? 1000 : 400); // Match the transition duration
+    
+    // Add a second update after a short delay to catch any post-rendering issues
+    setTimeout(() => {
+      // Secondary check to ensure everything is properly rendered and updated
+      if (this.hintLevel > 0 && this.revealedCells && this.revealedCells.length > 0) {
+        console.log('Secondary revealed letters update check');
+        this.updatePhraseWithRevealedLetters();
+      }
+    }, 100);
+  }, transitionDuration + 50); // Add a small buffer to ensure transition completes
 }
-
+  
 /**
  * Helper method to determine scroll direction based on offset change
  */
