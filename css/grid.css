@@ -139,23 +139,24 @@ body {
 
 /* Default non-letter cell - deep blue sea */
 .grid-cell {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: var(--defaultblue); /* Main sea color */
-    color: transparent; /* Hide the dot by making text transparent */
-    border: 1px solid var(--defaultblue-dark); /* Slightly darker border */
-    text-shadow: none; /* Remove text shadow */
-    border-radius: 4px;
-    font-family: 'Trebuchet MS', Arial, sans-serif;
-    font-weight: bold;
-    font-size: 1.4rem;
-    user-select: none;
-    /* Targeted transitions instead of 'all' for better performance */
-    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-    box-sizing: border-box;
-    width: 50px;
-    height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--defaultblue); /* Main sea color */
+  color: transparent; /* Hide the dot by making text transparent */
+  border: 1px solid var(--defaultblue-dark); /* Slightly darker border */
+  text-shadow: none; /* Remove text shadow */
+  border-radius: 4px;
+  font-family: 'Trebuchet MS', Arial, sans-serif;
+  font-weight: bold;
+  font-size: 1.4rem;
+  user-select: none;
+  /* Improved cell transitions during scrolling */
+  transition: opacity 0.2s ease, background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  will-change: opacity, background-color, border-color;
+  box-sizing: border-box;
+  width: 50px;
+  height: 50px;
     /* Hardware acceleration for smoother performance */
     transform: translateZ(0);
     /* Signal to browser that these properties will change */
@@ -929,6 +930,20 @@ body {
    7. Animation and Touch Handling (preserved from original)
    ========================================================================== */
 
+.grid-container {
+  transition-property: transform;
+  transition-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
+  will-change: transform;
+}
+
+.grid-container.fast-scroll {
+  transition-duration: 200ms;
+}
+
+.grid-container.slow-scroll {
+  transition-duration: 400ms;
+}
+
 /* Animation for button clicks - WITHOUT TRANSLATION */
 @keyframes button-pulse {
     0% { transform: scale(1); }
@@ -965,6 +980,12 @@ body {
 /* Hide the refresh button container (replaced by menu) */
 .refresh-button-container {
     display: none;
+}
+
+/* Better GPU acceleration for all grid components */
+.grid-container, .grid-cell, .snake-piece {
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 /* ==========================================================================
