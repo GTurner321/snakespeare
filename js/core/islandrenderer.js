@@ -1,7 +1,7 @@
 /**
- * IslandRenderer - Modified to move beach effect to sea cells (FIXED)
- * Ensures both path cells and random letter cells are green but the
- * yellow border "beach" effect is on the sea cells on the proper sides
+ * IslandRenderer - Optimized for scroll performance
+ * Ensures efficient styling of island cells with cached states
+ * and scroll-aware updates.
  */
 
 class IslandRenderer {
@@ -9,88 +9,221 @@ class IslandRenderer {
     this.gridRenderer = gridRenderer;
     this.initialized = false;
     
+    // NEW: Cell style cache to avoid redundant calculations
+    this.cellStyleCache = new Map();
+    
+    // NEW: Track scroll state
+    this._scrollInProgress = false;
+    
+    // NEW: Track visible cell bounds to detect newly visible cells
+    this._visibleBounds = {
+      minX: 0, maxX: 0,
+      minY: 0, maxY: 0
+    };
+    
     // Make this instance available globally for direct access
     window.islandRenderer = this;
     
-    // Force immediate update on initialization
-    console.log('IslandRenderer initializing - forcing immediate update');
-    this.updateIslandAppearance();
+    // Initial setup with delayed updates
+    this._setupInitialState();
     
-    // Also schedule a delayed update to ensure grid is fully rendered
-    setTimeout(() => {
-      console.log('IslandRenderer delayed update executing');
-      this.updateIslandAppearance();
-    }, 500);
+    // Set up optimized event listeners
+    this._setupEventListeners();
     
-    // Add event listeners for all scenarios that might affect cell styling
-    const criticalEvents = [
-      'pathSet',                   // When a path is newly set
-      'gridRebuilt',               // When grid is rebuilt
-      'gridScrolled',              // When grid is scrolled
-      'islandLettersUpdated',      // When island letters are updated 
-      'islandReductionLevelChanged', // When reduction level changes
-      'selectionsCleared',         // When selections are cleared
-      'gridCompletionChanged'      // When grid is completed
-    ];
-    
-    criticalEvents.forEach(eventName => {
-      document.addEventListener(eventName, (e) => {
-        console.log(`IslandRenderer: Critical event '${eventName}' received - updating appearance`);
-        // Force update immediately
-        this.updateIslandAppearance();
-        
-        // Also update again after a delay to ensure all changes are processed
-        setTimeout(() => this.updateIslandAppearance(), 100);
-      });
-    });
-    
-    // Explicitly handle reduction level changes with multiple updates
-    document.addEventListener('islandReductionLevelChanged', (e) => {
-      console.log(`IslandRenderer: Reduction level changed to ${e.detail?.level}`);
-      // Triple-ensure update for reduction level changes
-      this.updateIslandAppearance();
-      setTimeout(() => this.updateIslandAppearance(), 100);
-      setTimeout(() => this.updateIslandAppearance(), 300);
-    });
-    
-    // Listen for explicit update request
-    document.addEventListener('updateIslandStyling', () => {
-      console.log('IslandRenderer: Explicit request to update island styling');
-      this.updateIslandAppearance();
-    });
-    
-    console.log('IslandRenderer initialized with comprehensive event handling');
+    console.log('IslandRenderer initialized with scroll-optimized architecture');
     this.initialized = true;
   }
   
   /**
-   * Key method: Update island appearance by checking all visible cells
-   * FIXED to put correct beach borders on sea cells
+   * Initial setup with delayed updates for better loading performance
+   * @private
    */
-  updateIslandAppearance() {
-    console.log('Updating island appearance with beach effect on sea cells');
+  _setupInitialState() {
+    // Perform an initial calculation of styles after a short delay
+    setTimeout(() => {
+      this._calculateStyles();
+      this._applyStyles();
+    }, 200);
     
+    // Schedule a second update to ensure everything renders correctly
+    setTimeout(() => {
+      this._calculateStyles();
+      this._applyStyles();
+    }, 500);
+  }
+  
+  /**
+   * Set up optimized event listeners with scroll awareness
+   * @private
+   */
+  _setupEventListeners() {
+    // NEW: Track scroll events to pause updates during scrolling
+    document.addEventListener('gridScrolled', () => {
+      this._scrollInProgress = true;
+      // Update visible bounds but don't apply styles during scroll
+      this._updateVisibleBounds();
+    });
+    
+    document.addEventListener('gridScrollComplete', () => {
+      this._scrollInProgress = false;
+      // Update styles after scroll completes, using animation frame for smoother performance
+      this._updateVisibleBounds();
+      // Use requestAnimationFrame for better performance
+      requestAnimationFrame(() => {
+        this._calculateStyles();
+        this._applyStyles();
+      });
+    });
+    
+    // NEW: Create categories for different event types
+    const immediateEvents = [
+      'pathSet',
+      'islandLettersUpdated',
+      'islandReductionLevelChanged'
+    ];
+    
+    const delayedEvents = [
+      'gridCompletionChanged', 
+      'selectionsCleared'
+    ];
+    
+    // Handle high-priority events immediately (but still respect scrolling)
+    immediateEvents.forEach(eventName => {
+      document.addEventListener(eventName, () => {
+        // Don't update during scrolling
+        if (this._scrollInProgress) return;
+        
+        // Update on next animation frame
+        requestAnimationFrame(() => {
+          this._calculateStyles();
+          this._applyStyles();
+        });
+      });
+    });
+    
+    // Handle lower-priority events with debouncing
+    let updateTimeoutId = null;
+    delayedEvents.forEach(eventName => {
+      document.addEventListener(eventName, () => {
+        // Don't update during scrolling
+        if (this._scrollInProgress) return;
+        
+        // Clear existing timeout to debounce multiple events
+        if (updateTimeoutId) {
+          clearTimeout(updateTimeoutId);
+        }
+        
+        // Schedule update with delay
+        updateTimeoutId = setTimeout(() => {
+          requestAnimationFrame(() => {
+            this._calculateStyles();
+            this._applyStyles();
+          });
+        }, 100);
+      });
+    });
+    
+    // Handle explicit update requests
+    document.addEventListener('updateIslandStyling', () => {
+      if (this._scrollInProgress) return;
+      
+      requestAnimationFrame(() => {
+        this._calculateStyles();
+        this._applyStyles();
+      });
+    });
+    
+    // NEW: Track grid rebuilds to update visible bounds
+    document.addEventListener('gridRebuilt', (e) => {
+      // Only process if not during a scroll
+      if (!e.detail.isScrolling) {
+        this._updateVisibleBounds();
+        requestAnimationFrame(() => {
+          this._calculateStyles();
+          this._applyStyles();
+        });
+      }
+    });
+  }
+  
+  /**
+   * Calculate current visible bounds of the grid
+   * @private
+   */
+  _updateVisibleBounds() {
+    if (!this.gridRenderer) return;
+    
+    const viewOffset = this.gridRenderer.viewOffset || { x: 0, y: 0 };
+    const isMobile = window.innerWidth < 768;
+    const width = isMobile ? this.gridRenderer.options.gridWidthSmall : this.gridRenderer.options.gridWidth;
+    const height = isMobile ? this.gridRenderer.options.gridHeightSmall : this.gridRenderer.options.gridHeight;
+    
+    this._visibleBounds = {
+      minX: viewOffset.x,
+      maxX: viewOffset.x + width,
+      minY: viewOffset.y,
+      maxY: viewOffset.y + height
+    };
+  }
+  
+  /**
+   * Check if cell coordinates are currently visible
+   * @param {number} x - X coordinate
+   * @param {number} y - Y coordinate
+   * @return {boolean} True if cell is visible
+   * @private
+   */
+  _isCellVisible(x, y) {
+    return x >= this._visibleBounds.minX && 
+           x < this._visibleBounds.maxX && 
+           y >= this._visibleBounds.minY && 
+           y < this._visibleBounds.maxY;
+  }
+  
+  /**
+   * Calculate styles for all visible cells
+   * @private
+   */
+  _calculateStyles() {
     if (!this.gridRenderer || !this.gridRenderer.grid) {
-      console.warn('Grid renderer or grid not available');
       return;
     }
+    
+    // Clear existing cache
+    const newStyleCache = new Map();
+    
+    // Process all cells in visible bounds
+    for (let y = this._visibleBounds.minY; y < this._visibleBounds.maxY; y++) {
+      for (let x = this._visibleBounds.minX; x < this._visibleBounds.maxX; x++) {
+        if (y < 0 || y >= this.gridRenderer.grid.length || 
+            x < 0 || x >= this.gridRenderer.grid[0].length) {
+          continue;
+        }
+        
+        // Get cell's style configuration
+        const styleConfig = this._getCellStyleConfig(x, y);
+        
+        // Store in cache
+        newStyleCache.set(`${x},${y}`, styleConfig);
+      }
+    }
+    
+    // Replace cache atomically
+    this.cellStyleCache = newStyleCache;
+  }
+  
+  /**
+   * Apply cached styles to DOM elements
+   * @private
+   */
+  _applyStyles() {
+    // Skip if scrolling in progress
+    if (this._scrollInProgress) return;
     
     // Get all visible cells in the DOM
     const cells = document.querySelectorAll('.grid-cell');
-    if (!cells.length) {
-      console.warn('No grid cells found in DOM');
-      return;
-    }
     
-    console.log(`Processing ${cells.length} visible cells`);
-    
-    // Counter for debugging
-    let letterCellCount = 0;
-    let pathCellCount = 0;
-    let seaCellCount = 0;
-    let beachCellCount = 0;
-    
-    // Process each cell
+    // Process each visible cell
     cells.forEach(cellElement => {
       // Get cell coordinates
       const x = parseInt(cellElement.dataset.gridX, 10);
@@ -100,87 +233,100 @@ class IslandRenderer {
         return;
       }
       
-      try {
-        // IMPORTANT: Check both isPath AND hasLetter
-        const isPath = this.isCellPath(x, y);
-        const hasLetter = this.cellHasLetter(x, y);
-        
-        // Count for debugging
-        if (isPath) pathCellCount++;
-        if (hasLetter && !isPath) letterCellCount++;
-        if (!hasLetter && !isPath) seaCellCount++;
-        
-        // ANY cell with a letter should be styled as an island (green)
-        if (isPath || hasLetter) {
-          // Add path-cell class to make it green
-          if (!cellElement.classList.contains('path-cell')) {
-            cellElement.classList.add('path-cell');
-          }
-          
-          // REMOVE island edge classes (yellow borders) from island cells
-          cellElement.classList.remove(
-            'island-edge-top',
-            'island-edge-right',
-            'island-edge-bottom',
-            'island-edge-left'
-          );
-        } else {
-          // Remove path-cell class from non-letter cells
-          if (cellElement.classList.contains('path-cell')) {
-            cellElement.classList.remove('path-cell');
-          }
-          
-          // Process sea adjacency
-          const adjacentIslands = this.getAdjacentLetterCells(x, y);
-          
-          if (adjacentIslands.length > 0) {
-            // This is a sea cell adjacent to at least one island
-            cellElement.classList.add('sea-adjacent');
-            beachCellCount++;
-            
-            // FIXED: Add shore edge classes to sea cells in the CORRECT orientation
-            // Reset previous shore edge classes
-            cellElement.classList.remove(
-              'shore-edge-top',
-              'shore-edge-right',
-              'shore-edge-bottom',
-              'shore-edge-left'
-            );
-            
-            // Add appropriate shore edge classes based on adjacent islands
-            adjacentIslands.forEach(direction => {
-              // Now the border should be on the SAME side as the direction of the island
-              if (direction === 'top') {
-                cellElement.classList.add('shore-edge-top'); // TOP border when island is above
-              }
-              if (direction === 'right') {
-                cellElement.classList.add('shore-edge-right'); // RIGHT border when island is to the right
-              }
-              if (direction === 'bottom') {
-                cellElement.classList.add('shore-edge-bottom'); // BOTTOM border when island is below
-              }
-              if (direction === 'left') {
-                cellElement.classList.add('shore-edge-left'); // LEFT border when island is to the left
-              }
-            });
-          } else {
-            // Not adjacent to any islands
-            cellElement.classList.remove('sea-adjacent');
-            // Remove any shore edge classes
-            cellElement.classList.remove(
-              'shore-edge-top',
-              'shore-edge-right',
-              'shore-edge-bottom',
-              'shore-edge-left'
-            );
-          }
-        }
-      } catch (error) {
-        console.error(`Error processing cell at (${x},${y}):`, error);
-      }
+      // Get cached style configuration
+      const cacheKey = `${x},${y}`;
+      const styleConfig = this.cellStyleCache.get(cacheKey);
+      
+      // Skip if no style config found (should not happen for visible cells)
+      if (!styleConfig) return;
+      
+      // Apply styles efficiently using classList methods
+      this._applyStyleConfig(cellElement, styleConfig);
     });
+  }
+  
+  /**
+   * Get style configuration for a cell based on its state
+   * @param {number} x - X coordinate
+   * @param {number} y - Y coordinate
+   * @return {Object} Style configuration for the cell
+   * @private
+   */
+  _getCellStyleConfig(x, y) {
+    // Base configuration
+    const config = {
+      isPathCell: false,
+      isSeaAdjacent: false,
+      shoreEdges: []
+    };
     
-    console.log(`Island appearance update completed: ${pathCellCount} path cells, ${letterCellCount} random letter cells, ${seaCellCount} sea cells, ${beachCellCount} beach cells`);
+    // Check if cell has a letter or is a path cell
+    const hasLetter = this.cellHasLetter(x, y);
+    const isPath = this.isCellPath(x, y);
+    
+    // Island cells (path or letter cells)
+    if (isPath || hasLetter) {
+      config.isPathCell = true;
+      return config;
+    }
+    
+    // Check if this is a sea cell adjacent to an island
+    const adjacentDirections = this.getAdjacentLetterCells(x, y);
+    if (adjacentDirections.length > 0) {
+      config.isSeaAdjacent = true;
+      config.shoreEdges = adjacentDirections;
+    }
+    
+    return config;
+  }
+  
+  /**
+   * Apply style configuration to a cell element
+   * @param {HTMLElement} cellElement - Cell DOM element
+   * @param {Object} styleConfig - Style configuration
+   * @private
+   */
+  _applyStyleConfig(cellElement, styleConfig) {
+    // Reset classes we manage
+    cellElement.classList.remove(
+      'path-cell',
+      'sea-adjacent',
+      'shore-edge-top',
+      'shore-edge-right',
+      'shore-edge-bottom',
+      'shore-edge-left'
+    );
+    
+    // Apply path-cell class if needed
+    if (styleConfig.isPathCell) {
+      cellElement.classList.add('path-cell');
+      return;
+    }
+    
+    // Apply sea adjacent styling if needed
+    if (styleConfig.isSeaAdjacent) {
+      cellElement.classList.add('sea-adjacent');
+      
+      // Apply shore edge classes
+      styleConfig.shoreEdges.forEach(direction => {
+        cellElement.classList.add(`shore-edge-${direction}`);
+      });
+    }
+  }
+  
+  /**
+   * Public method to update island appearance
+   * Maintained for backwards compatibility
+   */
+  updateIslandAppearance() {
+    // Skip if scrolling in progress
+    if (this._scrollInProgress) return;
+    
+    // Use animation frame for better performance
+    requestAnimationFrame(() => {
+      this._calculateStyles();
+      this._applyStyles();
+    });
   }
   
   /**
@@ -233,14 +379,6 @@ class IslandRenderer {
   }
   
   /**
-   * Check if a cell is adjacent to any cell that has a letter
-   * KEPT for backwards compatibility
-   */
-  isAdjacentToAnyLetterCell(x, y) {
-    return this.getAdjacentLetterCells(x, y).length > 0;
-  }
-  
-  /**
    * Check if a cell is a path cell
    */
   isCellPath(x, y) {
@@ -254,6 +392,27 @@ class IslandRenderer {
     
     // Check if this cell is part of the path
     return this.gridRenderer.grid[y][x].isPath;
+  }
+  
+  /**
+   * Check if a cell is adjacent to any cell that has a letter
+   * KEPT for backwards compatibility
+   */
+  isAdjacentToAnyLetterCell(x, y) {
+    return this.getAdjacentLetterCells(x, y).length > 0;
+  }
+  
+  /**
+   * Refresh island rendering - Public API for forced updates
+   * @param {boolean} force - Force immediate update even during scrolling
+   */
+  refreshIsland(force = false) {
+    if (this._scrollInProgress && !force) return;
+    
+    requestAnimationFrame(() => {
+      this._calculateStyles();
+      this._applyStyles();
+    });
   }
 }
 
