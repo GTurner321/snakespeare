@@ -172,102 +172,290 @@ class ScrollAreaHandler {
     return scrollArea;
   }
   
-  /**
-   * Set up event listeners for scroll areas - UPDATED with auto-scroll support
-   */
-  setupEventListeners() {
-    // Scroll area click events
-    if (this.scrollAreas) {
-      // Map directions to scroll areas
-      const directions = {
-        'top': 'up',
-        'right': 'right',
-        'bottom': 'down',
-        'left': 'left'
-      };
+/**
+ * Set up event listeners for scroll areas - Main coordinator function
+ */
+setupEventListeners() {
+  // Initialize tracking variables for scroll state
+  this._isScrolling = false;
+  this._lastOffset = { x: 0, y: 0 };
+  this._scrollAnimationTimeout = null;
+  
+  // Set up different types of listeners
+  this._setupScrollAreaClickListeners();
+  this._setupKeyboardListeners();
+  this._setupScrollEventListeners();
+  this._setupGridEventListeners();
+  
+  // Initial updates with delay to ensure DOM is ready
+  this._scheduleInitialUpdates();
+}
+
+/**
+ * Set up click and touch listeners for scroll areas
+ * @private
+ */
+_setupScrollAreaClickListeners() {
+  // Map positions to scroll directions
+  const directions = {
+    'top': 'up',
+    'right': 'right',
+    'bottom': 'down',
+    'left': 'left'
+  };
+  
+  // Set up click handlers for each scroll area
+  if (this.scrollAreas) {
+    Object.entries(this.scrollAreas).forEach(([position, element]) => {
+      const direction = directions[position];
       
-      // Set up click handlers for each scroll area
-      Object.entries(this.scrollAreas).forEach(([position, element]) => {
-        const direction = directions[position];
+      // Add click handlers with proper debouncing
+      element.addEventListener('click', (e) => {
+        // Prevent clicking while scrolling is in progress
+        if (this._isScrolling) {
+          e.preventDefault();
+          return;
+        }
         
-        element.addEventListener('click', () => {
-          this.handleScrollAreaClick(direction, element);
-        });
+        // Call handler with clicked element
+        this.handleScrollAreaClick(direction, element);
       });
+      
+      // Add touch events for mobile (with debounce)
+      this._setupTouchListenersForElement(element, direction);
+    });
+  }
+}
+
+/**
+ * Set up touch listeners for a specific scroll area element
+ * @param {HTMLElement} element - Scroll area element
+ * @param {string} direction - Scroll direction
+ * @private
+ */
+_setupTouchListenersForElement(element, direction) {
+  let touchStartTime = 0;
+  let touchTimeout = null;
+  
+  element.addEventListener('touchstart', () => {
+    touchStartTime = Date.now();
+    
+    // Clear any existing timeout
+    if (touchTimeout) {
+      clearTimeout(touchTimeout);
     }
     
-    // Keyboard navigation (preserved from original code)
-    document.addEventListener('keydown', (event) => {
-      let direction = null;
-      
-      switch (event.key) {
-        case 'ArrowUp':
-          direction = 'up';
-          break;
-        case 'ArrowRight':
-          direction = 'right';
-          break;
-        case 'ArrowDown':
-          direction = 'down';
-          break;
-        case 'ArrowLeft':
-          direction = 'left';
-          break;
-      }
-      
-      if (direction) {
-        event.preventDefault();
-        // Scroll grid in the pressed direction
-        this.gridRenderer.scroll(direction);
-        
-        // Update scroll area states
-        this.updateScrollAreaStates();
-      }
-    });
+    // Add active class for visual feedback
+    element.classList.add('touch-active');
+  });
+  
+  element.addEventListener('touchend', () => {
+    // Remove touch-active class
+    element.classList.remove('touch-active');
     
-    // Add listener for auto-scrolling events
-    document.addEventListener('gridAutoScrolled', (e) => {
-      // Update scroll area states when auto-scrolling occurs
+    // Check if this was a quick tap (not a long press)
+    const touchDuration = Date.now() - touchStartTime;
+    if (touchDuration < 300) {
+      // Prevent rapid tapping - use timeout
+      if (!this._isScrolling) {
+        // Set scrolling flag
+        this._isScrolling = true;
+        
+        // Trigger scroll
+        this.handleScrollAreaClick(direction, element);
+        
+        // Reset after a short delay
+        touchTimeout = setTimeout(() => {
+          this._isScrolling = false;
+        }, 300);
+      }
+    }
+  });
+}
+
+/**
+ * Set up keyboard navigation listeners
+ * @private
+ */
+_setupKeyboardListeners() {
+  let keyboardScrollTimeout = null;
+  
+  document.addEventListener('keydown', (event) => {
+    // Prevent rapid keypresses
+    if (this._isScrolling) {
+      return;
+    }
+    
+    let direction = null;
+    
+    switch (event.key) {
+      case 'ArrowUp':
+        direction = 'up';
+        break;
+      case 'ArrowRight':
+        direction = 'right';
+        break;
+      case 'ArrowDown':
+        direction = 'down';
+        break;
+      case 'ArrowLeft':
+        direction = 'left';
+        break;
+    }
+    
+    if (direction) {
+      event.preventDefault();
+      
+      // Set scrolling flag
+      this._isScrolling = true;
+      
+      // Scroll grid in the pressed direction
+      this.gridRenderer.scroll(direction);
+      
+      // Update scroll area states
       this.updateScrollAreaStates();
       
-      // Visual feedback for auto-scroll
-      this.showAutoScrollFeedback(e.detail);
-    });
+      // Visual feedback for keyboard navigation
+      this._highlightScrollArea(direction);
+      
+      // Clear any existing timeout
+      if (keyboardScrollTimeout) {
+        clearTimeout(keyboardScrollTimeout);
+      }
+      
+      // Reset scrolling flag after a short delay
+      keyboardScrollTimeout = setTimeout(() => {
+        this._isScrolling = false;
+      }, 300);
+    }
+  });
+}
+
+/**
+ * Set up scroll-related event listeners
+ * @private
+ */
+_setupScrollEventListeners() {
+  // Listen for scroll start events
+  document.addEventListener('gridScrollStarted', (e) => {
+    // Set scrolling flag
+    this._isScrolling = true;
     
-    // Initial update of scroll area states
+    // Highlight the appropriate scroll area
+    this._highlightScrollArea(e.detail.direction);
+    
+    // Store current offset for comparison
+    if (this.gridRenderer && this.gridRenderer.viewOffset) {
+      this._lastOffset = { ...this.gridRenderer.viewOffset };
+    }
+  });
+  
+  // Listen for scroll in progress events
+  document.addEventListener('gridScrolled', () => {
+    // Keep scrolling flag active
+    this._isScrolling = true;
+    
+    // Update scroll area states during scrolling
+    this.updateScrollAreaStates();
+  });
+  
+  // Listen for scroll complete events
+  document.addEventListener('gridScrollComplete', () => {
+    // Update scroll area states
     this.updateScrollAreaStates();
     
-    // Listen for window resize
-    window.addEventListener('resize', () => {
-      this.adjustPhraseDisplayWidth();
-      this.updateScrollAreaStates();
-      if (this.gridRenderer) {
-        this.adjustScrollAreasToGrid(this.gridRenderer);
-      }
-    });
-    
-    // Add listener for grid creation to adjust scroll areas
-    document.addEventListener('gridCreated', (e) => {
-      this.adjustScrollAreasToGrid(e.detail.gridRenderer);
-    });
-    
-    // Add listener for grid resize to adjust scroll areas
-    document.addEventListener('gridResized', (e) => {
-      this.adjustPhraseDisplayWidth();
-      this.adjustScrollAreasToGrid(e.detail.gridRenderer);
-    });
-    
-    // Add listener for grid rebuild to adjust scroll areas
-    document.addEventListener('gridRebuilt', (e) => {
-      this.adjustScrollAreasToGrid(e.detail.gridRenderer);
-    });
-    
-    // Adjust phrase display on initial load
+    // Clear scrolling flag after a short delay to prevent rapid scrolling
     setTimeout(() => {
-      this.adjustPhraseDisplayWidth();
-      this.adjustScrollAreasToGrid(this.gridRenderer);
+      this._isScrolling = false;
     }, 100);
+    
+    // If phrase display needs height adjustment, do it now
+    if (this.adjustPhraseDisplayHeight) {
+      this.adjustPhraseDisplayHeight();
+    }
+  });
+  
+  // Listen for auto-scroll events with improved feedback
+  document.addEventListener('gridAutoScrolled', (e) => {
+    // Update scroll area states
+    this.updateScrollAreaStates();
+    
+    this._handleAutoScrollFeedback(e.detail);
+  });
+}
+
+/**
+ * Handle auto-scroll event feedback
+ * @param {Object} detail - Event detail object
+ * @private
+ */
+_handleAutoScrollFeedback(detail) {
+  // Provide visual feedback for auto-scrolling
+  if (detail.horizontalScroll) {
+    // Determine horizontal direction from offset change
+    const horizontalDirection = detail.offset.x > this._lastOffset.x ? 'right' : 'left';
+    this._highlightScrollArea(horizontalDirection);
   }
+  
+  if (detail.verticalScroll) {
+    // Determine vertical direction from offset change
+    const verticalDirection = detail.offset.y > this._lastOffset.y ? 'down' : 'up';
+    this._highlightScrollArea(verticalDirection);
+  }
+  
+  // Update last known offset
+  this._lastOffset = { ...detail.offset };
+}
+
+/**
+ * Set up grid-related event listeners
+ * @private
+ */
+_setupGridEventListeners() {
+  // Listen for grid creation events
+  document.addEventListener('gridCreated', (e) => {
+    this.adjustScrollAreasToGrid(e.detail.gridRenderer);
+    
+    // Store initial offset
+    if (e.detail.gridRenderer && e.detail.gridRenderer.viewOffset) {
+      this._lastOffset = { ...e.detail.gridRenderer.viewOffset };
+    }
+  });
+  
+  // Listen for grid resize events
+  document.addEventListener('gridResized', (e) => {
+    this.adjustPhraseDisplayWidth();
+    this.adjustScrollAreasToGrid(e.detail.gridRenderer);
+  });
+  
+  // Listen for grid rebuild events (only when not scrolling)
+  document.addEventListener('gridRebuilt', (e) => {
+    // Only adjust if not during a scroll operation
+    if (!e.detail.isScrolling) {
+      this.adjustScrollAreasToGrid(e.detail.gridRenderer);
+    }
+  });
+}
+
+/**
+ * Schedule initial updates with delays
+ * @private
+ */
+_scheduleInitialUpdates() {
+  // Initial updates with delay to ensure DOM is ready
+  setTimeout(() => {
+    this.adjustPhraseDisplayWidth();
+    this.adjustScrollAreasToGrid(this.gridRenderer);
+    this.updateScrollAreaStates();
+  }, 100);
+  
+  // Additional update after longer delay to catch any late-loading elements
+  setTimeout(() => {
+    this.adjustPhraseDisplayWidth();
+    this.adjustScrollAreasToGrid(this.gridRenderer);
+    this.updateScrollAreaStates();
+  }, 500);
+}
   
   /**
    * Show visual feedback for auto-scrolling to indicate direction
@@ -406,6 +594,34 @@ handleScrollAreaClick(direction, scrollArea) {
       scrollHeight
     });
   }
+
+/**
+ * Highlight a scroll area to provide visual feedback
+ * @param {string} direction - Scroll direction ('up', 'right', 'down', 'left')
+ * @private
+ */  
+_highlightScrollArea(direction) {
+  // Map directions to positions
+  const positionMap = {
+    'up': 'top',
+    'right': 'right',
+    'down': 'bottom',
+    'left': 'left'
+  };
+  
+  const position = positionMap[direction];
+  const scrollArea = this.scrollAreas[position];
+  
+  if (scrollArea) {
+    // Add feedback class
+    scrollArea.classList.add('auto-scroll-feedback');
+    
+    // Remove after animation completes
+    setTimeout(() => {
+      scrollArea.classList.remove('auto-scroll-feedback');
+    }, 300);
+  }
+}
   
   /**
    * Update scroll area states (enabled/disabled) based on grid scroll limits
