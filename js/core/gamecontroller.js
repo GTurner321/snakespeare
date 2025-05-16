@@ -350,7 +350,6 @@ checkHintLetterConflict(selectedLetters) {
   return false;
 }
   
-// 2. Update the handleSelectionChange method to include the conflict check
 handleSelectionChange() {
   // Get selected letters
   const selectedLetters = this.gridRenderer.getSelectedLetters();
@@ -374,16 +373,16 @@ handleSelectionChange() {
     return;
   }
   
-  // Continue with the original method as before
+  // IMPORTANT: Make sure to call updatePhraseWithHints here
   this.updatePhraseWithHints();
   
   // Update scroll area states
-  if (this.scrollHandler.updateScrollAreaStates) {
+  if (this.scrollHandler && this.scrollHandler.updateScrollAreaStates) {
     this.scrollHandler.updateScrollAreaStates();
   }
   
   // Adjust phrase display height after content change
-  if (this.scrollHandler.adjustPhraseDisplayHeight) {
+  if (this.scrollHandler && this.scrollHandler.adjustPhraseDisplayHeight) {
     setTimeout(() => {
       this.scrollHandler.adjustPhraseDisplayHeight();
     }, 50);
@@ -558,6 +557,7 @@ fillPhraseTemplate(template, phrase, selectedLetters) {
   return templateArray.join('');
 }
 
+// Also make sure updatePhraseWithHints is actually updating the text
 updatePhraseWithHints() {
   if (!this.gridRenderer || !this.currentPhrase || !this.phraseTemplate) {
     return;
@@ -658,41 +658,6 @@ updatePhraseWithHints() {
       this.scrollHandler.adjustPhraseDisplayHeight();
     }, 50);
   }
-}
-
-/**
- * Helper method for checking if a selection follows the path correctly
- * Modified to ensure start cell is handled
- */
-checkIfSelectionFollowsPath(selectedLetters) {
-  // Easy case - no letters selected
-  if (!selectedLetters.length) return false;
-  
-  // FIXED: We need to also check if the start cell is selected
-  const centerX = 35;
-  const centerY = 35;
-  const startCell = this.gridRenderer.grid[centerY][centerX];
-  const isStartSelected = startCell.isSelected;
-  
-  if (!isStartSelected) {
-    console.log('Start cell is not selected, cannot follow path');
-    return false;
-  }
-  
-  // Check if each selected letter is on the path
-  // Note: First check if there's at least one path cell, otherwise it would be impossible
-  // to find the correct path
-  const hasPathCells = selectedLetters.some(cell => cell.isPathCell);
-  if (!hasPathCells) {
-    console.log('None of the selected cells are on the path');
-    return false;
-  }
-  
-  // Check if each selected letter is on the path
-  // A stricter check would be to verify they're in the right order too
-  const allOnPath = selectedLetters.every(cell => cell.isPathCell);
-  
-  return allOnPath;
 }
   
 /**
