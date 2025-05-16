@@ -379,6 +379,10 @@ body {
     pointer-events: none !important; /* Allow clicks to pass through to the cell */
     z-index: 500 !important; /* Much higher z-index to ensure visibility over cells */
     object-fit: contain; /* Ensure image scales to fit while maintaining aspect ratio */
+     background-size: contain !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+   image-rendering: -webkit-optimize-contrast;
     transform-origin: center;
     transition: visibility 0.1s ease, transform 0.2s ease; /* Add visibility transition for flashing */
     overflow: hidden; /* Keep pieces contained within cell boundaries */
