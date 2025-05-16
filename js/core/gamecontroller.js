@@ -560,6 +560,7 @@ fillPhraseTemplate(template, phrase, selectedLetters) {
 /**
  * Updated updatePhraseWithHints to ensure selected letters immediately update
  * This separates the display update from the selection handling logic
+ * Also adds pulsing animation for matching hint letters
  */
 updatePhraseWithHints() {
   if (!this.gridRenderer || !this.currentPhrase || !this.phraseTemplate) {
@@ -656,9 +657,65 @@ updatePhraseWithHints() {
     }
   }
   
-  // Update the display - ENSURE THIS HAPPENS EVEN WITH NO SELECTION CHANGES
-  console.log('Updating phrase display with:', templateArray.join(''));
-  displayElement.textContent = templateArray.join('');
+  // Track which positions contain hint letters for animation
+  const hintLetterPositions = [];
+  
+  // Store the revealed hint letter positions
+  if (revealedLetters.length > 0) {
+    for (const revealedLetter of revealedLetters) {
+      if (revealedLetter.pathIndex >= 0 && revealedLetter.pathIndex < alphaPositions.length) {
+        const phrasePos = alphaPositions[revealedLetter.pathIndex];
+        if (phrasePos !== undefined) {
+          hintLetterPositions.push({
+            position: phrasePos,
+            pathIndex: revealedLetter.pathIndex,
+            letter: letterlistArray[phrasePos].toUpperCase()
+          });
+        }
+      }
+    }
+  }
+  
+  // Convert template array to HTML with spans for each character
+  let phraseHtml = '';
+  for (let i = 0; i < templateArray.length; i++) {
+    // Check if this is a hint letter
+    const isHint = hintLetterPositions.some(hint => hint.position === i);
+    
+    // Wrap each character in a span with data attributes
+    const char = templateArray[i];
+    
+    if (isHint) {
+      // Add data attribute for hint letters
+      phraseHtml += `<span class="phrase-char hint-letter" data-index="${i}">${char}</span>`;
+    } else {
+      phraseHtml += `<span class="phrase-char" data-index="${i}">${char}</span>`;
+    }
+  }
+  
+  // Update the display with the HTML spans
+  displayElement.innerHTML = phraseHtml;
+  
+  // Find matching hint letters that were selected
+  setTimeout(() => {
+    // Find which hint letters match selected letters
+    const matchingPositions = this.findMatchingHintLetters(hintLetterPositions);
+    
+    // Apply animation to matching hint letters
+    matchingPositions.forEach(position => {
+      const charSpan = displayElement.querySelector(`.phrase-char[data-index="${position}"]`);
+      if (charSpan) {
+        // Remove any existing animation first
+        charSpan.classList.remove('hint-letter-match');
+        
+        // Force a reflow to restart animation
+        void charSpan.offsetWidth;
+        
+        // Add class to trigger animation
+        charSpan.classList.add('hint-letter-match');
+      }
+    });
+  }, 50);
   
   // Adjust phrase display height if needed
   if (this.scrollHandler && this.scrollHandler.adjustPhraseDisplayHeight) {
@@ -666,6 +723,57 @@ updatePhraseWithHints() {
       this.scrollHandler.adjustPhraseDisplayHeight();
     }, 50);
   }
+}
+
+/**
+ * Helper method to find hint letters that match selected letters
+ * @param {Array} hintLetterPositions - Array of hint letter positions
+ * @return {Array} Array of matching phrase positions
+ */
+findMatchingHintLetters(hintLetterPositions) {
+  const matchingPositions = [];
+  
+  // Skip if no hints or no grid renderer
+  if (!hintLetterPositions.length || !this.gridRenderer) {
+    return matchingPositions;
+  }
+  
+  // Get selected cells
+  const selectedCells = this.gridRenderer.selectedCells;
+  if (!selectedCells.length) {
+    return matchingPositions;
+  }
+  
+  // Get the letterlist
+  const letterlistArray = this.currentPhrase.letterlist.split('');
+  
+  // Map path indices for selected cells
+  const selectedPathIndices = [];
+  
+  selectedCells.forEach((cell, index) => {
+    // Get the corresponding path cell
+    const gridCell = this.gridRenderer.grid[cell.y][cell.x];
+    if (gridCell && gridCell.pathIndex !== undefined && gridCell.pathIndex >= 0) {
+      selectedPathIndices.push(gridCell.pathIndex);
+    } else if (index === 0) {
+      // First cell is the start cell with index 0
+      selectedPathIndices.push(0);
+    }
+  });
+  
+  // Check each hint letter
+  hintLetterPositions.forEach(hint => {
+    // Get the path index for this hint
+    const hintPathIndex = hint.pathIndex;
+    
+    // Check if this path index is also selected
+    if (selectedPathIndices.includes(hintPathIndex)) {
+      // Add the phrase position for animation
+      matchingPositions.push(hint.position);
+    }
+  });
+  
+  return matchingPositions;
 }
   
 /**
