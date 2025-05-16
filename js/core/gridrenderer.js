@@ -899,7 +899,7 @@ clearRandomLetters() {
 }
 
 /**
- * Simplified handleAutoScroll with corrected buffer calculations
+ * Enhanced handleAutoScroll with adjacent edge checking and corrected buffers
  */
 handleAutoScroll() {
   // Only proceed if we have selected cells
@@ -925,7 +925,7 @@ handleAutoScroll() {
   };
   
   // Calculate buffer for each edge with corrections
-  // CRITICAL FIX: Apply +1 or -1 correction to each buffer calculation to match actual displayed values
+  // Apply +1 or -1 correction to each buffer calculation to match actual displayed values
   const buffer = {
     left: lastCell.x - viewBounds.left + 1,     // +1 correction for left
     right: viewBounds.right - lastCell.x - 1,   // -1 correction for right
@@ -944,7 +944,7 @@ handleAutoScroll() {
   let newOffsetX = this.viewOffset.x;
   let newOffsetY = this.viewOffset.y;
   
-  // SIMPLIFIED APPROACH: Only check for buffer === 0 for each edge
+  // PRIMARY CHECK: Only trigger primary scroll when buffer is EXACTLY 0
   
   // Left edge check
   if (buffer.left === 0) {
@@ -952,6 +952,25 @@ handleAutoScroll() {
     newOffsetX = Math.max(0, this.viewOffset.x - targetBufferSize);
     needsHorizontalScroll = true;
     console.log(`LEFT EDGE REACHED (buffer = ${buffer.left}). Scrolling left by ${targetBufferSize}`);
+    
+    // Check adjacent edges (top and bottom) when scrolling horizontally
+    if (buffer.top > 0 && buffer.top < targetBufferSize) {
+      // Top buffer is less than target - scroll up to achieve target buffer
+      const topAdjustment = targetBufferSize - buffer.top;
+      newOffsetY = Math.max(0, this.viewOffset.y - topAdjustment);
+      needsVerticalScroll = true;
+      console.log(`ADJACENT TOP EDGE CLOSE (buffer = ${buffer.top}). Scrolling up by ${topAdjustment}`);
+    }
+    else if (buffer.bottom > 0 && buffer.bottom < targetBufferSize) {
+      // Bottom buffer is less than target - scroll down to achieve target buffer
+      const bottomAdjustment = targetBufferSize - buffer.bottom;
+      newOffsetY = Math.min(
+        this.fullGridSize - viewHeight,
+        this.viewOffset.y + bottomAdjustment
+      );
+      needsVerticalScroll = true;
+      console.log(`ADJACENT BOTTOM EDGE CLOSE (buffer = ${buffer.bottom}). Scrolling down by ${bottomAdjustment}`);
+    }
   }
   // Right edge check
   else if (buffer.right === 0) {
@@ -962,6 +981,25 @@ handleAutoScroll() {
     );
     needsHorizontalScroll = true;
     console.log(`RIGHT EDGE REACHED (buffer = ${buffer.right}). Scrolling right by ${targetBufferSize}`);
+    
+    // Check adjacent edges (top and bottom) when scrolling horizontally
+    if (buffer.top > 0 && buffer.top < targetBufferSize) {
+      // Top buffer is less than target - scroll up to achieve target buffer
+      const topAdjustment = targetBufferSize - buffer.top;
+      newOffsetY = Math.max(0, this.viewOffset.y - topAdjustment);
+      needsVerticalScroll = true;
+      console.log(`ADJACENT TOP EDGE CLOSE (buffer = ${buffer.top}). Scrolling up by ${topAdjustment}`);
+    }
+    else if (buffer.bottom > 0 && buffer.bottom < targetBufferSize) {
+      // Bottom buffer is less than target - scroll down to achieve target buffer
+      const bottomAdjustment = targetBufferSize - buffer.bottom;
+      newOffsetY = Math.min(
+        this.fullGridSize - viewHeight,
+        this.viewOffset.y + bottomAdjustment
+      );
+      needsVerticalScroll = true;
+      console.log(`ADJACENT BOTTOM EDGE CLOSE (buffer = ${buffer.bottom}). Scrolling down by ${bottomAdjustment}`);
+    }
   }
   
   // Top edge check
@@ -970,6 +1008,25 @@ handleAutoScroll() {
     newOffsetY = Math.max(0, this.viewOffset.y - targetBufferSize);
     needsVerticalScroll = true;
     console.log(`TOP EDGE REACHED (buffer = ${buffer.top}). Scrolling up by ${targetBufferSize}`);
+    
+    // Check adjacent edges (left and right) when scrolling vertically
+    if (buffer.left > 0 && buffer.left < targetBufferSize) {
+      // Left buffer is less than target - scroll left to achieve target buffer
+      const leftAdjustment = targetBufferSize - buffer.left;
+      newOffsetX = Math.max(0, this.viewOffset.x - leftAdjustment);
+      needsHorizontalScroll = true;
+      console.log(`ADJACENT LEFT EDGE CLOSE (buffer = ${buffer.left}). Scrolling left by ${leftAdjustment}`);
+    }
+    else if (buffer.right > 0 && buffer.right < targetBufferSize) {
+      // Right buffer is less than target - scroll right to achieve target buffer
+      const rightAdjustment = targetBufferSize - buffer.right;
+      newOffsetX = Math.min(
+        this.fullGridSize - viewWidth,
+        this.viewOffset.x + rightAdjustment
+      );
+      needsHorizontalScroll = true;
+      console.log(`ADJACENT RIGHT EDGE CLOSE (buffer = ${buffer.right}). Scrolling right by ${rightAdjustment}`);
+    }
   }
   // Bottom edge check
   else if (buffer.bottom === 0) {
@@ -980,6 +1037,25 @@ handleAutoScroll() {
     );
     needsVerticalScroll = true;
     console.log(`BOTTOM EDGE REACHED (buffer = ${buffer.bottom}). Scrolling down by ${targetBufferSize}`);
+    
+    // Check adjacent edges (left and right) when scrolling vertically
+    if (buffer.left > 0 && buffer.left < targetBufferSize) {
+      // Left buffer is less than target - scroll left to achieve target buffer
+      const leftAdjustment = targetBufferSize - buffer.left;
+      newOffsetX = Math.max(0, this.viewOffset.x - leftAdjustment);
+      needsHorizontalScroll = true;
+      console.log(`ADJACENT LEFT EDGE CLOSE (buffer = ${buffer.left}). Scrolling left by ${leftAdjustment}`);
+    }
+    else if (buffer.right > 0 && buffer.right < targetBufferSize) {
+      // Right buffer is less than target - scroll right to achieve target buffer
+      const rightAdjustment = targetBufferSize - buffer.right;
+      newOffsetX = Math.min(
+        this.fullGridSize - viewWidth,
+        this.viewOffset.x + rightAdjustment
+      );
+      needsHorizontalScroll = true;
+      console.log(`ADJACENT RIGHT EDGE CLOSE (buffer = ${buffer.right}). Scrolling right by ${rightAdjustment}`);
+    }
   }
   
   // If we need to scroll in either direction, apply the combined scroll
@@ -1026,7 +1102,7 @@ handleAutoScroll() {
   
   return false; // No scrolling needed
 }
- 
+  
   /**
    * Update grid template based on screen size
    */
