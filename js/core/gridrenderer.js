@@ -534,6 +534,16 @@ handleTouchMove(e) {
     // Skip if cell is already selected
     if (cell.isSelected) return;
     
+    // CRITICAL FIX: Check if this cell has a letter - only allow cells with letters
+    if (!cell.letter || cell.letter.trim() === '') {
+      console.log('Cell has no letter, cannot select');
+      element.classList.add('invalid-selection');
+      setTimeout(() => {
+        element.classList.remove('invalid-selection');
+      }, 300);
+      return;
+    }
+    
     // Get current last selected cell as the reference point
     const lastSelected = this.selectedCells[this.selectedCells.length - 1];
     
@@ -562,80 +572,81 @@ handleTouchMove(e) {
    * Handle touch end event - with improved selection handling
    * @param {TouchEvent} e - Touch event
    */
-  handleTouchEnd(e) {
-    // If touch wasn't active, nothing to do
-    if (!this.touchState.active) return;
+ handleTouchEnd(e) {
+  // If touch wasn't active, nothing to do
+  if (!this.touchState.active) return;
+  
+  e.preventDefault();
+  
+  const currentTime = Date.now();
+  const touchDuration = currentTime - this.touchState.startTime;
+  
+  const x = this.touchState.lastCellX;
+  const y = this.touchState.lastCellY;
+  const startX = this.touchState.startX;
+  const startY = this.touchState.startY;
+  
+  // Determine if this was a tap (not a drag and short duration)
+  const MAX_TAP_DURATION = 300; // milliseconds
+  const isTap = (touchDuration < MAX_TAP_DURATION) && 
+              (!this.touchState.isDragging || (x === startX && y === startY));
+  
+  if (isTap) {
+    console.log(`Touch ended as tap on cell (${x}, ${y})`);
     
-    e.preventDefault();
-    
-    const currentTime = Date.now();
-    const touchDuration = currentTime - this.touchState.startTime;
-    
-    const x = this.touchState.lastCellX;
-    const y = this.touchState.lastCellY;
-    const startX = this.touchState.startX;
-    const startY = this.touchState.startY;
-    
-    // Determine if this was a tap (not a drag and short duration)
-    const MAX_TAP_DURATION = 300; // milliseconds
-    const isTap = (touchDuration < MAX_TAP_DURATION) && 
-                (!this.touchState.isDragging || (x === startX && y === startY));
-    
-    if (isTap) {
-      console.log(`Touch ended as tap on cell (${x}, ${y})`);
-      
-      // Execute the selection intent that was determined in touchStart
-      if (this.touchState.selectionIntent === 'select-start') {
-        console.log('Selecting start cell');
-        this.handleCellSelection(x, y, false); // Don't force selection - use normal adjacency checks
-      } 
-      else if (this.touchState.selectionIntent === 'deselect-last') {
-        console.log('Deselecting last cell');
-        this.deselectLastCell();
-      }
-      else if (this.touchState.selectionIntent === 'select-adjacent') {
-        console.log('Selecting adjacent cell');
-        this.handleCellSelection(x, y, false); // Don't force selection - use normal adjacency checks
-      }
-      
-      // Set flag with a shorter timeout for taps
-      this.recentlyHandledTouch = true;
-      setTimeout(() => {
-        this.recentlyHandledTouch = false;
-      }, 100); // Shorter timeout for taps
-    } else {
-      // For drags, handle based on what happened during the drag
-      if (this.touchState.hasAddedCellsDuringDrag) {
-        console.log('Drag added cells - keeping selection');
-      } else if (this.touchState.selectionIntent === 'deselect-last') {
-        console.log('Drag on last selected cell - deselecting');
-        this.deselectLastCell();
-      }
-      
-      console.log('Touch ended as drag/swipe');
-      
-      // For drags, we use a slightly longer timeout to prevent accidental clicks
-      this.recentlyHandledTouch = true;
-      setTimeout(() => {
-        this.recentlyHandledTouch = false;
-      }, 300);
+    // Execute the selection intent that was determined in touchStart
+    if (this.touchState.selectionIntent === 'select-start') {
+      console.log('Selecting start cell');
+      this.handleCellSelection(x, y, false); // Don't force selection - use normal adjacency checks
+    } 
+    else if (this.touchState.selectionIntent === 'deselect-last') {
+      console.log('Deselecting last cell');
+      this.deselectLastCell();
+    }
+    else if (this.touchState.selectionIntent === 'select-adjacent') {
+      console.log('Selecting adjacent cell');
+      this.handleCellSelection(x, y, false); // Don't force selection - use normal adjacency checks
     }
     
-    // Remove the touch active class from all cells
-    const cells = document.querySelectorAll('.grid-cell.touch-active');
-    cells.forEach(cell => cell.classList.remove('touch-active'));
+    // Set flag with a shorter timeout for taps
+    this.recentlyHandledTouch = true;
+    setTimeout(() => {
+      this.recentlyHandledTouch = false;
+    }, 100); // Shorter timeout for taps
+  } else {
+    // For drags, handle based on what happened during the drag
+    if (this.touchState.hasAddedCellsDuringDrag) {
+      console.log('Drag added cells - keeping selection');
+    } else if (this.touchState.selectionIntent === 'deselect-last') {
+      console.log('Drag on last selected cell - deselecting');
+      this.deselectLastCell();
+    }
     
-    // Reset touch state
-    this.touchState = {
-      active: false,
-      lastCellX: -1,
-      lastCellY: -1,
-      isDragging: false,
-      startCellSelected: false,
-      hasAddedCellsDuringDrag: false,
-      selectionIntent: null
-    };
+    console.log('Touch ended as drag/swipe');
+    
+    // For drags, we use a slightly longer timeout to prevent accidental clicks
+    this.recentlyHandledTouch = true;
+    setTimeout(() => {
+      this.recentlyHandledTouch = false;
+    }, 300);
   }
+  
+  // CRITICAL FIX: Make sure to remove touch-active class from all cells
+  const touchActiveCells = document.querySelectorAll('.grid-cell.touch-active');
+  touchActiveCells.forEach(cell => cell.classList.remove('touch-active'));
+  
+  // Reset touch state
+  this.touchState = {
+    active: false,
+    lastCellX: -1,
+    lastCellY: -1,
+    isDragging: false,
+    startCellSelected: false,
+    hasAddedCellsDuringDrag: false,
+    selectionIntent: null
+  };
+}
+
 
   /**
    * Check if the cell at coordinates is the last selected cell
@@ -722,6 +733,22 @@ handleCellSelection(x, y, forceSelect = false) {
   if (y >= 0 && y < this.grid.length && x >= 0 && x < this.grid[0].length) {
     const cell = this.grid[y][x];
     
+    // CRITICAL FIX: Check if this cell has a letter (except for the start cell)
+    const isStartCell = (x === 35 && y === 35);
+    if (!isStartCell && (!cell.letter || cell.letter.trim() === '')) {
+      console.log('Cell has no letter, cannot select');
+      
+      // Find the element for this cell to show invalid selection
+      const element = document.querySelector(`.grid-cell[data-grid-x="${x}"][data-grid-y="${y}"]`);
+      if (element) {
+        element.classList.add('invalid-selection');
+        setTimeout(() => {
+          element.classList.remove('invalid-selection');
+        }, 300);
+      }
+      return false;
+    }
+    
     // If this cell is already selected, deselect it only if it's the last one selected
     // AND we're not forcing selection (important for swipe/touch)
     if (cell.isSelected && !forceSelect) {
@@ -788,32 +815,30 @@ handleCellSelection(x, y, forceSelect = false) {
     this.selectedCells.push({ x, y });
     this.lastSelectedCell = { x, y };
 
-// Add this after: this.lastSelectedCell = { x, y };
-
-// Calculate and display buffer values even without auto-scroll
-if (this.selectedCells.length > 0) {
-  const lastCell = this.selectedCells[this.selectedCells.length - 1];
-  const isMobile = window.innerWidth < 768;
-  const viewWidth = isMobile ? this.options.gridWidthSmall : this.options.gridWidth;
-  const viewHeight = isMobile ? this.options.gridHeightSmall : this.options.gridHeight;
-  
-  const viewBounds = {
-    left: this.viewOffset.x,
-    right: this.viewOffset.x + viewWidth - 1,
-    top: this.viewOffset.y,
-    bottom: this.viewOffset.y + viewHeight - 1
-  };
-  
-  // Use the same corrected buffer calculation as in handleAutoScroll
-  const buffer = {
-    left: lastCell.x - viewBounds.left + 1,     // +1 correction for left
-    right: viewBounds.right - lastCell.x - 1,   // -1 correction for right
-    top: lastCell.y - viewBounds.top + 1,       // +1 correction for top
-    bottom: viewBounds.bottom - lastCell.y - 1  // -1 correction for bottom
-  };
-  
-  this.updateBufferDisplay(buffer);
-}
+    // Calculate and display buffer values even without auto-scroll
+    if (this.selectedCells.length > 0) {
+      const lastCell = this.selectedCells[this.selectedCells.length - 1];
+      const isMobile = window.innerWidth < 768;
+      const viewWidth = isMobile ? this.options.gridWidthSmall : this.options.gridWidth;
+      const viewHeight = isMobile ? this.options.gridHeightSmall : this.options.gridHeight;
+      
+      const viewBounds = {
+        left: this.viewOffset.x,
+        right: this.viewOffset.x + viewWidth - 1,
+        top: this.viewOffset.y,
+        bottom: this.viewOffset.y + viewHeight - 1
+      };
+      
+      // Use the same corrected buffer calculation as in handleAutoScroll
+      const buffer = {
+        left: lastCell.x - viewBounds.left + 1,     // +1 correction for left
+        right: viewBounds.right - lastCell.x - 1,   // -1 correction for right
+        top: lastCell.y - viewBounds.top + 1,       // +1 correction for top
+        bottom: viewBounds.bottom - lastCell.y - 1  // -1 correction for bottom
+      };
+      
+      this.updateBufferDisplay(buffer);
+    }
     
     // CRITICAL FIX: Make sure to log when start cell is selected
     if (cell.isStart) {
@@ -933,6 +958,11 @@ handleAutoScroll() {
     bottom: viewBounds.bottom - lastCell.y - 1  // -1 correction for bottom
   };
   
+  // DEBUG: Add this method to log buffer values
+  this.updateBufferDisplay = function(buffer) {
+    console.log(`Buffer values - Left: ${buffer.left}, Right: ${buffer.right}, Top: ${buffer.top}, Bottom: ${buffer.bottom}`);
+  };
+  
   // Update buffer display with the corrected values
   this.updateBufferDisplay(buffer);
   
@@ -944,17 +974,18 @@ handleAutoScroll() {
   let newOffsetX = this.viewOffset.x;
   let newOffsetY = this.viewOffset.y;
   
-  // SIMPLIFIED APPROACH: Only check for buffer === 0 for each edge
+  // CRITICAL FIX: Check for buffer <= 0 instead of just === 0
+  // This ensures we catch edge cases where the buffer might be negative
   
   // Left edge check
-  if (buffer.left === 0) {
+  if (buffer.left <= 0) {
     // Cell is at the left edge - scroll left by targetBufferSize
     newOffsetX = Math.max(0, this.viewOffset.x - targetBufferSize);
     needsHorizontalScroll = true;
     console.log(`LEFT EDGE REACHED (buffer = ${buffer.left}). Scrolling left by ${targetBufferSize}`);
   }
   // Right edge check
-  else if (buffer.right === 0) {
+  else if (buffer.right <= 0) {
     // Cell is at the right edge - scroll right by targetBufferSize
     newOffsetX = Math.min(
       this.fullGridSize - viewWidth,
@@ -965,14 +996,14 @@ handleAutoScroll() {
   }
   
   // Top edge check
-  if (buffer.top === 0) {
+  if (buffer.top <= 0) {
     // Cell is at the top edge - scroll up by targetBufferSize
     newOffsetY = Math.max(0, this.viewOffset.y - targetBufferSize);
     needsVerticalScroll = true;
     console.log(`TOP EDGE REACHED (buffer = ${buffer.top}). Scrolling up by ${targetBufferSize}`);
   }
   // Bottom edge check
-  else if (buffer.bottom === 0) {
+  else if (buffer.bottom <= 0) {
     // Cell is at the bottom edge - scroll down by targetBufferSize
     newOffsetY = Math.min(
       this.fullGridSize - viewHeight,
