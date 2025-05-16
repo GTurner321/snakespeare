@@ -557,7 +557,10 @@ fillPhraseTemplate(template, phrase, selectedLetters) {
   return templateArray.join('');
 }
 
-// Also make sure updatePhraseWithHints is actually updating the text
+/**
+ * Updated updatePhraseWithHints to ensure selected letters immediately update
+ * This separates the display update from the selection handling logic
+ */
 updatePhraseWithHints() {
   if (!this.gridRenderer || !this.currentPhrase || !this.phraseTemplate) {
     return;
@@ -604,8 +607,8 @@ updatePhraseWithHints() {
   }
   
   // Check if start cell is selected and has a letter
-  const centerX = 35;  // Updated from 25 to 35 based on your grid dimensions
-  const centerY = 35;  // Updated from 25 to 35 based on your grid dimensions
+  const centerX = 35;
+  const centerY = 35;
   const startCell = this.gridRenderer.grid[centerY][centerX];
   const isStartSelected = startCell.isSelected;
   
@@ -633,6 +636,10 @@ updatePhraseWithHints() {
   // Now apply regular selected letters, skipping positions that already have hint letters
   // and excluding the start cell since we already handled it
   const selectedLetters = this.gridRenderer.getSelectedLetters();
+  
+  // DEBUG: Log the selected letters
+  console.log('Selected letters for phrase update:', selectedLetters.map(l => l.letter).join(''));
+  
   if (selectedLetters.length > 0) {
     console.log('Applying selected letters:', selectedLetters.map(l => `${l.letter}`).join(', '));
     
@@ -649,7 +656,8 @@ updatePhraseWithHints() {
     }
   }
   
-  // Update the display
+  // Update the display - ENSURE THIS HAPPENS EVEN WITH NO SELECTION CHANGES
+  console.log('Updating phrase display with:', templateArray.join(''));
   displayElement.textContent = templateArray.join('');
   
   // Adjust phrase display height if needed
