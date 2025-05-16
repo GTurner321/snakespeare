@@ -755,6 +755,19 @@ body {
     }
 }
 
+/* Animation for hint letter matches */
+@keyframes hint-letter-pulse {
+  0% { font-weight: normal; transform: scale(1); }
+  50% { font-weight: bold; transform: scale(1.2); color: #4CAF50; }
+  100% { font-weight: normal; transform: scale(1); }
+}
+
+/* Class to apply the animation */
+.hint-letter-match {
+  display: inline-block;
+  animation: hint-letter-pulse 1s ease-in-out;
+}
+
 /* ==========================================================================
    5. Menu System (Replacing Refresh Buttons)
    ========================================================================== */
