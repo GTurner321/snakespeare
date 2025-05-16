@@ -722,6 +722,10 @@ deselectLastCell() {
  * @param {boolean} forceSelect - Force selection without adjacency check
  * @return {boolean} True if selection was successful
  */
+/**
+ * Modified handleCellSelection method for GridRenderer
+ * Ensures that selection changes properly trigger phrase updates
+ */
 handleCellSelection(x, y, forceSelect = false) {
   // If the grid is completed, prevent any further selection
   if (this.isCompleted) {
@@ -768,7 +772,7 @@ handleCellSelection(x, y, forceSelect = false) {
             this.lastSelectedCell = null;
           }
           
-          // Re-render and notify
+          // Re-render and notify - CRITICAL: Ensure notification happens
           this.renderVisibleGrid();
           if (this.options.onSelectionChange) {
             this.options.onSelectionChange(this.selectedCells);
@@ -815,45 +819,15 @@ handleCellSelection(x, y, forceSelect = false) {
     this.selectedCells.push({ x, y });
     this.lastSelectedCell = { x, y };
 
-    // Calculate and display buffer values even without auto-scroll
-    if (this.selectedCells.length > 0) {
-      const lastCell = this.selectedCells[this.selectedCells.length - 1];
-      const isMobile = window.innerWidth < 768;
-      const viewWidth = isMobile ? this.options.gridWidthSmall : this.options.gridWidth;
-      const viewHeight = isMobile ? this.options.gridHeightSmall : this.options.gridHeight;
-      
-      const viewBounds = {
-        left: this.viewOffset.x,
-        right: this.viewOffset.x + viewWidth - 1,
-        top: this.viewOffset.y,
-        bottom: this.viewOffset.y + viewHeight - 1
-      };
-      
-      // Use the same corrected buffer calculation as in handleAutoScroll
-      const buffer = {
-        left: lastCell.x - viewBounds.left + 1,     // +1 correction for left
-        right: viewBounds.right - lastCell.x - 1,   // -1 correction for right
-        top: lastCell.y - viewBounds.top + 1,       // +1 correction for top
-        bottom: viewBounds.bottom - lastCell.y - 1  // -1 correction for bottom
-      };
-      
-      this.updateBufferDisplay(buffer);
-    }
-    
-    // CRITICAL FIX: Make sure to log when start cell is selected
-    if (cell.isStart) {
-      console.log('Start cell selected with letter:', cell.letter);
-    }
-    
     // Check if we need to auto-scroll after selecting a cell
-    // Use the improved auto-scroll function that only triggers when buffer = 0
     this.handleAutoScroll();
     
     // Re-render grid
     this.renderVisibleGrid();
     
-    // Notify of selection change
+    // CRITICAL: Notify of selection change immediately
     if (this.options.onSelectionChange) {
+      console.log('Cell selected, notifying GameController');
       this.options.onSelectionChange(this.selectedCells);
     }
     
@@ -861,8 +835,7 @@ handleCellSelection(x, y, forceSelect = false) {
   }
   
   return false;
-}
-  
+}  
 applyRandomLetters(cells) {
   // Reset any existing random cells first
   this.clearRandomLetters();
