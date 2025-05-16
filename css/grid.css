@@ -251,17 +251,17 @@ body {
 
 /* Completed path style - lighter green with visible text */
 .grid-cell.completed-cell {
-  background-color: var(--color-path-bg, #90ee90) !important;
-  border-color: var(--color-path-border, #008000) !important;
-  color: var(--text-dark) !important; /* Dark teal for text */
-  border: 1px solid #81c784 !important; /* Lighter green border */
+  background-color: var(--maingreen) !important; /* Use island green instead */
+  border-color: var(--maingreen-dark) !important;
+  color: var(--text-dark) !important;
+  border: 1px solid var(--maingreen-dark) !important;
   text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8) !important;
-  z-index: 7 !important; /* Ensure completed is on top of all other states */
+  z-index: 7 !important;
 }
 
 .grid-cell.correct-path {
-  background-color: var(--color-path-bg, #90ee90) !important;
-  border-color: var(--color-path-border, #008000) !important;
+  background-color: var(--maingreen) !important; /* Use island green instead */
+  border-color: var(--maingreen-dark) !important;
 }
 
 /* Out of bounds cells as darker blue */
