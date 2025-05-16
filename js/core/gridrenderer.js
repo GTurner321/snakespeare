@@ -897,8 +897,7 @@ clearRandomLetters() {
 }
 
 /**
- * Improved handleAutoScroll method for GridRenderer
- * Triggers only at edge (buffer=0) and scrolls by 4 cells
+ * Manual fix for handleAutoScroll with direction-specific buffer thresholds
  */
 handleAutoScroll() {
   // Only proceed if we have selected cells
@@ -907,8 +906,11 @@ handleAutoScroll() {
   // Get the last selected cell
   const lastCell = this.selectedCells[this.selectedCells.length - 1];
   
-  // Buffer threshold - only scroll when buffer is exactly 0 (at the edge)
-  const bufferThreshold = 0;
+  // Direction-specific buffer thresholds
+  const leftBufferThreshold = -1;   // Trigger at this buffer value for left edge
+  const rightBufferThreshold = 1;   // Trigger at this buffer value for right edge
+  const topBufferThreshold = -1;    // Trigger at this buffer value for top edge
+  const bottomBufferThreshold = 1;  // Trigger at this buffer value for bottom edge
   
   // Scroll amount - how many cells to scroll when triggered
   const scrollAmount = 4;
@@ -918,13 +920,13 @@ handleAutoScroll() {
   const viewWidth = isMobile ? this.options.gridWidthSmall : this.options.gridWidth;
   const viewHeight = isMobile ? this.options.gridHeightSmall : this.options.gridHeight;
   
-  // Calculate edge positions consistently
+  // Calculate edge positions
   const leftEdge = this.viewOffset.x;
   const rightEdge = this.viewOffset.x + viewWidth - 1; // -1 because it's 0-indexed
   const topEdge = this.viewOffset.y;
   const bottomEdge = this.viewOffset.y + viewHeight - 1; // -1 because it's 0-indexed
   
-  // Calculate buffer distances consistently
+  // Calculate buffer distances
   const leftBuffer = lastCell.x - leftEdge;
   const rightBuffer = rightEdge - lastCell.x;
   const topBuffer = lastCell.y - topEdge;
@@ -936,6 +938,12 @@ handleAutoScroll() {
     rightBuffer,
     topBuffer,
     bottomBuffer,
+    thresholds: {
+      left: leftBufferThreshold,
+      right: rightBufferThreshold,
+      top: topBufferThreshold,
+      bottom: bottomBufferThreshold
+    },
     scrollAmount,
     lastCell: {x: lastCell.x, y: lastCell.y},
     edges: {leftEdge, rightEdge, topEdge, bottomEdge}
@@ -949,40 +957,40 @@ handleAutoScroll() {
   let newOffsetX = this.viewOffset.x;
   let newOffsetY = this.viewOffset.y;
   
-  // Left edge check - only trigger when exactly at edge (buffer = 0)
-  if (leftBuffer === bufferThreshold) {
+  // Left edge check - use direction-specific threshold
+  if (leftBuffer <= leftBufferThreshold) {
     // Scroll left by scrollAmount cells
     newOffsetX = Math.max(0, this.viewOffset.x - scrollAmount);
     needsHorizontalScroll = true;
-    console.log(`At left edge (buffer=${leftBuffer}). Scrolling left by ${scrollAmount} cells.`);
+    console.log(`At left edge (buffer=${leftBuffer} <= threshold=${leftBufferThreshold}). Scrolling left by ${scrollAmount} cells.`);
   }
-  // Right edge check - only trigger when exactly at edge (buffer = 0)
-  else if (rightBuffer === bufferThreshold) {
+  // Right edge check - use direction-specific threshold
+  else if (rightBuffer <= rightBufferThreshold) {
     // Scroll right by scrollAmount cells
     newOffsetX = Math.min(
       this.fullGridSize - viewWidth,
       this.viewOffset.x + scrollAmount
     );
     needsHorizontalScroll = true;
-    console.log(`At right edge (buffer=${rightBuffer}). Scrolling right by ${scrollAmount} cells.`);
+    console.log(`At right edge (buffer=${rightBuffer} <= threshold=${rightBufferThreshold}). Scrolling right by ${scrollAmount} cells.`);
   }
   
-  // Top edge check - only trigger when exactly at edge (buffer = 0)
-  if (topBuffer === bufferThreshold) {
+  // Top edge check - use direction-specific threshold
+  if (topBuffer <= topBufferThreshold) {
     // Scroll up by scrollAmount cells
     newOffsetY = Math.max(0, this.viewOffset.y - scrollAmount);
     needsVerticalScroll = true;
-    console.log(`At top edge (buffer=${topBuffer}). Scrolling up by ${scrollAmount} cells.`);
+    console.log(`At top edge (buffer=${topBuffer} <= threshold=${topBufferThreshold}). Scrolling up by ${scrollAmount} cells.`);
   }
-  // Bottom edge check - only trigger when exactly at edge (buffer = 0)
-  else if (bottomBuffer === bufferThreshold) {
+  // Bottom edge check - use direction-specific threshold 
+  else if (bottomBuffer <= bottomBufferThreshold) {
     // Scroll down by scrollAmount cells
     newOffsetY = Math.min(
       this.fullGridSize - viewHeight,
       this.viewOffset.y + scrollAmount
     );
     needsVerticalScroll = true;
-    console.log(`At bottom edge (buffer=${bottomBuffer}). Scrolling down by ${scrollAmount} cells.`);
+    console.log(`At bottom edge (buffer=${bottomBuffer} <= threshold=${bottomBufferThreshold}). Scrolling down by ${scrollAmount} cells.`);
   }
   
   // If we need to scroll in either direction, apply the combined scroll
@@ -1040,14 +1048,6 @@ handleAutoScroll() {
   }
   
   return false; // No scrolling needed
-}
-  
-/**
- * Log current buffer values for debugging purposes
- * @param {Object} buffer - Buffer values for all edges
- */
-updateBufferDisplay(buffer) {
-  console.log(`Buffer values - Left: ${buffer.left}, Right: ${buffer.right}, Top: ${buffer.top}, Bottom: ${buffer.bottom}`);
 }
   
   /**
