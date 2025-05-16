@@ -1,8 +1,9 @@
 /**
- * FINAL CORRECTED SNAKE PATH SOLUTION
+ * CLEAN SNAKE PATH SOLUTION
  * 
  * This file provides a completely fixed replacement for snakepath.js
  * It correctly handles the piece orientation by focusing on each cell's entry and exit directions
+ * All console.log statements have been removed for clarity
  * 
  * Instructions:
  * 1. Save this as js/core/snakepath.js, replacing the existing file
@@ -15,7 +16,7 @@ window.SnakePath = class SnakePath {
   constructor(gridRenderer) {
     this.gridRenderer = gridRenderer;
     this.initialized = false;
-    this._scrollInProgress = false; // Add this line to initialize the flag
+    this._scrollInProgress = false;
     
     // Add critical CSS to ensure things work
     this.injectCriticalStyles();
@@ -109,7 +110,6 @@ window.SnakePath = class SnakePath {
     
     // Flag initialization as complete
     this.initialized = true;
-    console.log('🐍 SnakePath initialized with image URLs:', this.pieceImages);
     
     // Initial update after a short delay
     setTimeout(() => this.updateSnakePath(), 500);
@@ -144,7 +144,6 @@ window.SnakePath = class SnakePath {
     
     // Add to document
     document.head.appendChild(style);
-    console.log('Injected critical styles for snake pieces');
   }
   
   /**
@@ -153,8 +152,6 @@ window.SnakePath = class SnakePath {
   verifyImageUrls() {
     Object.entries(this.pieceImages).forEach(([key, url]) => {
       const img = new Image();
-      img.onload = () => console.log(`✅ Snake ${key} image loaded successfully:`, url);
-      img.onerror = () => console.error(`❌ Snake ${key} image failed to load:`, url);
       img.src = url;
     });
   }
@@ -170,7 +167,6 @@ window.SnakePath = class SnakePath {
         const originalHandleCellSelection = this.gridRenderer.handleCellSelection;
         this.gridRenderer.handleCellSelection = (x, y, forceSelect) => {
           const result = originalHandleCellSelection.call(this.gridRenderer, x, y, forceSelect);
-          console.log(`Cell selection handled (${x},${y}), result: ${result}`);
           
           // Only update if not scrolling
           if (!this._scrollInProgress) {
@@ -180,7 +176,6 @@ window.SnakePath = class SnakePath {
           
           return result;
         };
-        console.log('Hooked into GridRenderer.handleCellSelection');
       }
       
       // Also try to hook into handleSelectionChange if it exists
@@ -188,7 +183,6 @@ window.SnakePath = class SnakePath {
         const originalHandleSelectionChange = this.gridRenderer.handleSelectionChange;
         this.gridRenderer.handleSelectionChange = (...args) => {
           const result = originalHandleSelectionChange.apply(this.gridRenderer, args);
-          console.log('handleSelectionChange called, updating snake path');
           
           // Only update if not scrolling
           if (!this._scrollInProgress) {
@@ -197,21 +191,18 @@ window.SnakePath = class SnakePath {
           
           return result;
         };
-        console.log('Hooked into GridRenderer.handleSelectionChange');
       }
     }
     
     // Listen for cell clicks
     document.addEventListener('click', (e) => {
       if (e.target.classList.contains('grid-cell') && !this._scrollInProgress) {
-        console.log('Cell clicked, updating snake path');
         setTimeout(() => this.updateSnakePath(), 100);
       }
     });
     
     // Listen for deselection events
     document.addEventListener('selectionsCleared', () => {
-      console.log('Selections cleared, updating snake path');
       if (!this._scrollInProgress) {
         setTimeout(() => this.updateSnakePath(), 100);
       }
@@ -221,15 +212,11 @@ window.SnakePath = class SnakePath {
     document.addEventListener('gridScrolled', (e) => {
       // Mark that scrolling is in progress
       this._scrollInProgress = true;
-      
-      // Don't update during scroll animation - wait for completion
-      console.log('Grid scrolling in progress, delaying snake path update');
     });
 
     document.addEventListener('gridScrollComplete', (e) => {
       // Scrolling is complete, update the snake path
       this._scrollInProgress = false;
-      console.log('Grid scroll completed, updating snake path');
       
       // Use requestAnimationFrame for smooth performance
       requestAnimationFrame(() => this.refreshSnakePath(false));
@@ -239,8 +226,6 @@ window.SnakePath = class SnakePath {
     document.addEventListener('gridRebuilt', (e) => {
       // Only update if not in the middle of scrolling
       if (!this._scrollInProgress) {
-        console.log('Grid rebuilt (not during scroll), updating snake path');
-        
         // Use requestAnimationFrame for smoother performance
         requestAnimationFrame(() => this.refreshSnakePath(false));
       }
@@ -256,8 +241,6 @@ window.SnakePath = class SnakePath {
         this.updateSnakePath();
       }
     }, 2000);
-    
-    console.log('SnakePath event listeners set up with scroll optimization');
   }
   
   /**
@@ -265,11 +248,7 @@ window.SnakePath = class SnakePath {
    */
   clearSnakeImages() {
     const snakeImages = document.querySelectorAll('.snake-piece');
-    const count = snakeImages.length;
     snakeImages.forEach(image => image.remove());
-    if (count > 0) {
-      console.log(`Cleared ${count} snake images`);
-    }
   }
   
   /**
@@ -281,14 +260,12 @@ window.SnakePath = class SnakePath {
   getDirection(fromCell, toCell) {
     // Check if either cell is undefined or null
     if (!fromCell || !toCell) {
-      console.warn('getDirection called with undefined or null cell', { fromCell, toCell });
       return -1; // Return invalid direction
     }
     
     // Check if both cells have x and y properties
     if (typeof fromCell.y !== 'number' || typeof toCell.y !== 'number' ||
         typeof fromCell.x !== 'number' || typeof toCell.x !== 'number') {
-      console.warn('getDirection called with invalid cell coordinates', { fromCell, toCell });
       return -1; // Return invalid direction
     }
     
@@ -324,64 +301,51 @@ window.SnakePath = class SnakePath {
    * @return {Object} Configuration for the piece
    */
   determinePiece(index, cells, isLastCell) {
-    console.log(`\n🔍 DETERMINING PIECE FOR CELL ${index} at (${cells[index].x}, ${cells[index].y})`);
-    
     // For the first cell (tail piece)
     if (index === 0) {
       // If we only have one cell selected, default to tail from bottom
       if (cells.length === 1) {
-        console.log(`  → Single cell selected, using default tail (bottom to top)`);
         return { piece: 'tail_bt', type: 'tail', description: 'Default tail (bottom to top)' };
       }
       
       // For tail, we need to know the direction TO the next cell
       const exitDirection = this.getDirection(cells[0], cells[1]);
-      console.log(`  → Tail exit direction: ${exitDirection} (${this.directionNames[exitDirection]})`);
       
       // Use tailMappings to get the correct piece (exits to direction)
       const tailMapping = this.tailMappings[exitDirection];
       if (tailMapping) {
-        console.log(`  → Selected TAIL piece: ${tailMapping.piece} - ${tailMapping.description}`);
         return { 
           piece: tailMapping.piece, 
           type: 'tail', 
           description: tailMapping.description 
         };
       } else {
-        console.warn(`  ⚠️ No tail mapping found for direction ${exitDirection}, using default`);
         return { piece: 'tail_bt', type: 'tail', description: 'Default tail (bottom to top)' };
       }
     }
     
     // For the last cell (head piece)
     if (isLastCell) {
-      console.log(`  → This is the HEAD piece (last selected cell)`);
-      
       // For head, we need to know the direction FROM the previous cell
       const prevDirection = this.getDirection(cells[index-1], cells[index]);
       
       // The entry direction is OPPOSITE of the previous cell's exit direction
       const entryDirection = this.getOppositeDirection(prevDirection);
-      console.log(`  → From previous: ${prevDirection} (${this.directionNames[prevDirection]})`);
-      console.log(`  → Head entry direction: ${entryDirection} (${this.directionNames[entryDirection]})`);
       
       // Use headMappings to get the correct piece (enters from direction)
       const headMapping = this.headMappings[entryDirection];
       if (headMapping) {
-        console.log(`  → Selected HEAD piece: ${headMapping.piece} - ${headMapping.description}`);
         return { 
           piece: headMapping.piece, 
           type: 'head', 
           description: headMapping.description 
         };
       } else {
-        console.warn(`  ⚠️ No head mapping found for direction ${entryDirection}, using default`);
         return { piece: 'head_tb', type: 'head', description: 'Default head (top to bottom)' };
       }
     }
     
     // For middle cells (non-head, non-tail)
-    console.log(`  → This is a MIDDLE piece (connects two segments)`);
     
     // Get previous and next cells
     const prevCell = cells[index - 1];
@@ -397,23 +361,13 @@ window.SnakePath = class SnakePath {
     const entryDirection = this.getOppositeDirection(prevDirection);
     const exitDirection = nextDirection;
     
-    console.log(`  → From previous: ${prevDirection} (${this.directionNames[prevDirection]})`);
-    console.log(`  → Entry direction: ${entryDirection} (${this.directionNames[entryDirection]})`);
-    console.log(`  → Exit direction: ${exitDirection} (${this.directionNames[exitDirection]})`);
-    
     // Create key for direction mappings
     const key = `${entryDirection},${exitDirection}`;
-    console.log(`  → Direction key: ${key}`);
     
     // Look up the piece configuration from our direction mappings
     if (this.directionMappings[key]) {
       const mappingInfo = this.directionMappings[key];
       const pieceType = mappingInfo.piece.includes('curved') ? 'curved' : 'straight';
-      
-      console.log(`  → Selected ${pieceType.toUpperCase()} piece: ${mappingInfo.piece} - ${mappingInfo.description}`);
-      console.log(`  → PREVIOUS cell is at (${prevCell.x}, ${prevCell.y})`);
-      console.log(`  → CURRENT cell is at (${thisCell.x}, ${thisCell.y})`);
-      console.log(`  → NEXT cell is at (${nextCell.x}, ${nextCell.y})`);
       
       return { 
         piece: mappingInfo.piece,
@@ -423,7 +377,6 @@ window.SnakePath = class SnakePath {
     }
     
     // If no mapping found, use a fallback based on alignment
-    console.warn(`  ⚠️ No mapping found for direction combination ${key}`);
     
     // Check if cells are aligned horizontally (same y coordinate)
     if (prevCell.y === thisCell.y && thisCell.y === nextCell.y) {
@@ -481,154 +434,135 @@ window.SnakePath = class SnakePath {
     return img;
   }
   
-/**
- * Update the full snake path visualization
- * Fixed to properly handle deselections
- */
-updateSnakePath() {
-  console.log('\n🐍 UPDATE SNAKE PATH CALLED');
-  
-  // Skip updates if scrolling is in progress - will be handled on completion
-  if (this._scrollInProgress) {
-    console.log('Skipping snake path update during scroll');
-    return;
-  }
-  
-  // Get selected cells
-  const selectedCells = this.gridRenderer.selectedCells;
-  if (!selectedCells || selectedCells.length === 0) {
-    // Clear all snake pieces when no cells are selected
-    this.clearSnakeImages();
-    console.log('No selected cells, clearing all snake pieces');
-    return;
-  }
-
-  console.log(`Updating snake path for ${selectedCells.length} selected cells`);
-  
-  // Create a map of currently selected cell coordinates for quick lookup
-  const selectedCellMap = new Map();
-  selectedCells.forEach(cell => {
-    selectedCellMap.set(`${cell.x},${cell.y}`, true);
-  });
-  
-  // FIRST PASS: Remove snake pieces from cells that are no longer selected
-  const allSnakePieces = document.querySelectorAll('.snake-piece');
-  allSnakePieces.forEach(piece => {
-    const cell = piece.closest('.grid-cell');
-    if (cell) {
-      const x = parseInt(cell.dataset.gridX, 10);
-      const y = parseInt(cell.dataset.gridY, 10);
-      
-      // If this cell is valid and no longer selected, remove the snake piece
-      if (!isNaN(x) && !isNaN(y) && !selectedCellMap.has(`${x},${y}`)) {
-        console.log(`Removing snake piece from deselected cell (${x}, ${y})`);
-        piece.remove();
-      }
-    }
-  });
-  
-  // SECOND PASS: Track existing snake pieces on selected cells
-  const existingPieces = new Map();
-  document.querySelectorAll('.snake-piece').forEach(piece => {
-    const cell = piece.closest('.grid-cell');
-    if (cell) {
-      const x = parseInt(cell.dataset.gridX, 10);
-      const y = parseInt(cell.dataset.gridY, 10);
-      if (!isNaN(x) && !isNaN(y)) {
-        existingPieces.set(`${x},${y}`, {
-          element: piece,
-          type: piece.getAttribute('data-piece-type')
-        });
-      }
-    }
-  });
-  
-  // Track which cells need updates
-  const cellsToUpdate = new Set();
-  
-  // For each selected cell, determine if it needs a new piece
-  selectedCells.forEach((cell, index) => {
-    // Find the corresponding DOM element
-    const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
-    
-    if (!cellElement) {
-      console.warn(`Cell element not found for selected cell at (${cell.x}, ${cell.y})`);
+  /**
+   * Update the full snake path visualization
+   * Fixed to properly handle deselections
+   */
+  updateSnakePath() {
+    // Skip updates if scrolling is in progress - will be handled on completion
+    if (this._scrollInProgress) {
       return;
     }
     
-    // Determine if this is the last cell
-    const isLastCell = index === selectedCells.length - 1;
-    
-    // Get the configuration for this piece
-    const pieceConfig = this.determinePiece(index, selectedCells, isLastCell);
-    
-    // Check if we already have the correct piece for this cell
-    const existingPiece = existingPieces.get(`${cell.x},${cell.y}`);
-    if (existingPiece && existingPiece.type === pieceConfig.piece) {
-      // Piece already exists and is correct - nothing to do
-      console.log(`Piece ${pieceConfig.piece} already exists at (${cell.x}, ${cell.y}) - skipping update`);
-      // Remove from the map to mark as processed
-      existingPieces.delete(`${cell.x},${cell.y}`);
-    } else {
-      // Need to update this cell
-      cellsToUpdate.add(`${cell.x},${cell.y}`);
-      
-      // CRITICAL: Force position relative
-      cellElement.style.position = 'relative';
-      
-      // Remove any existing piece from this cell
-      const existingElements = cellElement.querySelectorAll('.snake-piece');
-      existingElements.forEach(el => el.remove());
-      
-      // Create and add the new image to the cell
-      const pieceImage = this.createPieceImage(pieceConfig);
-      cellElement.appendChild(pieceImage);
-      
-      console.log(`Added ${pieceConfig.piece} piece to cell (${cell.x}, ${cell.y})`);
+    // Get selected cells
+    const selectedCells = this.gridRenderer.selectedCells;
+    if (!selectedCells || selectedCells.length === 0) {
+      // Clear all snake pieces when no cells are selected
+      this.clearSnakeImages();
+      return;
     }
-  });
-  
-  // Handle the special case for start cell (first cell)
-  if (selectedCells.length > 0) {
-    const startCell = selectedCells[0];
-    const startCellElement = document.querySelector(`.grid-cell[data-grid-x="${startCell.x}"][data-grid-y="${startCell.y}"]`);
     
-    if (startCellElement && !cellsToUpdate.has(`${startCell.x},${startCell.y}`)) {
-      if (!startCellElement.classList.contains('selected-cell')) {
-        console.log('Start cell does not have selected-cell class, adding snake piece manually');
+    // Create a map of currently selected cell coordinates for quick lookup
+    const selectedCellMap = new Map();
+    selectedCells.forEach(cell => {
+      selectedCellMap.set(`${cell.x},${cell.y}`, true);
+    });
+    
+    // FIRST PASS: Remove snake pieces from cells that are no longer selected
+    const allSnakePieces = document.querySelectorAll('.snake-piece');
+    allSnakePieces.forEach(piece => {
+      const cell = piece.closest('.grid-cell');
+      if (cell) {
+        const x = parseInt(cell.dataset.gridX, 10);
+        const y = parseInt(cell.dataset.gridY, 10);
         
-        // Force position relative
-        startCellElement.style.position = 'relative';
+        // If this cell is valid and no longer selected, remove the snake piece
+        if (!isNaN(x) && !isNaN(y) && !selectedCellMap.has(`${x},${y}`)) {
+          piece.remove();
+        }
+      }
+    });
+    
+    // SECOND PASS: Track existing snake pieces on selected cells
+    const existingPieces = new Map();
+    document.querySelectorAll('.snake-piece').forEach(piece => {
+      const cell = piece.closest('.grid-cell');
+      if (cell) {
+        const x = parseInt(cell.dataset.gridX, 10);
+        const y = parseInt(cell.dataset.gridY, 10);
+        if (!isNaN(x) && !isNaN(y)) {
+          existingPieces.set(`${x},${y}`, {
+            element: piece,
+            type: piece.getAttribute('data-piece-type')
+          });
+        }
+      }
+    });
+    
+    // Track which cells need updates
+    const cellsToUpdate = new Set();
+    
+    // For each selected cell, determine if it needs a new piece
+    selectedCells.forEach((cell, index) => {
+      // Find the corresponding DOM element
+      const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
+      
+      if (!cellElement) {
+        return;
+      }
+      
+      // Determine if this is the last cell
+      const isLastCell = index === selectedCells.length - 1;
+      
+      // Get the configuration for this piece
+      const pieceConfig = this.determinePiece(index, selectedCells, isLastCell);
+      
+      // Check if we already have the correct piece for this cell
+      const existingPiece = existingPieces.get(`${cell.x},${cell.y}`);
+      if (existingPiece && existingPiece.type === pieceConfig.piece) {
+        // Piece already exists and is correct - nothing to do
+        // Remove from the map to mark as processed
+        existingPieces.delete(`${cell.x},${cell.y}`);
+      } else {
+        // Need to update this cell
+        cellsToUpdate.add(`${cell.x},${cell.y}`);
         
-        // Check if it already has the correct piece
-        const existingStartPiece = existingPieces.get(`${startCell.x},${startCell.y}`);
-        const pieceConfig = this.determinePiece(0, selectedCells, false);
+        // CRITICAL: Force position relative
+        cellElement.style.position = 'relative';
         
-        if (!existingStartPiece || existingStartPiece.type !== pieceConfig.piece) {
-          // Clear any existing pieces
-          const existingPieces = startCellElement.querySelectorAll('.snake-piece');
-          existingPieces.forEach(piece => piece.remove());
+        // Remove any existing piece from this cell
+        const existingElements = cellElement.querySelectorAll('.snake-piece');
+        existingElements.forEach(el => el.remove());
+        
+        // Create and add the new image to the cell
+        const pieceImage = this.createPieceImage(pieceConfig);
+        cellElement.appendChild(pieceImage);
+      }
+    });
+    
+    // Handle the special case for start cell (first cell)
+    if (selectedCells.length > 0) {
+      const startCell = selectedCells[0];
+      const startCellElement = document.querySelector(`.grid-cell[data-grid-x="${startCell.x}"][data-grid-y="${startCell.y}"]`);
+      
+      if (startCellElement && !cellsToUpdate.has(`${startCell.x},${startCell.y}`)) {
+        if (!startCellElement.classList.contains('selected-cell')) {
+          // Force position relative
+          startCellElement.style.position = 'relative';
           
-          // Add the tail piece
-          const pieceImage = this.createPieceImage(pieceConfig);
-          startCellElement.appendChild(pieceImage);
+          // Check if it already has the correct piece
+          const existingStartPiece = existingPieces.get(`${startCell.x},${startCell.y}`);
+          const pieceConfig = this.determinePiece(0, selectedCells, false);
           
-          console.log(`Added ${pieceConfig.piece} piece to start cell (${startCell.x}, ${startCell.y})`);
+          if (!existingStartPiece || existingStartPiece.type !== pieceConfig.piece) {
+            // Clear any existing pieces
+            const existingPieces = startCellElement.querySelectorAll('.snake-piece');
+            existingPieces.forEach(piece => piece.remove());
+            
+            // Add the tail piece
+            const pieceImage = this.createPieceImage(pieceConfig);
+            startCellElement.appendChild(pieceImage);
+          }
         }
       }
     }
   }
-  
-  console.log(`Snake path update complete with ${selectedCells.length} pieces`);
-}
   
   /**
    * Public method to force a snake path update
    * Can be called from other components
    */
   refreshSnakePath(forceFullRefresh = false) {
-    console.log(`Manual refresh of snake path triggered (forceFullRefresh: ${forceFullRefresh})`);
-    
     if (forceFullRefresh) {
       // Clear existing snake images for a full refresh
       this.clearSnakeImages();
@@ -642,7 +576,6 @@ updateSnakePath() {
 window.addEventListener('load', () => {
 // Check if we already have a snake path instance
   if (!window.snakePath && window.gameController && window.gameController.gridRenderer) {
-    console.log('Auto-initializing snake path...');
     window.snakePath = new window.SnakePath(window.gameController.gridRenderer);
   }
 });
