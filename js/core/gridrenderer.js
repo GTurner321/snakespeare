@@ -2690,7 +2690,7 @@ triggerFlashAnimation() {
 }
 
 /**
- * Add CSS for flash animation if needed
+ * Ensure flash animation CSS exists and uses the correct colors
  */
 ensureFlashAnimationCSS() {
   // Check if we've already added the styles
@@ -2704,24 +2704,30 @@ ensureFlashAnimationCSS() {
   style.textContent = `
     .snake-piece {
       transition: visibility 0.1s ease;
+      transform-origin: center;
     }
     
-    /* Remove the yellow background from completed cells */
+    /* Use existing maingreen variables for completed cells */
     .grid-cell.completed-cell {
-      background-color: var(--color-path-bg, #90ee90) !important;
+      background-color: var(--maingreen) !important;
+      border-color: var(--maingreen-dark) !important;
+      color: var(--text-dark) !important;
+      border: 1px solid var(--maingreen-dark) !important;
+      text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8) !important;
     }
     
-    /* Remove the different color for correct path */
+    /* Make sure correct-path also uses the same color */
     .grid-cell.correct-path {
-      background-color: var(--color-path-bg, #90ee90) !important;
+      background-color: var(--maingreen) !important;
+      border-color: var(--maingreen-dark) !important;
     }
   `;
   
   // Add to document
   document.head.appendChild(style);
-  console.log('Added flash animation styles');
+  console.log('Added flash animation styles with correct island colors');
 }
-
+  
   /**
  * Start flashing cells to indicate imminent erosion
  * @param {Array} cells - Array of cells to flash
