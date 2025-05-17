@@ -62,6 +62,7 @@ class IslandRenderer {
    * @private
    */
   _setupEventListeners() {
+    this.interceptGridRendererScroll();
     // Enhanced coordination with GridRenderer's scroll system
     this.coordWithGridRenderer();
 
@@ -186,81 +187,82 @@ class IslandRenderer {
     });
   }
 
-  /**
-   * NEW: Enhanced method to coordinate with GridRenderer's scroll system
-   * This ensures seashore styles are preserved during CSS transform animations
-   */
-  coordWithGridRenderer() {
-    if (!this.gridRenderer || !this.gridRenderer.scroll) return;
+// New method to intercept GridRenderer's scroll method
+interceptGridRendererScroll() {
+  if (!this.gridRenderer || !this.gridRenderer.scroll) return;
+  
+  // Save original scroll method
+  const originalScroll = this.gridRenderer.scroll;
+  
+  // Override the scroll method
+  this.gridRenderer.scroll = (direction, slowMotion = false) => {
+    // CRITICAL: Apply inline styles to ALL beach cells BEFORE any transform
+    this._preserveAllBeachCellStyles();
     
-    // Save original scroll method
-    const originalScroll = this.gridRenderer.scroll;
+    // Call the original scroll method to perform the transform
+    originalScroll.call(this.gridRenderer, direction, slowMotion);
     
-    // Override the scroll method to add beach cell preservation
-    this.gridRenderer.scroll = (direction, slowMotion = false) => {
-      // Before scrolling, ensure we preserve current beach cell styles
-      this._preserveBeachCellStyles();
-      
-      // Call the original scroll method
-      originalScroll.call(this.gridRenderer, direction, slowMotion);
+    // Calculate transition time to restore styles
+    const transitionDuration = slowMotion ? 400 : 200;
+    
+    // After the transition, restore class-based styling
+    setTimeout(() => {
+      this._restoreBeachCellStyles();
+    }, transitionDuration + 50); // Add buffer to ensure transition completes
+  };
+  
+  console.log('Enhanced GridRenderer scroll method with beach cell style preservation');
+}
+
+// New comprehensive beach cell style preservation method
+_preserveAllBeachCellStyles() {
+  // Get all current sea-adjacent (beach) cells
+  const beachCells = document.querySelectorAll('.grid-cell.sea-adjacent');
+  
+  // Add inline styles to ALL beach cells
+  beachCells.forEach(cell => {
+    // Create style object based on current classes
+    const styles = {
+      backgroundColor: 'var(--lightblue)',
+      transition: 'none', // Disable transitions to prevent flicker
+      // Apply solid borders based on edge classes
+      borderTop: cell.classList.contains('shore-edge-top') ? 
+        '6px solid var(--sandyellow)' : '',
+      borderRight: cell.classList.contains('shore-edge-right') ? 
+        '6px solid var(--sandyellow)' : '',
+      borderBottom: cell.classList.contains('shore-edge-bottom') ? 
+        '6px solid var(--sandyellow)' : '',
+      borderLeft: cell.classList.contains('shore-edge-left') ? 
+        '6px solid var(--sandyellow)' : ''
     };
     
-    console.log('Enhanced GridRenderer scroll method with beach cell style preservation');
-  }
-
-  /**
-   * NEW: Preserve beach cell styles during transitions by adding inline styles
-   * This critical method ensures visible beach cells maintain their appearance during CSS transforms
-   * @private
-   */
-  _preserveBeachCellStyles() {
-    // Get all sea-adjacent cells currently visible
-    const beachCells = document.querySelectorAll('.grid-cell.sea-adjacent');
+    // Apply inline styles to override any class changes during transition
+    Object.assign(cell.style, styles);
     
-    beachCells.forEach(cell => {
-      // Create a styles object to track what needs to be preserved
-      const styles = {
-        borderTop: cell.classList.contains('shore-edge-top') ? 
-          '6px solid var(--sandyellow)' : cell.style.borderTop,
-        borderRight: cell.classList.contains('shore-edge-right') ? 
-          '6px solid var(--sandyellow)' : cell.style.borderRight,
-        borderBottom: cell.classList.contains('shore-edge-bottom') ? 
-          '6px solid var(--sandyellow)' : cell.style.borderBottom,
-        borderLeft: cell.classList.contains('shore-edge-left') ? 
-          '6px solid var(--sandyellow)' : cell.style.borderLeft,
-        backgroundColor: 'var(--lightblue)',
-        transition: 'none' // Disable transitions to prevent flicker
-      };
-      
-      // Apply inline styles to override any class changes during transition
-      Object.assign(cell.style, styles);
-      
-      // Store original class list to restore after transition
-      cell.dataset.originalClasses = Array.from(cell.classList).join(' ');
-    });
-    
-    // After a delay matching the CSS transform duration, restore class-based styling
-    setTimeout(() => {
-      beachCells.forEach(cell => {
-        if (cell.dataset.originalClasses) {
-          // Restore original classes if element still exists in DOM
-          if (document.body.contains(cell)) {
-            // Clear inline styles
-            cell.style.borderTop = '';
-            cell.style.borderRight = '';
-            cell.style.borderBottom = '';
-            cell.style.borderLeft = '';
-            cell.style.backgroundColor = '';
-            cell.style.transition = '';
-          }
-          
-          // Remove dataset property
-          delete cell.dataset.originalClasses;
-        }
-      });
-    }, 500); // Slightly longer than the longest possible transition
-  }
+    // Store original class list to restore after transition
+    cell.dataset.originalClasses = Array.from(cell.classList).join(' ');
+  });
+}
 
+// New method to restore class-based styling after transition
+_restoreBeachCellStyles() {
+  // Find all cells with stored original classes
+  const beachCells = document.querySelectorAll('.grid-cell[data-original-classes]');
+  
+  beachCells.forEach(cell => {
+    // Clear inline styles
+    cell.style.backgroundColor = '';
+    cell.style.transition = '';
+    cell.style.borderTop = '';
+    cell.style.borderRight = '';
+    cell.style.borderBottom = '';
+    cell.style.borderLeft = '';
+    
+    // Remove dataset property
+    delete cell.dataset.originalClasses;
+  });
+}
+  
   /**
    * NEW: Pre-style beach cells specifically for cells that will come into view after scrolling
    * This is the key enhancement for smoother beach cell transitions
