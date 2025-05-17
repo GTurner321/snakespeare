@@ -57,25 +57,79 @@ class IslandRenderer {
   }
   
 /**
- * Set up optimized event listeners with scroll awareness
- * ENHANCED: Improved coordination with GridRenderer for pre-styling cells
+ * NEW: Enhanced method to coordinate with GridRenderer's scroll system
+ * This ensures seashore styles are preserved during CSS transform animations
+ */
+coordWithGridRenderer() {
+  if (!this.gridRenderer || !this.gridRenderer.scroll) return;
+  
+  // Save original scroll method
+  const originalScroll = this.gridRenderer.scroll;
+  
+  // Override the scroll method to add beach cell preservation
+  this.gridRenderer.scroll = (direction, slowMotion = false) => {
+    // Before scrolling, ensure we preserve current beach cell styles
+    this._preserveBeachCellStyles();
+    
+    // Call the original scroll method
+    originalScroll.call(this.gridRenderer, direction, slowMotion);
+  };
+  
+  console.log('Enhanced GridRenderer scroll method with beach cell style preservation');
+}
+
+/**
+ * NEW: Preserve beach cell styles during transitions by adding inline styles
+ * This critical method ensures visible beach cells maintain their appearance during CSS transforms
  * @private
  */
-_setupEventListeners() {
-  // NEW: Intercept grid renderer's _prepareNewCellsForScroll method to enhance beach styling
-  if (this.gridRenderer && this.gridRenderer._prepareNewCellsForScroll) {
-    const originalPrepareNewCells = this.gridRenderer._prepareNewCellsForScroll;
-    
-    this.gridRenderer._prepareNewCellsForScroll = (direction, newOffsetX, newOffsetY) => {
-      // First, call the original method to create new cells
-      originalPrepareNewCells.call(this.gridRenderer, direction, newOffsetX, newOffsetY);
-      
-      // ENHANCED: Pre-calculate beach styles for cells that will come into view
-      this._preStyleBeachCellsForScroll(direction, newOffsetX, newOffsetY);
+_preserveBeachCellStyles() {
+  // Get all sea-adjacent cells currently visible
+  const beachCells = document.querySelectorAll('.grid-cell.sea-adjacent');
+  
+  beachCells.forEach(cell => {
+    // Create a styles object to track what needs to be preserved
+    const styles = {
+      borderTop: cell.classList.contains('shore-edge-top') ? 
+        '6px solid var(--sandyellow)' : cell.style.borderTop,
+      borderRight: cell.classList.contains('shore-edge-right') ? 
+        '6px solid var(--sandyellow)' : cell.style.borderRight,
+      borderBottom: cell.classList.contains('shore-edge-bottom') ? 
+        '6px solid var(--sandyellow)' : cell.style.borderBottom,
+      borderLeft: cell.classList.contains('shore-edge-left') ? 
+        '6px solid var(--sandyellow)' : cell.style.borderLeft,
+      backgroundColor: 'var(--lightblue)',
+      transition: 'none' // Disable transitions to prevent flicker
     };
     
-    console.log('Enhanced GridRenderer\'s _prepareNewCellsForScroll for beach cell pre-styling');
-  }
+    // Apply inline styles to override any class changes during transition
+    Object.assign(cell.style, styles);
+    
+    // Store original class list to restore after transition
+    cell.dataset.originalClasses = Array.from(cell.classList).join(' ');
+  });
+  
+  // After a delay matching the CSS transform duration, restore class-based styling
+  setTimeout(() => {
+    beachCells.forEach(cell => {
+      if (cell.dataset.originalClasses) {
+        // Restore original classes if element still exists in DOM
+        if (document.body.contains(cell)) {
+          // Clear inline styles
+          cell.style.borderTop = '';
+          cell.style.borderRight = '';
+          cell.style.borderBottom = '';
+          cell.style.borderLeft = '';
+          cell.style.backgroundColor = '';
+          cell.style.transition = '';
+        }
+        
+        // Remove dataset property
+        delete cell.dataset.originalClasses;
+      }
+    });
+  }, 500); // Slightly longer than the longest possible transition
+}
 
   // Track scroll events to pause updates during scrolling
   document.addEventListener('gridScrollStarted', (e) => {
@@ -509,28 +563,75 @@ _applyStyles() {
 
 /**
  * Apply shore/beach specific styles to cell element
+ * ENHANCED: Check current state before modifying to avoid unnecessary reflows
  * @param {HTMLElement} cellElement - Cell DOM element
  * @param {Object} styleConfig - Style configuration
  * @private
  */
 _applyShoreStyles(cellElement, styleConfig) {
-  // Reset shore-specific classes first
-  cellElement.classList.remove(
-    'sea-adjacent',
-    'shore-edge-top',
-    'shore-edge-right',
-    'shore-edge-bottom',
-    'shore-edge-left'
-  );
+  // Store the current state for comparison
+  const currentClasses = {
+    isSeaAdjacent: cellElement.classList.contains('sea-adjacent'),
+    top: cellElement.classList.contains('shore-edge-top'),
+    right: cellElement.classList.contains('shore-edge-right'),
+    bottom: cellElement.classList.contains('shore-edge-bottom'),
+    left: cellElement.classList.contains('shore-edge-left')
+  };
   
-  // Apply sea adjacent styling
-  cellElement.classList.add('sea-adjacent');
+  // Create a map of needed classes
+  const neededClasses = {
+    isSeaAdjacent: true,
+    top: styleConfig.shoreEdges.includes('top'),
+    right: styleConfig.shoreEdges.includes('right'),
+    bottom: styleConfig.shoreEdges.includes('bottom'),
+    left: styleConfig.shoreEdges.includes('left')
+  };
   
-  // Apply shore edge classes
-  if (styleConfig.shoreEdges && styleConfig.shoreEdges.length > 0) {
-    styleConfig.shoreEdges.forEach(direction => {
-      cellElement.classList.add(`shore-edge-${direction}`);
-    });
+  // Only add/remove classes if there's a difference from current state
+  
+  // Handle sea-adjacent class
+  if (currentClasses.isSeaAdjacent !== neededClasses.isSeaAdjacent) {
+    if (neededClasses.isSeaAdjacent) {
+      cellElement.classList.add('sea-adjacent');
+    } else {
+      cellElement.classList.remove('sea-adjacent');
+    }
+  }
+  
+  // Handle top edge
+  if (currentClasses.top !== neededClasses.top) {
+    if (neededClasses.top) {
+      cellElement.classList.add('shore-edge-top');
+    } else {
+      cellElement.classList.remove('shore-edge-top');
+    }
+  }
+  
+  // Handle right edge
+  if (currentClasses.right !== neededClasses.right) {
+    if (neededClasses.right) {
+      cellElement.classList.add('shore-edge-right');
+    } else {
+      cellElement.classList.remove('shore-edge-right');
+    }
+  }
+  
+  // Handle bottom edge
+  if (currentClasses.bottom !== neededClasses.bottom) {
+    if (neededClasses.bottom) {
+      cellElement.classList.add('shore-edge-bottom');
+    } else {
+      cellElement.classList.remove('shore-edge-bottom');
+    }
+  }
+  
+  // Handle left edge
+  if (currentClasses.left !== neededClasses.left) {
+    if (neededClasses.left) {
+      cellElement.classList.add('shore-edge-left');
+    } else {
+      cellElement.classList.remove('shore-edge-left');
+    }
   }
 }
   
