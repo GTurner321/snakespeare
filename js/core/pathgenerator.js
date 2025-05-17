@@ -1,7 +1,7 @@
 /**
  * Path Generator for Grid Game
  * Creates a snake-like path for letters in a phrase
- * Includes enhanced two-layer island generation with erosion support
+ * Includes enhanced three-layer island generation with erosion support
  * Based on coordinate grid with start at (0,0)
  */
 
@@ -48,11 +48,14 @@ class PathGenerator {
     // Store pre-generated island cells
     this.islandCells = [];
     
-    // NEW: Store cells that are adjacent to shore for erosion
+    // Store cells that are adjacent to shore for erosion
     this.erodableCells = [];
     
-    // NEW: Store cells with 3 adjacent edges to path
+    // Store cells with 3 adjacent edges to path
     this.highPriorityCornerCells = [];
+    
+    // NEW: Store layer 3 cells separately
+    this.layer3Cells = [];
   }
   
   /**
@@ -69,6 +72,7 @@ class PathGenerator {
     this.islandCells = [];
     this.erodableCells = [];
     this.highPriorityCornerCells = [];
+    this.layer3Cells = []; // NEW: Reset layer 3 cells
     
     // Parse letter list to ensure it's in the right format (skipping spaces)
     const letters = this.parseLetterList(letterList);
@@ -302,20 +306,33 @@ class PathGenerator {
   }
 
   /**
-   * NEW: Find cells to include in two-layer system
+   * Modified: Find cells to include in three-layer system
    * Layer 1: Cells adjacent to the path
    * Layer 2: Cells adjacent to layer 1
+   * Layer 3: Cells adjacent to layer 2 with special pattern removal
    * @return {Object} Object with islandCells and erodableCells
    */
   generateTwoLayerIsland() {
+    // Forward to three-layer system for enhanced path obscuring
+    return this.generateThreeLayerIsland();
+  }
+  
+  /**
+   * NEW: Enhanced version of generateTwoLayerIsland that adds a third layer
+   * with a specific pattern of removals to obscure the path
+   * @return {Object} Object with islandCells and erodableCells
+   */
+  generateThreeLayerIsland() {
     // Reset our collections
     this.islandCells = [];
     this.erodableCells = [];
     this.highPriorityCornerCells = [];
+    this.layer3Cells = [];
     
     // Maps for quicker lookups
     const pathCellMap = new Map();
     const layer1CellMap = new Map();
+    const layer2CellMap = new Map();
     
     // Step 1: Map all path cells for quick reference
     for (const pathCell of this.path) {
@@ -388,19 +405,63 @@ class PathGenerator {
         
         // This is a valid Layer 2 cell
         const letter = this.getWeightedRandomLetter();
-        layer2Cells.push({ x: newX, y: newY, letter, layer: 2 });
+        const cell = { x: newX, y: newY, letter, layer: 2 };
+        layer2Cells.push(cell);
+        layer2CellMap.set(key, cell);
       }
     }
     
     console.log(`Generated ${layer2Cells.length} Layer 2 cells`);
     
-    // Step 4: Combine layers and mark all erodable cells
-    this.islandCells = [...this.islandCells, ...layer2Cells];
+    // NEW Step 4: Generate Layer 3 (cells adjacent to Layer 2 but not Layer 1 or path)
+    const layer3Cells = [];
     
-    // Step 5: Remove ~20% of the island cells in adjacent pairs
-    this.removeIslandCellPairs();
+    for (const layer2Cell of layer2Cells) {
+      // For each Layer 2 cell, check all four adjacent directions
+      for (const [dx, dy] of this.directions) {
+        const newX = layer2Cell.x + dx;
+        const newY = layer2Cell.y + dy;
+        const key = `${newX},${newY}`;
+        
+        // Skip if already in path, Layer 1, or Layer 2
+        if (pathCellMap.has(key) || layer1CellMap.has(key) || layer2CellMap.has(key)) {
+          continue;
+        }
+        
+        // Skip if already added to Layer 3
+        if (layer3Cells.some(cell => cell.x === newX && cell.y === newY)) {
+          continue;
+        }
+        
+        // Skip if outside bounds
+        if (Math.abs(newX) > this.maxDistance || Math.abs(newY) > this.maxDistance) {
+          continue;
+        }
+        
+        // This is a valid Layer 3 cell
+        const letter = this.getWeightedRandomLetter();
+        const cell = { x: newX, y: newY, letter, layer: 3 };
+        layer3Cells.push(cell);
+      }
+    }
     
-    // Step 6: Identify which cells are erodable (adjacent to sea)
+    console.log(`Generated ${layer3Cells.length} Layer 3 cells`);
+    
+    // Step 5: Store generated layer 3 cells before processing
+    this.layer3Cells = [...layer3Cells];
+    
+    // Step 6: Apply the special pattern removal to Layer 3
+    const processedLayer3 = this.applyLayer3RemovalPattern(layer3Cells);
+    
+    console.log(`After pattern removal: ${processedLayer3.length} Layer 3 cells remain`);
+    
+    // Step 7: Combine all layers
+    this.islandCells = [...this.islandCells, ...layer2Cells, ...processedLayer3];
+    
+    // Step 8: Remove ~25% of the island cells in adjacent pairs (increased from 20%)
+    this.removeIslandCellPairs(0.25); // Changed percentage from 0.2 to 0.25
+    
+    // Step 9: Identify which cells are erodable (adjacent to sea)
     this.identifyErodableCells();
     
     console.log(`Final island has ${this.islandCells.length} cells (${this.erodableCells.length} erodable)`);
@@ -412,23 +473,115 @@ class PathGenerator {
   }
   
   /**
-   * NEW: Remove ~20% of island cells in adjacent pairs
-   * This makes the island shape more natural
+   * NEW: Arrange Layer 3 cells in clockwise order and apply the removal pattern
+   * @param {Array} layer3Cells - Array of Layer 3 cells
+   * @return {Array} Modified Layer 3 cells with pattern-based removals
    */
-  removeIslandCellPairs() {
+  applyLayer3RemovalPattern(layer3Cells) {
+    if (layer3Cells.length === 0) {
+      return [];
+    }
+    
+    // Step 1: Find a starting cell (we'll use the one closest to the origin)
+    let startCell = layer3Cells[0];
+    let minDistance = Math.sqrt(startCell.x * startCell.x + startCell.y * startCell.y);
+    
+    for (const cell of layer3Cells) {
+      const distance = Math.sqrt(cell.x * cell.x + cell.y * cell.y);
+      if (distance < minDistance) {
+        minDistance = distance;
+        startCell = cell;
+      }
+    }
+    
+    // Step 2: Arrange cells in clockwise order from the starting cell
+    const orderedCells = this.arrangeClockwise(startCell, layer3Cells);
+    
+    // Step 3: Apply the removal pattern
+    const processedCells = [];
+    
+    // Choose random removal and keep counts for this pattern
+    const removeCount = Math.floor(Math.random() * 5) + 4; // 4-8 cells removed
+    const keepCount = Math.floor(Math.random() * 4) + 1;   // 1-4 cells kept
+    
+    let index = 0;
+    let mode = 'remove'; // Start by removing cells
+    let currentCount = 0;
+    
+    while (index < orderedCells.length) {
+      if (mode === 'remove') {
+        // Skip (remove) this cell
+        currentCount++;
+        if (currentCount >= removeCount) {
+          // Switch to keep mode
+          mode = 'keep';
+          currentCount = 0;
+        }
+      } else { // mode === 'keep'
+        // Keep this cell
+        processedCells.push(orderedCells[index]);
+        currentCount++;
+        if (currentCount >= keepCount) {
+          // Switch to remove mode
+          mode = 'remove';
+          currentCount = 0;
+        }
+      }
+      index++;
+    }
+    
+    console.log(`Applied Layer 3 pattern: ${removeCount} remove, ${keepCount} keep, resulting in ${processedCells.length} cells`);
+    
+    return processedCells;
+  }
+  
+  /**
+   * NEW: Arrange cells in clockwise order around a starting cell
+   * @param {Object} startCell - The cell to start from
+   * @param {Array} cells - Array of cells to arrange
+   * @return {Array} Cells arranged in clockwise order
+   */
+  arrangeClockwise(startCell, cells) {
+    // Remove the start cell from the list
+    const remainingCells = cells.filter(cell => 
+      !(cell.x === startCell.x && cell.y === startCell.y)
+    );
+    
+    // Function to calculate the angle between two points
+    const calculateAngle = (center, point) => {
+      return Math.atan2(point.y - center.y, point.x - center.x);
+    };
+    
+    // Sort cells by their angle relative to the start cell
+    const sortedByAngle = [...remainingCells].sort((a, b) => {
+      const angleA = calculateAngle(startCell, a);
+      const angleB = calculateAngle(startCell, b);
+      return angleA - angleB;
+    });
+    
+    // Put the start cell at the beginning
+    return [startCell, ...sortedByAngle];
+  }
+
+/**
+   * Modified: Remove island cells in adjacent pairs with configurable percentage
+   * This makes the island shape more natural
+   * @param {number} removalPercentage - Percentage of cells to remove (0.0-1.0), defaults to 0.25
+   */
+  removeIslandCellPairs(removalPercentage = 0.25) {
     if (this.islandCells.length <= 4) {
       console.log('Not enough island cells to remove pairs');
       return;
     }
     
-    // Calculate how many cells to remove (20% rounded up to nearest 2)
-    const removeCount = Math.ceil(this.islandCells.length * 0.2);
+    // Calculate how many cells to remove (25% rounded up to nearest 2)
+    const removeCount = Math.ceil(this.islandCells.length * removalPercentage);
     const adjustedRemoveCount = Math.ceil(removeCount / 2) * 2; // Ensure it's an even number
     const pairsToRemove = adjustedRemoveCount / 2;
     
     console.log(`Removing ${pairsToRemove} pairs (${adjustedRemoveCount} cells) from island`);
     
-    // Find all possible adjacent pairs (preference for layer 2)
+    // Find all possible adjacent pairs (preference for layer 2 and 3)
     const possiblePairs = [];
     
     // Create a map for quick lookups
@@ -454,8 +607,26 @@ class PathGenerator {
             continue;
           }
           
-          // Prefer pairs where both cells are in layer 2
-          const pairLayer = (cell.layer === 2 && adjacentCell.layer === 2) ? 2 : 1;
+          // Determine layer priority for removal
+          // Start with default layer values if not set
+          const cellLayer = cell.layer || 1;
+          const adjCellLayer = adjacentCell.layer || 1;
+          
+          // Calculate pair layer - prioritize higher layers for removal
+          // For layer 3 cells, we want highest priority
+          let pairLayer;
+          
+          if (cellLayer === 3 && adjCellLayer === 3) {
+            pairLayer = 3; // Highest priority - both layer 3
+          } else if (cellLayer === 3 || adjCellLayer === 3) {
+            pairLayer = 2.5; // High priority - one layer 3
+          } else if (cellLayer === 2 && adjCellLayer === 2) {
+            pairLayer = 2; // Medium priority - both layer 2
+          } else if (cellLayer === 2 || adjCellLayer === 2) {
+            pairLayer = 1.5; // Low-medium priority - one layer 2
+          } else {
+            pairLayer = 1; // Lowest priority - both layer 1
+          }
           
           // Create a pair object with a unique ID to avoid duplicates
           const pairId = [
@@ -482,17 +653,28 @@ class PathGenerator {
       }
     }
     
-    // Sort pairs: layer 2 first
-    uniquePairs.sort((a, b) => b.layer - a.layer);
-    
-    // Shuffle the first groups to ensure randomness
+    // Group pairs by layer for better organization and randomization
+    const layer3Pairs = uniquePairs.filter(p => p.layer === 3);
+    const layer2dot5Pairs = uniquePairs.filter(p => p.layer === 2.5);
     const layer2Pairs = uniquePairs.filter(p => p.layer === 2);
+    const layer1dot5Pairs = uniquePairs.filter(p => p.layer === 1.5);
     const layer1Pairs = uniquePairs.filter(p => p.layer === 1);
     
+    // Shuffle each group independently for proper randomness
+    const shuffledLayer3 = this.shuffleArray(layer3Pairs);
+    const shuffledLayer2dot5 = this.shuffleArray(layer2dot5Pairs);
     const shuffledLayer2 = this.shuffleArray(layer2Pairs);
+    const shuffledLayer1dot5 = this.shuffleArray(layer1dot5Pairs);
     const shuffledLayer1 = this.shuffleArray(layer1Pairs);
     
-    const shuffledPairs = [...shuffledLayer2, ...shuffledLayer1];
+    // Combine in priority order
+    const shuffledPairs = [
+      ...shuffledLayer3,
+      ...shuffledLayer2dot5,
+      ...shuffledLayer2,
+      ...shuffledLayer1dot5,
+      ...shuffledLayer1
+    ];
     
     // Select pairs to remove
     const pairsToKeep = Math.max(0, shuffledPairs.length - pairsToRemove);
@@ -515,7 +697,7 @@ class PathGenerator {
   }
   
   /**
-   * NEW: Identify which cells are erodable (adjacent to sea)
+   * Identify which cells are erodable (adjacent to sea)
    * These are cells that can be removed during erosion
    */
   identifyErodableCells() {
@@ -578,7 +760,7 @@ class PathGenerator {
   getIslandCells() {
     // If we haven't generated the island yet, do so now
     if (this.islandCells.length === 0) {
-      this.generateTwoLayerIsland();
+      this.generateThreeLayerIsland(); // Modified to use the enhanced version
     }
     
     return this.islandCells;
@@ -590,6 +772,47 @@ class PathGenerator {
    */
   getErodableCells() {
     return this.erodableCells;
+  }
+  
+  /**
+   * NEW: Get random letters for a specific island reduction level
+   * @param {number} level - Island reduction level (0-2)
+   * @return {Array} Array of cells with letters for the given level
+   */
+  getRandomLettersForLevel(level) {
+    // If we don't have any cells yet, generate them
+    if (this.islandCells.length === 0) {
+      this.generateThreeLayerIsland();
+    }
+    
+    // Just return all cells for level 0
+    if (level === 0) {
+      return this.islandCells;
+    }
+    
+    // For level 1 and 2, we need to selectively return cells based on their layer
+    
+    // Level 1: Return only layer 1 cells (adjacent to path)
+    if (level === 1) {
+      return this.islandCells.filter(cell => cell.layer === 1);
+    }
+    
+    // Level 2: Return layer 1 and some layer 2 cells (specifically, ones adjacent to layer 1)
+    if (level === 2) {
+      // For level 2, we return all layer 1 cells and a subset of layer 2 cells
+      const layer1Cells = this.islandCells.filter(cell => cell.layer === 1);
+      
+      // Get a subset of layer 2 cells - we'll take 60% of them
+      const layer2Cells = this.islandCells.filter(cell => cell.layer === 2);
+      const layer2Count = Math.ceil(layer2Cells.length * 0.6); // 60% of layer 2
+      const shuffledLayer2 = this.shuffleArray([...layer2Cells]);
+      const selectedLayer2 = shuffledLayer2.slice(0, layer2Count);
+      
+      return [...layer1Cells, ...selectedLayer2];
+    }
+    
+    // Fallback - return everything
+    return this.islandCells;
   }
   
   /**
