@@ -30,6 +30,8 @@ class IslandRenderer {
     
     // Initial setup with delayed updates
     this._setupInitialState();
+
+    this.coordWithGridRenderer();
     
     // Set up optimized event listeners
     this._setupEventListeners();
