@@ -1,8 +1,6 @@
 /**
- * IslandRenderer - Optimized for scroll performance
- * Enhanced with improved beach/seashore cell handling during scrolling
- * Ensures efficient styling of island cells with cached states
- * and scroll-aware updates.
+ * IslandRenderer - Enhanced with direct style preservation
+ * Fixes beach cell flashing issues during scroll by preserving styles during CSS transforms
  */
 
 class IslandRenderer {
@@ -23,7 +21,10 @@ class IslandRenderer {
     };
 
     // ENHANCED: Add buffer size for pre-styling cells outside view
-    this._bufferSize = 3; // Increased from 2 to ensure smoother scrolling
+    this._bufferSize = 4; // Increased from 3 to ensure smoother scrolling
+    
+    // Add critical CSS for beach cells to ensure styles persist during transforms
+    this._injectCriticalBeachCellStyles();
     
     // Make this instance available globally for direct access
     window.islandRenderer = this;
@@ -36,8 +37,59 @@ class IslandRenderer {
     // Set up optimized event listeners
     this._setupEventListeners();
     
-    console.log('IslandRenderer initialized with enhanced beach cell handling');
+    console.log('IslandRenderer initialized with enhanced beach cell style preservation');
     this.initialized = true;
+  }
+  
+  /**
+   * NEW: Inject critical CSS styles to fix beach cell flashing
+   * @private
+   */
+  _injectCriticalBeachCellStyles() {
+    if (document.getElementById('island-renderer-critical-styles')) return;
+    
+    const style = document.createElement('style');
+    style.id = 'island-renderer-critical-styles';
+    style.textContent = `
+      /* Fix for beach cells during scrolling */
+      .grid-cell.sea-adjacent {
+        background-color: var(--lightblue) !important;
+        position: relative !important;
+        z-index: 2 !important;
+        will-change: transform !important;
+      }
+      
+      .grid-cell.sea-adjacent.shore-edge-top {
+        border-top: 6px solid var(--sandyellow) !important;
+      }
+      
+      .grid-cell.sea-adjacent.shore-edge-right {
+        border-right: 6px solid var(--sandyellow) !important;
+      }
+      
+      .grid-cell.sea-adjacent.shore-edge-bottom {
+        border-bottom: 6px solid var(--sandyellow) !important;
+      }
+      
+      .grid-cell.sea-adjacent.shore-edge-left {
+        border-left: 6px solid var(--sandyellow) !important;
+      }
+      
+      /* Special class to disable transitions during scrolling */
+      .grid-cell.sea-adjacent.no-transition {
+        transition: none !important;
+      }
+      
+      /* Class for preserved beach cells during transforms */
+      .grid-cell.preserved-beach-cell {
+        background-color: var(--lightblue) !important;
+        z-index: 2 !important;
+        transition: none !important;
+      }
+    `;
+    
+    document.head.appendChild(style);
+    console.log('Injected critical beach cell styles');
   }
   
   /**
@@ -58,412 +110,259 @@ class IslandRenderer {
     }, 500);
   }
 
-/**
- * Complete Set of Changes for IslandRenderer.js
- * 
- * These are all the methods you need to add or modify to fix the beach cells issue
- */
-
-// 1. Add this new method right after the constructor
-coordWithGridRenderer() {
-  if (!this.gridRenderer) return;
-  
-  // Force an initial island style calculation when the renderer is ready
-  setTimeout(() => {
-    this._calculateStyles();
-    this._applyStyles(true); // Force application
-    console.log("Initial island styling applied");
-  }, 300);
-  
-  // Also do another refresh after everything is loaded
-  setTimeout(() => {
-    this.refreshIsland(true);
-  }, 1000);
-}
-
-// 2. Add this new method for direct beach cell styling
-_applyBeachCellsDirectly() {
-  const cells = document.querySelectorAll('.grid-cell');
-  
-  // Find sea-adjacent cells needing shore styling
-  cells.forEach(cellElement => {
-    // Get cell coordinates
-    const x = parseInt(cellElement.dataset.gridX, 10);
-    const y = parseInt(cellElement.dataset.gridY, 10);
-    
-    if (isNaN(x) || isNaN(y)) {
-      return;
-    }
-    
-    // Skip path cells (letters/islands)
-    if (cellElement.classList.contains('path-cell')) {
-      return;
-    }
-    
-    // Check if this is adjacent to any letter cell
-    const adjacentDirections = this.getAdjacentLetterCells(x, y);
-    if (adjacentDirections.length > 0) {
-      // Apply sea-adjacent class
-      cellElement.classList.add('sea-adjacent');
-      
-      // Remove any existing shore edge classes first
-      cellElement.classList.remove(
-        'shore-edge-top',
-        'shore-edge-right',
-        'shore-edge-bottom',
-        'shore-edge-left'
-      );
-      
-      // Add specific edge classes
-      adjacentDirections.forEach(direction => {
-        cellElement.classList.add(`shore-edge-${direction}`);
-      });
-    } else {
-      // Not a beach cell, remove sea-adjacent class if present
-      cellElement.classList.remove('sea-adjacent');
-      cellElement.classList.remove(
-        'shore-edge-top',
-        'shore-edge-right',
-        'shore-edge-bottom',
-        'shore-edge-left'
-      );
-    }
-  });
-}
-  
   /**
-   * Set up optimized event listeners with scroll awareness
-   * ENHANCED: Improved coordination with GridRenderer for pre-styling cells
-   * @private
+   * Coordinate with GridRenderer for initial styling
    */
-/**
- * Set up optimized event listeners with scroll awareness
- * ENHANCED: Improved coordination with GridRenderer for pre-styling cells
- * @private
- */
-_setupEventListeners() {
-  this.interceptGridRendererScroll();
-  // Enhanced coordination with GridRenderer's scroll system
-  this.coordWithGridRenderer();
-
-  // Track scroll events to pause updates during scrolling
-  document.addEventListener('gridScrollStarted', (e) => {
-    this._scrollInProgress = true;
+  coordWithGridRenderer() {
+    if (!this.gridRenderer) return;
     
-    // ENHANCED: Update visible bounds immediately when scrolling starts
-    this._updateVisibleBounds();
-    
-    // IMPORTANT: Pre-calculate styles with an increased buffer before the scroll starts
-    // This ensures cells just outside the view are properly styled
-    this._calculateStylesWithBuffer(e.detail.direction);
-    
-    // Apply shore/beach styles to all cells in the expanded view region
-    this._applyBeachCellsDuringScroll();
-  });
-  
-  document.addEventListener('gridScrolled', (e) => {
-    // Keep track that scrolling is in progress
-    this._scrollInProgress = true;
-    
-    // Update visible bounds
-    this._updateVisibleBounds();
-    
-    // IMPORTANT: Apply shore styles even during scrolling with requestAnimationFrame
-    // for better performance
-    requestAnimationFrame(() => {
-      this._applyBeachCellsDuringScroll();
-    });
-  });
-  
-  // Listen for grid rebuild events (which happen during scrolling)
-  document.addEventListener('gridRebuilt', (e) => {
-    // Update visible bounds
-    this._updateVisibleBounds();
-    
-    // IMPORTANT: If a rebuild happens during scrolling, still apply shore styles
-    if (e.detail.isScrolling) {
-      setTimeout(() => {
-        // Calculate styles with a larger buffer during scroll rebuilds
-        this._calculateStylesWithBuffer();
-        this._applyBeachCellsDuringScroll();
-      }, 0);
-    } else {
-      // Only process if not during a scroll
-      requestAnimationFrame(() => {
-        this._calculateStyles();
-        this._applyStyles();
-      });
-    }
-  });
-  
-  document.addEventListener('gridScrollComplete', () => {
-    this._scrollInProgress = false;
-    // Update styles after scroll completes, using animation frame for smoother performance
-    this._updateVisibleBounds();
-    
-    // Use requestAnimationFrame for better performance
-    requestAnimationFrame(() => {
+    // Force an initial island style calculation when the renderer is ready
+    setTimeout(() => {
       this._calculateStyles();
-      this._applyStyles();
-    });
-  });
-  
-  // NEW: Add listener for gridCreated event
-  document.addEventListener('gridCreated', () => {
-    console.log('Grid created - applying beach cell styles');
-    // Apply beach cell styles after a short delay to ensure grid is fully rendered
+      this._applyStyles(true); // Force application
+      console.log("Initial island styling applied");
+    }, 300);
+    
+    // Also do another refresh after everything is loaded
     setTimeout(() => {
       this.refreshIsland(true);
-    }, 200);
-  });
-  
-  // NEW: Create categories for different event types
-  const immediateEvents = [
-    'pathSet',
-    'islandLettersUpdated',
-    'islandReductionLevelChanged'
-  ];
-  
-  const delayedEvents = [
-    'gridCompletionChanged', 
-    'selectionsCleared'
-  ];
-  
-  // Handle high-priority events immediately (but still respect scrolling)
-  immediateEvents.forEach(eventName => {
-    document.addEventListener(eventName, () => {
-      // Don't update during scrolling
-      if (this._scrollInProgress) return;
-      
-      // Update on next animation frame
-      requestAnimationFrame(() => {
-        this._calculateStyles();
-        this._applyStyles();
-      });
-    });
-  });
-  
-  // Handle lower-priority events with debouncing
-  let updateTimeoutId = null;
-  delayedEvents.forEach(eventName => {
-    document.addEventListener(eventName, () => {
-      // Don't update during scrolling
-      if (this._scrollInProgress) return;
-      
-      // Clear existing timeout to debounce multiple events
-      if (updateTimeoutId) {
-        clearTimeout(updateTimeoutId);
-      }
-      
-      // Schedule update with delay
-      updateTimeoutId = setTimeout(() => {
-        requestAnimationFrame(() => {
-          this._calculateStyles();
-          this._applyStyles();
-        });
-      }, 100);
-    });
-  });
-  
-  // Handle explicit update requests
-  document.addEventListener('updateIslandStyling', () => {
-    if (this._scrollInProgress) return;
+    }, 1000);
     
-    requestAnimationFrame(() => {
-      this._calculateStyles();
-      this._applyStyles();
-    });
-  });
-}
+    // CRITICAL FIX: Intercept GridRenderer's scroll method to preserve beach cell styles
+    this._interceptGridRendererScroll();
+  }
 
-// New method to intercept GridRenderer's scroll method
-interceptGridRendererScroll() {
-  if (!this.gridRenderer || !this.gridRenderer.scroll) return;
-  
-  // Save original scroll method
-  const originalScroll = this.gridRenderer.scroll;
-  
-  // Override the scroll method with specific attention to CSS transforms
-  this.gridRenderer.scroll = (direction, slowMotion = false) => {
-    // BEFORE TRANSFORM: Detect all beach cells and cache their styles with inline properties
-    // This must happen BEFORE any transform is applied
-    this._preserveAllBeachCellStyles();
-    
-    // Also pre-style cells that will come into view after scrolling
-    const newOffsetX = this._calculateNewOffset(direction, 'x');
-    const newOffsetY = this._calculateNewOffset(direction, 'y');
-    if (newOffsetX !== null && newOffsetY !== null) {
-      this._preStyleBeachCellsForScroll(direction, newOffsetX, newOffsetY);
-    }
-    
-    // Call the original scroll method to perform the transform
-    originalScroll.call(this.gridRenderer, direction, slowMotion);
-    
-    // Calculate transition time to restore styles - slightly longer than the transition itself
-    const transitionDuration = slowMotion ? 450 : 250; // Extra 50ms buffer
-    
-    // Check if we need to reapply during long transitions
-    if (slowMotion) {
-      // For slow transitions, recheck/reapply halfway through
-      setTimeout(() => {
-        // Ensure preserved styles are still applied during long transitions
-        this._reinforceBeachCellStyles();
-      }, transitionDuration / 2);
-    }
-    
-    // After the transition is complete, restore class-based styling
-    setTimeout(() => {
-      this._restoreBeachCellStyles();
-      // Then apply beach cell styles properly
-      this._applyBeachCellsDirectly();
-    }, transitionDuration);
-  };
-  
-  console.log('Enhanced GridRenderer scroll method with improved beach cell style preservation');
-}
-
-// New comprehensive beach cell style preservation method
-_preserveAllBeachCellStyles() {
-  // Get all current sea-adjacent (beach) cells
-  const beachCells = document.querySelectorAll('.grid-cell.sea-adjacent');
-  console.log(`Preserving styles for ${beachCells.length} beach cells before transform`);
-  
-  // Add inline styles to ALL beach cells with !important to override any transitions
-  beachCells.forEach(cell => {
-    // Get actual computed styles for reliability
-    const computedStyle = window.getComputedStyle(cell);
-    
-    // Force correct background color with !important
-    cell.style.setProperty('background-color', 'var(--lightblue)', 'important');
-    
-    // Explicitly disable transitions for all properties during transform
-    cell.style.setProperty('transition', 'transform 0.2s ease-out', 'important');
-    
-    // Apply solid borders based on edge classes with !important
-    if (cell.classList.contains('shore-edge-top')) {
-      cell.style.setProperty('border-top', '6px solid var(--sandyellow)', 'important');
-    }
-    if (cell.classList.contains('shore-edge-right')) {
-      cell.style.setProperty('border-right', '6px solid var(--sandyellow)', 'important');
-    }
-    if (cell.classList.contains('shore-edge-bottom')) {
-      cell.style.setProperty('border-bottom', '6px solid var(--sandyellow)', 'important');
-    }
-    if (cell.classList.contains('shore-edge-left')) {
-      cell.style.setProperty('border-left', '6px solid var(--sandyellow)', 'important');
-    }
-    
-    // Ensure z-index is preserved during transform
-    cell.style.setProperty('z-index', '2', 'important');
-    
-    // Store original class list to restore after transition
-    cell.dataset.originalClasses = Array.from(cell.classList).join(' ');
-    cell.dataset.isPreservedBeachCell = 'true';
-  });
-}
-
-// New method to restore class-based styling after transition
-_restoreBeachCellStyles() {
-  // Find all cells with stored original classes
-  const beachCells = document.querySelectorAll('.grid-cell[data-original-classes]');
-  
-  beachCells.forEach(cell => {
-    // Clear inline styles
-    cell.style.backgroundColor = '';
-    cell.style.transition = '';
-    cell.style.borderTop = '';
-    cell.style.borderRight = '';
-    cell.style.borderBottom = '';
-    cell.style.borderLeft = '';
-    
-    // Remove dataset property
-    delete cell.dataset.originalClasses;
-  });
-}
-
-_reinforceBeachCellStyles() {
-  // Find all cells marked as preserved beach cells
-  const preservedBeachCells = document.querySelectorAll('[data-is-preserved-beach-cell="true"]');
-  
-  preservedBeachCells.forEach(cell => {
-    // Re-apply critical styles to ensure they don't get lost during animation
-    cell.style.setProperty('background-color', 'var(--lightblue)', 'important');
-    
-    // Re-apply borders if needed
-    if (cell.classList.contains('shore-edge-top')) {
-      cell.style.setProperty('border-top', '6px solid var(--sandyellow)', 'important');
-    }
-    if (cell.classList.contains('shore-edge-right')) {
-      cell.style.setProperty('border-right', '6px solid var(--sandyellow)', 'important');
-    }
-    if (cell.classList.contains('shore-edge-bottom')) {
-      cell.style.setProperty('border-bottom', '6px solid var(--sandyellow)', 'important');
-    }
-    if (cell.classList.contains('shore-edge-left')) {
-      cell.style.setProperty('border-left', '6px solid var(--sandyellow)', 'important');
-    }
-  });
-}
-  
   /**
-   * NEW: Pre-style beach cells specifically for cells that will come into view after scrolling
-   * This is the key enhancement for smoother beach cell transitions
-   * @param {string} direction - Scroll direction ('up', 'right', 'down', 'left')
-   * @param {number} newOffsetX - New X offset after scroll
-   * @param {number} newOffsetY - New Y offset after scroll
+   * NEW: Intercept GridRenderer's scroll method to preserve beach cells during transformation
+   * This is the key fix for the flashing issue
    * @private
    */
-  _preStyleBeachCellsForScroll(direction, newOffsetX, newOffsetY) {
-    if (!this.gridRenderer || !this.gridRenderer.grid) {
-      return;
-    }
+  _interceptGridRendererScroll() {
+    if (!this.gridRenderer || !this.gridRenderer.scroll) return;
     
-    // Get current view dimensions
+    // Save original scroll method
+    const originalScroll = this.gridRenderer.scroll;
+    
+    // Override the scroll method to preserve beach cell styles during CSS transforms
+    this.gridRenderer.scroll = (direction, slowMotion = false) => {
+      // BEFORE the transform begins, preserve all beach cell styles
+      this._preserveBeachCellStyles();
+      
+      // Calculate the new offset based on scroll direction
+      const newOffsetX = this._calculateNewOffset(direction, 'x');
+      const newOffsetY = this._calculateNewOffset(direction, 'y');
+      
+      // Pre-style cells that will come into view during scrolling
+      if (newOffsetX !== null && newOffsetY !== null) {
+        this._preStyleBeachCellsForOffset(newOffsetX, newOffsetY);
+      }
+      
+      // Call the original scroll method to perform the transform
+      originalScroll.call(this.gridRenderer, direction, slowMotion);
+      
+      // Calculate transition duration with buffer
+      const transitionDuration = slowMotion ? 450 : 250; // Extra 50ms buffer
+      
+      // For longer transitions, reinforce styles halfway through
+      if (slowMotion) {
+        setTimeout(() => {
+          this._reinforceBeachCellStyles();
+        }, transitionDuration / 2);
+      }
+      
+      // After transition completes, restore normal styling
+      setTimeout(() => {
+        this._restoreBeachCellStyles();
+        this._applyBeachCellStyles(true); // Force apply correct styles
+      }, transitionDuration + 50);
+    };
+    
+    console.log('Intercepted GridRenderer scroll method for beach cell preservation');
+  }
+  
+  /**
+   * NEW: Preserve beach cell styles before transform by adding inline styles
+   * @private
+   */
+  _preserveBeachCellStyles() {
+    const beachCells = document.querySelectorAll('.grid-cell.sea-adjacent');
+    console.log(`Preserving styles for ${beachCells.length} beach cells before transform`);
+    
+    beachCells.forEach(cell => {
+      // Add a marker class to identify preserved cells
+      cell.classList.add('preserved-beach-cell');
+      
+      // Force critical styles as inline with !important to override transitions
+      cell.style.setProperty('background-color', 'var(--lightblue)', 'important');
+      cell.style.setProperty('transition', 'none', 'important');
+      cell.style.setProperty('will-change', 'transform', 'important');
+      
+      // Add solid borders based on edge classes with !important
+      if (cell.classList.contains('shore-edge-top')) {
+        cell.style.setProperty('border-top', '6px solid var(--sandyellow)', 'important');
+      }
+      if (cell.classList.contains('shore-edge-right')) {
+        cell.style.setProperty('border-right', '6px solid var(--sandyellow)', 'important');
+      }
+      if (cell.classList.contains('shore-edge-bottom')) {
+        cell.style.setProperty('border-bottom', '6px solid var(--sandyellow)', 'important');
+      }
+      if (cell.classList.contains('shore-edge-left')) {
+        cell.style.setProperty('border-left', '6px solid var(--sandyellow)', 'important');
+      }
+    });
+  }
+  
+  /**
+   * NEW: Reinforce beach cell styles during long transitions
+   * @private
+   */
+  _reinforceBeachCellStyles() {
+    const preservedCells = document.querySelectorAll('.preserved-beach-cell');
+    preservedCells.forEach(cell => {
+      // Re-apply critical styles to ensure they don't get lost during animation
+      cell.style.setProperty('background-color', 'var(--lightblue)', 'important');
+      
+      // Re-apply borders if needed
+      if (cell.classList.contains('shore-edge-top')) {
+        cell.style.setProperty('border-top', '6px solid var(--sandyellow)', 'important');
+      }
+      if (cell.classList.contains('shore-edge-right')) {
+        cell.style.setProperty('border-right', '6px solid var(--sandyellow)', 'important');
+      }
+      if (cell.classList.contains('shore-edge-bottom')) {
+        cell.style.setProperty('border-bottom', '6px solid var(--sandyellow)', 'important');
+      }
+      if (cell.classList.contains('shore-edge-left')) {
+        cell.style.setProperty('border-left', '6px solid var(--sandyellow)', 'important');
+      }
+    });
+  }
+  
+  /**
+   * NEW: Restore class-based styling after transform animation completes
+   * @private
+   */
+  _restoreBeachCellStyles() {
+    const preservedCells = document.querySelectorAll('.preserved-beach-cell');
+    
+    preservedCells.forEach(cell => {
+      // Remove inline styles and marker class
+      cell.classList.remove('preserved-beach-cell');
+      
+      // Remove inline styles
+      cell.style.removeProperty('background-color');
+      cell.style.removeProperty('transition');
+      cell.style.removeProperty('will-change');
+      cell.style.removeProperty('border-top');
+      cell.style.removeProperty('border-right');
+      cell.style.removeProperty('border-bottom');
+      cell.style.removeProperty('border-left');
+    });
+  }
+
+  /**
+   * Calculate new offset based on scroll direction
+   * @param {string} direction - Scroll direction ('up', 'right', 'down', 'left')
+   * @param {string} axis - Axis to calculate for ('x' or 'y')
+   * @return {number|null} The new offset value or null if invalid
+   * @private
+   */
+  _calculateNewOffset(direction, axis) {
+    if (!this.gridRenderer || !this.gridRenderer.viewOffset) return null;
+    
     const isMobile = window.innerWidth < 768;
     const width = isMobile ? this.gridRenderer.options.gridWidthSmall : this.gridRenderer.options.gridWidth;
     const height = isMobile ? this.gridRenderer.options.gridHeightSmall : this.gridRenderer.options.gridHeight;
     
-    // Determine which new cells need to be styled based on direction
-    const newCellPositions = [];
+    let newOffset = this.gridRenderer.viewOffset[axis];
     
-    // Define the region of new cells that will come into view
-    switch (direction) {
-      case 'up': 
-        // Top row(s) come into view
-        for (let x = newOffsetX; x < newOffsetX + width; x++) {
-          for (let y = newOffsetY; y < this.gridRenderer.viewOffset.y; y++) {
-            newCellPositions.push({x, y});
-          }
-        }
-        break;
-      case 'down':
-        // Bottom row(s) come into view
-        for (let x = newOffsetX; x < newOffsetX + width; x++) {
-          for (let y = this.gridRenderer.viewOffset.y + height; y < newOffsetY + height; y++) {
-            newCellPositions.push({x, y});
-          }
-        }
-        break;
-      case 'left':
-        // Left column(s) come into view
-        for (let x = newOffsetX; x < this.gridRenderer.viewOffset.x; x++) {
-          for (let y = newOffsetY; y < newOffsetY + height; y++) {
-            newCellPositions.push({x, y});
-          }
-        }
-        break;
-      case 'right':
-        // Right column(s) come into view
-        for (let x = this.gridRenderer.viewOffset.x + width; x < newOffsetX + width; x++) {
-          for (let y = newOffsetY; y < newOffsetY + height; y++) {
-            newCellPositions.push({x, y});
-          }
-        }
-        break;
+    if (axis === 'x') {
+      if (direction === 'left') {
+        newOffset = Math.max(0, this.gridRenderer.viewOffset.x - 1);
+      } else if (direction === 'right') {
+        newOffset = Math.min(
+          this.gridRenderer.fullGridSize - width,
+          this.gridRenderer.viewOffset.x + 1
+        );
+      }
+    } else if (axis === 'y') {
+      if (direction === 'up') {
+        newOffset = Math.max(0, this.gridRenderer.viewOffset.y - 1);
+      } else if (direction === 'down') {
+        newOffset = Math.min(
+          this.gridRenderer.fullGridSize - height,
+          this.gridRenderer.viewOffset.y + 1
+        );
+      }
     }
     
-    // Process each new cell position
-    newCellPositions.forEach(({x, y}) => {
+    return newOffset;
+  }
+  
+  /**
+   * NEW: Pre-style beach cells for a specific target offset
+   * This ensures cells that will come into view are already styled correctly
+   * @param {number} targetOffsetX - Target X offset after scrolling
+   * @param {number} targetOffsetY - Target Y offset after scrolling
+   * @private
+   */
+  _preStyleBeachCellsForOffset(targetOffsetX, targetOffsetY) {
+    if (!this.gridRenderer || !this.gridRenderer.grid) return;
+    
+    const isMobile = window.innerWidth < 768;
+    const width = isMobile ? this.gridRenderer.options.gridWidthSmall : this.gridRenderer.options.gridWidth;
+    const height = isMobile ? this.gridRenderer.options.gridHeightSmall : this.gridRenderer.options.gridHeight;
+    
+    // Calculate the new visible area that will appear after scrolling
+    const newVisibleArea = {
+      minX: targetOffsetX,
+      maxX: targetOffsetX + width,
+      minY: targetOffsetY,
+      maxY: targetOffsetY + height
+    };
+    
+    // Determine cells that will be newly visible
+    const xDiff = targetOffsetX - this.gridRenderer.viewOffset.x;
+    const yDiff = targetOffsetY - this.gridRenderer.viewOffset.y;
+    const newCells = [];
+    
+    // Check horizontal movement
+    if (xDiff > 0) { // Moving right
+      for (let x = this._visibleBounds.maxX; x < newVisibleArea.maxX; x++) {
+        for (let y = newVisibleArea.minY; y < newVisibleArea.maxY; y++) {
+          newCells.push({x, y});
+        }
+      }
+    } else if (xDiff < 0) { // Moving left
+      for (let x = newVisibleArea.minX; x < this._visibleBounds.minX; x++) {
+        for (let y = newVisibleArea.minY; y < newVisibleArea.maxY; y++) {
+          newCells.push({x, y});
+        }
+      }
+    }
+    
+    // Check vertical movement
+    if (yDiff > 0) { // Moving down
+      for (let y = this._visibleBounds.maxY; y < newVisibleArea.maxY; y++) {
+        for (let x = newVisibleArea.minX; x < newVisibleArea.maxX; x++) {
+          if (!newCells.some(cell => cell.x === x && cell.y === y)) {
+            newCells.push({x, y});
+          }
+        }
+      }
+    } else if (yDiff < 0) { // Moving up
+      for (let y = newVisibleArea.minY; y < this._visibleBounds.minY; y++) {
+        for (let x = newVisibleArea.minX; x < newVisibleArea.maxX; x++) {
+          if (!newCells.some(cell => cell.x === x && cell.y === y)) {
+            newCells.push({x, y});
+          }
+        }
+      }
+    }
+    
+    // For each new cell, check if it needs beach cell styling
+    newCells.forEach(({x, y}) => {
       // Skip if outside grid bounds
       if (y < 0 || y >= this.gridRenderer.grid.length || 
           x < 0 || x >= this.gridRenderer.grid[0].length) {
@@ -475,164 +374,157 @@ _reinforceBeachCellStyles() {
         return;
       }
       
-      // Check if this is a sea cell adjacent to any island
+      // Check if this cell should be a beach cell
       const adjacentDirections = this.getAdjacentLetterCells(x, y);
       if (adjacentDirections.length > 0) {
-        // Find the cell element
+        // Check if the cell element already exists
         const cellElement = document.querySelector(`.grid-cell[data-grid-x="${x}"][data-grid-y="${y}"]`);
         if (cellElement) {
-          // Apply sea-adjacent and shore edge classes
-          const styleConfig = {
-            isSeaAdjacent: true,
-            shoreEdges: adjacentDirections
-          };
+          // Add beach cell styles with inline properties for transform persistence
+          cellElement.classList.add('sea-adjacent', 'preserved-beach-cell');
+          cellElement.style.setProperty('background-color', 'var(--lightblue)', 'important');
           
-          // Apply beach styles to the cell
-          this._applyShoreStyles(cellElement, styleConfig);
-          
-          // Cache this style configuration
-          this.cellStyleCache.set(`${x},${y}`, styleConfig);
+          // Add specific edge classes and styles
+          adjacentDirections.forEach(direction => {
+            cellElement.classList.add(`shore-edge-${direction}`);
+            
+            // Add inline styles for the borders
+            switch(direction) {
+              case 'top':
+                cellElement.style.setProperty('border-top', '6px solid var(--sandyellow)', 'important');
+                break;
+              case 'right':
+                cellElement.style.setProperty('border-right', '6px solid var(--sandyellow)', 'important');
+                break;
+              case 'bottom':
+                cellElement.style.setProperty('border-bottom', '6px solid var(--sandyellow)', 'important');
+                break;
+              case 'left':
+                cellElement.style.setProperty('border-left', '6px solid var(--sandyellow)', 'important');
+                break;
+            }
+          });
         }
       }
     });
   }
 
-_calculateNewOffset(direction, axis) {
-  if (!this.gridRenderer || !this.gridRenderer.viewOffset) return null;
-  
-  const isMobile = window.innerWidth < 768;
-  const width = isMobile ? this.gridRenderer.options.gridWidthSmall : this.gridRenderer.options.gridWidth;
-  const height = isMobile ? this.gridRenderer.options.gridHeightSmall : this.gridRenderer.options.gridHeight;
-  
-  let newOffset = this.gridRenderer.viewOffset[axis];
-  
-  if (axis === 'x') {
-    if (direction === 'left') {
-      newOffset = Math.max(0, this.gridRenderer.viewOffset.x - 1);
-    } else if (direction === 'right') {
-      newOffset = Math.min(
-        this.gridRenderer.fullGridSize - width,
-        this.gridRenderer.viewOffset.x + 1
-      );
-    }
-  } else if (axis === 'y') {
-    if (direction === 'up') {
-      newOffset = Math.max(0, this.gridRenderer.viewOffset.y - 1);
-    } else if (direction === 'down') {
-      newOffset = Math.min(
-        this.gridRenderer.fullGridSize - height,
-        this.gridRenderer.viewOffset.y + 1
-      );
-    }
-  }
-  
-  return newOffset;
-}
-  
   /**
-   * ENHANCED: Calculate styles for all visible cells plus a larger buffer zone
-   * @param {string} direction - Optional scroll direction for targeted buffer expansion
+   * Set up optimized event listeners with scroll awareness
    * @private
    */
-  _calculateStylesWithBuffer(direction = null) {
-    if (!this.gridRenderer || !this.gridRenderer.grid) {
-      return;
-    }
-    
-    // Clear existing cache
-    const newStyleCache = new Map();
-    
-    // Use a larger buffer when direction is provided (during scrolling)
-    // This ensures smoother transitions in the scroll direction
-    const baseBuffer = this._bufferSize;
-    const topBuffer = direction === 'up' ? baseBuffer * 2 : baseBuffer;
-    const rightBuffer = direction === 'right' ? baseBuffer * 2 : baseBuffer;
-    const bottomBuffer = direction === 'down' ? baseBuffer * 2 : baseBuffer;
-    const leftBuffer = direction === 'left' ? baseBuffer * 2 : baseBuffer;
-    
-    // Process all cells in visible bounds AND the enhanced buffer zone
-    for (let y = this._visibleBounds.minY - topBuffer; y < this._visibleBounds.maxY + bottomBuffer; y++) {
-      for (let x = this._visibleBounds.minX - leftBuffer; x < this._visibleBounds.maxX + rightBuffer; x++) {
-        if (y < 0 || y >= this.gridRenderer.grid.length || 
-            x < 0 || x >= this.gridRenderer.grid[0].length) {
-          continue;
-        }
-        
-        // Get cell's style configuration
-        const styleConfig = this._getCellStyleConfig(x, y);
-        
-        // Also pre-calculate sea-adjacent (shore) cells
-        if (!styleConfig.isPathCell) {
-          const adjacentDirections = this.getAdjacentLetterCells(x, y);
-          if (adjacentDirections.length > 0) {
-            styleConfig.isSeaAdjacent = true;
-            styleConfig.shoreEdges = adjacentDirections;
-          }
-        }
-        
-        // Store in cache
-        newStyleCache.set(`${x},${y}`, styleConfig);
-      }
-    }
-    
-    // Replace cache atomically
-    this.cellStyleCache = newStyleCache;
-  }
-
-  /**
-   * Apply beach/shore cell styles during scrolling
-   * ENHANCED: Better handling of new cells coming into view
-   * @private
-   */
-  _applyBeachCellsDuringScroll() {
-    // Skip if no grid renderer or grid
-    if (!this.gridRenderer || !this.gridRenderer.grid) {
-      return;
-    }
-    
-    // Get current visible cells
-    const cells = document.querySelectorAll('.grid-cell');
-    
-    // Find sea-adjacent cells needing shore styling
-    cells.forEach(cellElement => {
-      // Get cell coordinates
-      const x = parseInt(cellElement.dataset.gridX, 10);
-      const y = parseInt(cellElement.dataset.gridY, 10);
+  _setupEventListeners() {
+    // Track scroll events to pause updates during scrolling
+    document.addEventListener('gridScrollStarted', (e) => {
+      this._scrollInProgress = true;
       
-      if (isNaN(x) || isNaN(y)) {
-        return;
-      }
+      // Update visible bounds immediately when scrolling starts
+      this._updateVisibleBounds();
       
-      // Don't process path cells (letters/islands) - just focus on sea cells
-      if (cellElement.classList.contains('path-cell')) {
-        return;
-      }
+      // Pre-calculate and apply beach cell styles with a larger buffer before scrolling
+      this._calculateStyles();
+      this._applyBeachCellStyles(true);
+    });
+    
+    document.addEventListener('gridScrolled', (e) => {
+      // Keep track that scrolling is in progress
+      this._scrollInProgress = true;
       
-      // Get cached style if available
-      const cacheKey = `${x},${y}`;
-      const cachedStyle = this.cellStyleCache.get(cacheKey);
+      // Update visible bounds
+      this._updateVisibleBounds();
+    });
+    
+    // Listen for grid rebuild events (which happen during scrolling)
+    document.addEventListener('gridRebuilt', (e) => {
+      // Update visible bounds
+      this._updateVisibleBounds();
       
-      if (cachedStyle && cachedStyle.isSeaAdjacent) {
-        // Use cached style data if available
-        this._applyShoreStyles(cellElement, cachedStyle);
+      // If a rebuild happens during scrolling, ensure beach cells are styled
+      if (e.detail.isScrolling) {
+        setTimeout(() => {
+          this._applyBeachCellStyles(true);
+        }, 0);
       } else {
-        // Otherwise calculate on the fly for this cell
-        const adjacentDirections = this.getAdjacentLetterCells(x, y);
-        if (adjacentDirections.length > 0) {
-          // Apply sea-adjacent and shore edge classes
-          const styleConfig = {
-            isSeaAdjacent: true,
-            shoreEdges: adjacentDirections
-          };
-          this._applyShoreStyles(cellElement, styleConfig);
-          
-          // Cache this result for future use
-          this.cellStyleCache.set(cacheKey, styleConfig);
-        }
+        // Only process if not during a scroll
+        requestAnimationFrame(() => {
+          this._calculateStyles();
+          this._applyStyles();
+        });
       }
     });
-  }
     
+    document.addEventListener('gridScrollComplete', () => {
+      this._scrollInProgress = false;
+      
+      // Update styles after scroll completes, using animation frame for smoother performance
+      this._updateVisibleBounds();
+      
+      // Use requestAnimationFrame for better performance
+      requestAnimationFrame(() => {
+        this._calculateStyles();
+        this._applyStyles();
+      });
+    });
+    
+    // Event categories for different processing approaches
+    const immediateEvents = [
+      'pathSet',
+      'islandLettersUpdated',
+      'islandReductionLevelChanged'
+    ];
+    
+    const delayedEvents = [
+      'gridCompletionChanged', 
+      'selectionsCleared'
+    ];
+    
+    // Handle high-priority events immediately
+    immediateEvents.forEach(eventName => {
+      document.addEventListener(eventName, () => {
+        // Don't update during scrolling
+        if (this._scrollInProgress) return;
+        
+        // Update on next animation frame
+        requestAnimationFrame(() => {
+          this._calculateStyles();
+          this._applyStyles();
+        });
+      });
+    });
+    
+    // Handle lower-priority events with debouncing
+    let updateTimeoutId = null;
+    delayedEvents.forEach(eventName => {
+      document.addEventListener(eventName, () => {
+        // Don't update during scrolling
+        if (this._scrollInProgress) return;
+        
+        // Clear existing timeout to debounce multiple events
+        if (updateTimeoutId) {
+          clearTimeout(updateTimeoutId);
+        }
+        
+        // Schedule update with delay
+        updateTimeoutId = setTimeout(() => {
+          requestAnimationFrame(() => {
+            this._calculateStyles();
+            this._applyStyles();
+          });
+        }, 100);
+      });
+    });
+    
+    // Handle explicit update requests
+    document.addEventListener('updateIslandStyling', () => {
+      if (this._scrollInProgress) return;
+      
+      requestAnimationFrame(() => {
+        this._calculateStyles();
+        this._applyStyles();
+      });
+    });
+  }
+  
   /**
    * Calculate current visible bounds of the grid
    * @private
@@ -710,9 +602,10 @@ _calculateNewOffset(direction, axis) {
     
   /**
    * Apply cached styles to DOM elements
+   * @param {boolean} force - Force application even during scrolling
    * @private
    */
-  _applyStyles() {
+  _applyStyles(force = false) {
     // Get all visible cells in the DOM
     const cells = document.querySelectorAll('.grid-cell');
     
@@ -730,94 +623,133 @@ _calculateNewOffset(direction, axis) {
       const cacheKey = `${x},${y}`;
       const styleConfig = this.cellStyleCache.get(cacheKey);
       
-      // Skip if no style config found
-      if (!styleConfig) return;
+      // Skip if no style config found and not forced
+      if (!styleConfig && !force) return;
       
-      // ENHANCED: Apply shore styles even during scrolling to maintain continuity
-      if (styleConfig.isSeaAdjacent) {
+      // Apply shore styles even during scrolling to maintain continuity
+      if (styleConfig && styleConfig.isSeaAdjacent) {
         this._applyShoreStyles(cellElement, styleConfig);
         return;
       }
       
-      // For non-shore cells, only apply styles if not scrolling
-      if (!this._scrollInProgress) {
-        this._applyStyleConfig(cellElement, styleConfig);
+      // For non-shore cells, only apply styles if not scrolling or if forced
+      if (force || !this._scrollInProgress) {
+        // If we have a style config, apply it
+        if (styleConfig) {
+          this._applyStyleConfig(cellElement, styleConfig);
+        } 
+        // If forced but no style config, check adjacency directly
+        else if (force) {
+          const adjacentDirections = this.getAdjacentLetterCells(x, y);
+          if (adjacentDirections.length > 0) {
+            const newStyleConfig = {
+              isSeaAdjacent: true,
+              shoreEdges: adjacentDirections
+            };
+            this._applyShoreStyles(cellElement, newStyleConfig);
+            // Cache this result for future use
+            this.cellStyleCache.set(cacheKey, newStyleConfig);
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * Apply beach cell styles directly to DOM - focused implementation that only handles beach cells
+   * @param {boolean} force - Force application even during scrolling
+   * @private
+   */
+  _applyBeachCellStyles(force = false) {
+    if (!this.gridRenderer || !this.gridRenderer.grid || (!force && this._scrollInProgress)) {
+      return;
+    }
+    
+    const cells = document.querySelectorAll('.grid-cell');
+    
+    cells.forEach(cellElement => {
+      // Get cell coordinates
+      const x = parseInt(cellElement.dataset.gridX, 10);
+      const y = parseInt(cellElement.dataset.gridY, 10);
+      
+      if (isNaN(x) || isNaN(y)) {
+        return;
+      }
+      
+      // Skip if this cell is a path cell or has a letter - focus only on potential beach cells
+      if (cellElement.classList.contains('path-cell')) {
+        return;
+      }
+      
+      // Check if this should be a beach cell by looking for adjacent letter cells
+      const adjacentDirections = this.getAdjacentLetterCells(x, y);
+      
+      if (adjacentDirections.length > 0) {
+        // This should be a beach cell
+        cellElement.classList.add('sea-adjacent');
+        
+        // Remove any existing shore edge classes first
+        cellElement.classList.remove(
+          'shore-edge-top', 
+          'shore-edge-right', 
+          'shore-edge-bottom', 
+          'shore-edge-left'
+        );
+        
+        // Add specific edge classes
+        adjacentDirections.forEach(direction => {
+          cellElement.classList.add(`shore-edge-${direction}`);
+        });
+        
+        // During scrolling, disable transitions
+        if (this._scrollInProgress) {
+          cellElement.classList.add('no-transition');
+        } else {
+          cellElement.classList.remove('no-transition');
+        }
+      } else {
+        // Not a beach cell, remove sea-adjacent class if present
+        cellElement.classList.remove(
+          'sea-adjacent',
+          'shore-edge-top',
+          'shore-edge-right',
+          'shore-edge-bottom',
+          'shore-edge-left',
+          'no-transition'
+        );
       }
     });
   }
 
   /**
    * Apply shore/beach specific styles to cell element
-   * ENHANCED: Check current state before modifying to avoid unnecessary reflows
    * @param {HTMLElement} cellElement - Cell DOM element
    * @param {Object} styleConfig - Style configuration
    * @private
    */
   _applyShoreStyles(cellElement, styleConfig) {
-    // Store the current state for comparison
-    const currentClasses = {
-      isSeaAdjacent: cellElement.classList.contains('sea-adjacent'),
-      top: cellElement.classList.contains('shore-edge-top'),
-      right: cellElement.classList.contains('shore-edge-right'),
-      bottom: cellElement.classList.contains('shore-edge-bottom'),
-      left: cellElement.classList.contains('shore-edge-left')
-    };
+    // Add sea-adjacent class
+    cellElement.classList.add('sea-adjacent');
     
-    // Create a map of needed classes
-    const neededClasses = {
-      isSeaAdjacent: true,
-      top: styleConfig.shoreEdges.includes('top'),
-      right: styleConfig.shoreEdges.includes('right'),
-      bottom: styleConfig.shoreEdges.includes('bottom'),
-      left: styleConfig.shoreEdges.includes('left')
-    };
-    
-    // Only add/remove classes if there's a difference from current state
-    
-    // Handle sea-adjacent class
-    if (currentClasses.isSeaAdjacent !== neededClasses.isSeaAdjacent) {
-      if (neededClasses.isSeaAdjacent) {
-        cellElement.classList.add('sea-adjacent');
-      } else {
-        cellElement.classList.remove('sea-adjacent');
-      }
+    // During scrolling, disable transitions for better performance
+    if (this._scrollInProgress) {
+      cellElement.classList.add('no-transition');
+    } else {
+      cellElement.classList.remove('no-transition');
     }
     
-    // Handle top edge
-    if (currentClasses.top !== neededClasses.top) {
-      if (neededClasses.top) {
-        cellElement.classList.add('shore-edge-top');
-      } else {
-        cellElement.classList.remove('shore-edge-top');
-      }
-    }
+    // Clear existing edge classes
+    cellElement.classList.remove(
+      'shore-edge-top',
+      'shore-edge-right',
+      'shore-edge-bottom',
+      'shore-edge-left'
+    );
     
-    // Handle right edge
-    if (currentClasses.right !== neededClasses.right) {
-      if (neededClasses.right) {
-        cellElement.classList.add('shore-edge-right');
-      } else {
-        cellElement.classList.remove('shore-edge-right');
-      }
-    }
-    
-    // Handle bottom edge
-    if (currentClasses.bottom !== neededClasses.bottom) {
-      if (neededClasses.bottom) {
-        cellElement.classList.add('shore-edge-bottom');
-      } else {
-        cellElement.classList.remove('shore-edge-bottom');
-      }
-    }
-    
-    // Handle left edge
-    if (currentClasses.left !== neededClasses.left) {
-      if (neededClasses.left) {
-        cellElement.classList.add('shore-edge-left');
-      } else {
-        cellElement.classList.remove('shore-edge-left');
-      }
-    }
+    // Add edge-specific classes
+    styleConfig.shoreEdges.forEach(direction => {
+      cellElement.classList.add(`shore-edge-${direction}`);
+    });
   }
     
   /**
@@ -854,183 +786,131 @@ _calculateNewOffset(direction, axis) {
     
     return config;
   }
-    
-  /**
-   * Apply style configuration to a cell element
-   * @param {HTMLElement} cellElement - Cell DOM element
-   * @param {Object} styleConfig - Style configuration
-   * @private
-   */
-  _applyStyleConfig(cellElement, styleConfig) {
-    // Reset classes we manage
-    cellElement.classList.remove(
-      'path-cell',
-      'sea-adjacent',
-      'shore-edge-top',
-      'shore-edge-right',
-      'shore-edge-bottom',
-      'shore-edge-left'
-    );
-    
-    // Apply path-cell class if needed
-    if (styleConfig.isPathCell) {
-      cellElement.classList.add('path-cell');
-      return;
-    }
-    
-    // Apply sea adjacent styling if needed
-    if (styleConfig.isSeaAdjacent) {
-      cellElement.classList.add('sea-adjacent');
-      
-      // Apply shore edge classes
-      styleConfig.shoreEdges.forEach(direction => {
-        cellElement.classList.add(`shore-edge-${direction}`);
-      });
-    }
-  }
 
-_applyStyles(force = false) {
-  // Get all visible cells in the DOM
-  const cells = document.querySelectorAll('.grid-cell');
+/**
+ * Apply style configuration to a cell element
+ * @param {HTMLElement} cellElement - Cell DOM element
+ * @param {Object} styleConfig - Style configuration
+ * @private
+ */
+_applyStyleConfig(cellElement, styleConfig) {
+  // Reset classes we manage
+  cellElement.classList.remove(
+    'path-cell',
+    'sea-adjacent',
+    'shore-edge-top',
+    'shore-edge-right',
+    'shore-edge-bottom',
+    'shore-edge-left',
+    'no-transition'
+  );
   
-  // Process each visible cell
-  cells.forEach(cellElement => {
-    // Get cell coordinates
-    const x = parseInt(cellElement.dataset.gridX, 10);
-    const y = parseInt(cellElement.dataset.gridY, 10);
-    
-    if (isNaN(x) || isNaN(y)) {
-      return;
-    }
-    
-    // Get cached style configuration
-    const cacheKey = `${x},${y}`;
-    const styleConfig = this.cellStyleCache.get(cacheKey);
-    
-    // Skip if no style config found and not forced
-    if (!styleConfig && !force) return;
-    
-    // ENHANCED: Apply shore styles even during scrolling to maintain continuity
-    if (styleConfig && styleConfig.isSeaAdjacent) {
-      this._applyShoreStyles(cellElement, styleConfig);
-      return;
-    }
-    
-    // For non-shore cells, only apply styles if not scrolling or if forced
-    if (force || !this._scrollInProgress) {
-      // If we have a style config, apply it
-      if (styleConfig) {
-        this._applyStyleConfig(cellElement, styleConfig);
-      } 
-      // If forced but no style config, check adjacency directly
-      else if (force) {
-        const adjacentDirections = this.getAdjacentLetterCells(x, y);
-        if (adjacentDirections.length > 0) {
-          const newStyleConfig = {
-            isSeaAdjacent: true,
-            shoreEdges: adjacentDirections
-          };
-          this._applyShoreStyles(cellElement, newStyleConfig);
-          // Cache this result for future use
-          this.cellStyleCache.set(cacheKey, newStyleConfig);
-        }
-      }
-    }
-  });
-}
+  // Apply path-cell class if needed
+  if (styleConfig.isPathCell) {
+    cellElement.classList.add('path-cell');
+    return;
+  }
   
-  /**
-   * Public method to update island appearance
-   * Maintained for backwards compatibility
-   */
-  updateIslandAppearance() {
-    // Skip if scrolling in progress
-    if (this._scrollInProgress) return;
+  // Apply sea adjacent styling if needed
+  if (styleConfig.isSeaAdjacent) {
+    cellElement.classList.add('sea-adjacent');
     
-    // Use animation frame for better performance
-    requestAnimationFrame(() => {
-      this._calculateStyles();
-      this._applyStyles();
+    // During scrolling, disable transitions
+    if (this._scrollInProgress) {
+      cellElement.classList.add('no-transition');
+    }
+    
+    // Apply shore edge classes
+    styleConfig.shoreEdges.forEach(direction => {
+      cellElement.classList.add(`shore-edge-${direction}`);
     });
   }
-    
-  /**
-   * Get a list of directions where adjacent cells have letters
-   * @param {number} x - X coordinate
-   * @param {number} y - Y coordinate
-   * @return {Array} Array of directions ('top', 'right', 'bottom', 'left')
-   */
-  getAdjacentLetterCells(x, y) {
-    const directions = [];
-    
-    // Check cell above
-    if (this.cellHasLetter(x, y-1) || this.isCellPath(x, y-1)) {
-      directions.push('top');
-    }
-    
-    // Check cell to the right
-    if (this.cellHasLetter(x+1, y) || this.isCellPath(x+1, y)) {
-      directions.push('right');
-    }
-    
-    // Check cell below
-    if (this.cellHasLetter(x, y+1) || this.isCellPath(x, y+1)) {
-      directions.push('bottom');
-    }
-    
-    // Check cell to the left
-    if (this.cellHasLetter(x-1, y) || this.isCellPath(x-1, y)) {
-      directions.push('left');
-    }
-    
-    return directions;
+}
+
+/**
+ * Public method to update island appearance
+ * Maintained for backwards compatibility
+ */
+updateIslandAppearance() {
+  // Skip if scrolling in progress
+  if (this._scrollInProgress) return;
+  
+  // Use animation frame for better performance
+  requestAnimationFrame(() => {
+    this._calculateStyles();
+    this._applyStyles();
+  });
+}
+
+/**
+ * Get a list of directions where adjacent cells have letters
+ * @param {number} x - X coordinate
+ * @param {number} y - Y coordinate
+ * @return {Array} Array of directions ('top', 'right', 'bottom', 'left')
+ */
+getAdjacentLetterCells(x, y) {
+  const directions = [];
+  
+  // Check cell above
+  if (this.cellHasLetter(x, y-1) || this.isCellPath(x, y-1)) {
+    directions.push('top');
   }
-    
-  /**
-   * Check if a cell has any letter (path or random)
-   */
-  cellHasLetter(x, y) {
-    if (!this.gridRenderer || !this.gridRenderer.grid) return false;
-    
-    // Check if coordinates are within grid bounds
-    if (y < 0 || y >= this.gridRenderer.grid.length || 
-        x < 0 || x >= this.gridRenderer.grid[0].length) {
-      return false;
-    }
-    
-    // Check if the cell has a non-empty letter
-    const cell = this.gridRenderer.grid[y][x];
-    return cell && cell.letter && cell.letter.trim() !== '';
+  
+  // Check cell to the right
+  if (this.cellHasLetter(x+1, y) || this.isCellPath(x+1, y)) {
+    directions.push('right');
   }
-    
-  /**
-   * Check if a cell is a path cell
-   */
-  isCellPath(x, y) {
-    if (!this.gridRenderer || !this.gridRenderer.grid) return false;
-    
-    // Check if coordinates are within grid bounds
-    if (y < 0 || y >= this.gridRenderer.grid.length || 
-        x < 0 || x >= this.gridRenderer.grid[0].length) {
-      return false;
-    }
-    
-    // Check if this cell is part of the path
-    return this.gridRenderer.grid[y][x].isPath;
+  
+  // Check cell below
+  if (this.cellHasLetter(x, y+1) || this.isCellPath(x, y+1)) {
+    directions.push('bottom');
   }
-    
-  /**
-   * Check if a cell is adjacent to any cell that has a letter
-   * KEPT for backwards compatibility
-   */
-  isAdjacentToAnyLetterCell(x, y) {
-    return this.getAdjacentLetterCells(x, y).length > 0;
+  
+  // Check cell to the left
+  if (this.cellHasLetter(x-1, y) || this.isCellPath(x-1, y)) {
+    directions.push('left');
   }
-    
-  /**
-   * Refresh island rendering - Public API for forced updates
-   * @param {boolean} force - Force immediate update even during scrolling
-   */
+  
+  return directions;
+}
+
+/**
+ * Check if a cell has any letter (path or random)
+ */
+cellHasLetter(x, y) {
+  if (!this.gridRenderer || !this.gridRenderer.grid) return false;
+  
+  // Check if coordinates are within grid bounds
+  if (y < 0 || y >= this.gridRenderer.grid.length || 
+      x < 0 || x >= this.gridRenderer.grid[0].length) {
+    return false;
+  }
+  
+  // Check if the cell has a non-empty letter
+  const cell = this.gridRenderer.grid[y][x];
+  return cell && cell.letter && cell.letter.trim() !== '';
+}
+
+/**
+ * Check if a cell is a path cell
+ */
+isCellPath(x, y) {
+  if (!this.gridRenderer || !this.gridRenderer.grid) return false;
+  
+  // Check if coordinates are within grid bounds
+  if (y < 0 || y >= this.gridRenderer.grid.length || 
+      x < 0 || x >= this.gridRenderer.grid[0].length) {
+    return false;
+  }
+  
+  // Check if this cell is part of the path
+  return this.gridRenderer.grid[y][x].isPath;
+}
+
+/**
+ * Refresh island rendering - Public API for forced updates
+ * @param {boolean} force - Force immediate update even during scrolling
+ */
 refreshIsland(force = false) {
   // Skip if scrolling in progress and not forced
   if (this._scrollInProgress && !force) return;
@@ -1040,14 +920,46 @@ refreshIsland(force = false) {
   // Update visible bounds
   this._updateVisibleBounds();
   
-  // Calculate styles for ALL cells including beach cells with increased buffer
-  this._calculateStylesWithBuffer();
+  // Calculate styles for all cells including beach cells
+  this._calculateStyles();
   
-  // Always apply beach cell styles specifically
-  this._applyBeachCellsDirectly();
+  // Apply beach cell styles with forced application
+  this._applyBeachCellStyles(true);
   
   // Then apply all other styles
   this._applyStyles(force);
+}
+
+/**
+ * NEW: Fix beach cells after any DOM manipulation
+ * This should be called whenever grid cells might have been altered or rebuilt
+ */
+fixBeachCellsAfterDOMChange() {
+  // Short circuit if scrolling
+  if (this._scrollInProgress) return;
+  
+  // Use requestAnimationFrame to ensure DOM is stable
+  requestAnimationFrame(() => {
+    this._applyBeachCellStyles(true);
+  });
+}
+
+/**
+ * NEW: Update all beach cells when the grid changes size or position
+ * Handles responsive layout changes
+ */
+handleGridResize() {
+  // Update visible bounds
+  this._updateVisibleBounds();
+  
+  // Calculate new styles based on current grid
+  this._calculateStyles();
+  
+  // Apply beach cell styles with forced application
+  this._applyBeachCellStyles(true);
+  
+  // Apply all other styles
+  this._applyStyles(true);
 }
 }
 
