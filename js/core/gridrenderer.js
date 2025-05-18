@@ -2284,9 +2284,8 @@ cellHasContent(x, y) {
 }
 
 /**
- * Optimized scroll method with efficient grid movement and reduced re-renders
- * @param {string} direction - 'up', 'down', 'left', or 'right'
- * @param {boolean} slowMotion - Whether to use slow scrolling speed
+ * Modified GridRenderer scroll method to fix beach cell flashing
+ * Replace the existing scroll method in GridRenderer.js with this improved version
  */
 scroll(direction, slowMotion = false) {
   // Signal to components that scrolling is starting
@@ -2333,8 +2332,14 @@ scroll(direction, slowMotion = false) {
     return;
   }
   
+  // NEW: Before transformation, preserve all beach cells
+  if (window.islandRenderer) {
+    // Let islandRenderer know we're about to transform
+    window.islandRenderer._preserveBeachCellStyles();
+  }
+  
   // Use CSS transform for smooth scrolling rather than full rebuild
-  const transitionDuration = slowMotion ? 400 : 200;
+  const transitionDuration = slowMotion ? 350 : 180; // Slightly faster default
   
   // Determine if this is a small scroll (1 unit in any direction)
   const isSmallScroll = 
@@ -2404,7 +2409,7 @@ scroll(direction, slowMotion = false) {
           to: { x: newOffsetX, y: newOffsetY }
         }
       }));
-    }, transitionDuration + 50); // Add a small buffer to ensure transition completes
+    }, transitionDuration + 30); // Slightly reduced buffer
   } else {
     // For larger scrolls, use the standard approach
     this.viewOffset.x = newOffsetX;
@@ -2430,7 +2435,7 @@ scroll(direction, slowMotion = false) {
     detail: { direction, offset: this.viewOffset, gridRenderer: this, slowMotion }
   }));
 }
-
+  
 /**
  * Prepare new cells that will come into view during small scrolls
  * This improves performance by pre-creating cells before they're needed
