@@ -283,53 +283,82 @@ interceptGridRendererScroll() {
   // Save original scroll method
   const originalScroll = this.gridRenderer.scroll;
   
-  // Override the scroll method
+  // Override the scroll method with specific attention to CSS transforms
   this.gridRenderer.scroll = (direction, slowMotion = false) => {
-    // CRITICAL: Apply inline styles to ALL beach cells BEFORE any transform
+    // BEFORE TRANSFORM: Detect all beach cells and cache their styles with inline properties
+    // This must happen BEFORE any transform is applied
     this._preserveAllBeachCellStyles();
+    
+    // Also pre-style cells that will come into view after scrolling
+    const newOffsetX = this._calculateNewOffset(direction, 'x');
+    const newOffsetY = this._calculateNewOffset(direction, 'y');
+    if (newOffsetX !== null && newOffsetY !== null) {
+      this._preStyleBeachCellsForScroll(direction, newOffsetX, newOffsetY);
+    }
     
     // Call the original scroll method to perform the transform
     originalScroll.call(this.gridRenderer, direction, slowMotion);
     
-    // Calculate transition time to restore styles
-    const transitionDuration = slowMotion ? 400 : 200;
+    // Calculate transition time to restore styles - slightly longer than the transition itself
+    const transitionDuration = slowMotion ? 450 : 250; // Extra 50ms buffer
     
-    // After the transition, restore class-based styling
+    // Check if we need to reapply during long transitions
+    if (slowMotion) {
+      // For slow transitions, recheck/reapply halfway through
+      setTimeout(() => {
+        // Ensure preserved styles are still applied during long transitions
+        this._reinforceBeachCellStyles();
+      }, transitionDuration / 2);
+    }
+    
+    // After the transition is complete, restore class-based styling
     setTimeout(() => {
       this._restoreBeachCellStyles();
-    }, transitionDuration + 50); // Add buffer to ensure transition completes
+      // Then apply beach cell styles properly
+      this._applyBeachCellsDirectly();
+    }, transitionDuration);
   };
   
-  console.log('Enhanced GridRenderer scroll method with beach cell style preservation');
+  console.log('Enhanced GridRenderer scroll method with improved beach cell style preservation');
 }
 
 // New comprehensive beach cell style preservation method
 _preserveAllBeachCellStyles() {
   // Get all current sea-adjacent (beach) cells
   const beachCells = document.querySelectorAll('.grid-cell.sea-adjacent');
+  console.log(`Preserving styles for ${beachCells.length} beach cells before transform`);
   
-  // Add inline styles to ALL beach cells
+  // Add inline styles to ALL beach cells with !important to override any transitions
   beachCells.forEach(cell => {
-    // Create style object based on current classes
-    const styles = {
-      backgroundColor: 'var(--lightblue)',
-      transition: 'none', // Disable transitions to prevent flicker
-      // Apply solid borders based on edge classes
-      borderTop: cell.classList.contains('shore-edge-top') ? 
-        '6px solid var(--sandyellow)' : '',
-      borderRight: cell.classList.contains('shore-edge-right') ? 
-        '6px solid var(--sandyellow)' : '',
-      borderBottom: cell.classList.contains('shore-edge-bottom') ? 
-        '6px solid var(--sandyellow)' : '',
-      borderLeft: cell.classList.contains('shore-edge-left') ? 
-        '6px solid var(--sandyellow)' : ''
-    };
+    // Get actual computed styles for reliability
+    const computedStyle = window.getComputedStyle(cell);
     
-    // Apply inline styles to override any class changes during transition
-    Object.assign(cell.style, styles);
+    // Force correct background color with !important
+    cell.style.setProperty('background-color', 'var(--lightblue)', 'important');
+    
+    // Explicitly disable transitions for all properties during transform
+    cell.style.setProperty('transition', 'transform 0.2s ease-out', 'important');
+    
+    // Apply solid borders based on edge classes with !important
+    if (cell.classList.contains('shore-edge-top')) {
+      cell.style.setProperty('border-top', '6px solid var(--sandyellow)', 'important');
+    }
+    if (cell.classList.contains('shore-edge-right')) {
+      cell.style.setProperty('border-right', '6px solid var(--sandyellow)', 'important');
+    }
+    if (cell.classList.contains('shore-edge-bottom')) {
+      cell.style.setProperty('border-bottom', '6px solid var(--sandyellow)', 'important');
+    }
+    if (cell.classList.contains('shore-edge-left')) {
+      cell.style.setProperty('border-left', '6px solid var(--sandyellow)', 'important');
+    }
+    
+    // Ensure z-index is preserved during transform
+    cell.style.setProperty('z-index', '2', 'important');
     
     // Store original class list to restore after transition
     cell.dataset.originalClasses = Array.from(cell.classList).join(' ');
+    cell.dataset.isPreservedBeachCell = 'true';
   });
 }
 
@@ -349,6 +378,30 @@ _restoreBeachCellStyles() {
     
     // Remove dataset property
     delete cell.dataset.originalClasses;
+  });
+}
+
+_reinforceBeachCellStyles() {
+  // Find all cells marked as preserved beach cells
+  const preservedBeachCells = document.querySelectorAll('[data-is-preserved-beach-cell="true"]');
+  
+  preservedBeachCells.forEach(cell => {
+    // Re-apply critical styles to ensure they don't get lost during animation
+    cell.style.setProperty('background-color', 'var(--lightblue)', 'important');
+    
+    // Re-apply borders if needed
+    if (cell.classList.contains('shore-edge-top')) {
+      cell.style.setProperty('border-top', '6px solid var(--sandyellow)', 'important');
+    }
+    if (cell.classList.contains('shore-edge-right')) {
+      cell.style.setProperty('border-right', '6px solid var(--sandyellow)', 'important');
+    }
+    if (cell.classList.contains('shore-edge-bottom')) {
+      cell.style.setProperty('border-bottom', '6px solid var(--sandyellow)', 'important');
+    }
+    if (cell.classList.contains('shore-edge-left')) {
+      cell.style.setProperty('border-left', '6px solid var(--sandyellow)', 'important');
+    }
   });
 }
   
@@ -444,6 +497,38 @@ _restoreBeachCellStyles() {
     });
   }
 
+_calculateNewOffset(direction, axis) {
+  if (!this.gridRenderer || !this.gridRenderer.viewOffset) return null;
+  
+  const isMobile = window.innerWidth < 768;
+  const width = isMobile ? this.gridRenderer.options.gridWidthSmall : this.gridRenderer.options.gridWidth;
+  const height = isMobile ? this.gridRenderer.options.gridHeightSmall : this.gridRenderer.options.gridHeight;
+  
+  let newOffset = this.gridRenderer.viewOffset[axis];
+  
+  if (axis === 'x') {
+    if (direction === 'left') {
+      newOffset = Math.max(0, this.gridRenderer.viewOffset.x - 1);
+    } else if (direction === 'right') {
+      newOffset = Math.min(
+        this.gridRenderer.fullGridSize - width,
+        this.gridRenderer.viewOffset.x + 1
+      );
+    }
+  } else if (axis === 'y') {
+    if (direction === 'up') {
+      newOffset = Math.max(0, this.gridRenderer.viewOffset.y - 1);
+    } else if (direction === 'down') {
+      newOffset = Math.min(
+        this.gridRenderer.fullGridSize - height,
+        this.gridRenderer.viewOffset.y + 1
+      );
+    }
+  }
+  
+  return newOffset;
+}
+  
   /**
    * ENHANCED: Calculate styles for all visible cells plus a larger buffer zone
    * @param {string} direction - Optional scroll direction for targeted buffer expansion
