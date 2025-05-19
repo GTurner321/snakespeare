@@ -2,7 +2,14 @@
  * Island Erosion Controller
  * Manages the timed erosion of island cells in the Grid Game
  * Creates a "rising water" effect where cells gradually disappear over time
+ * Now using shared erosionUtils for consistent cell selection
  */
+
+import {
+  identifyErodableCells,
+  selectCellsToErode,
+  shuffleArray
+} from './erosionutils.js';
 
 class ErosionController {
   constructor(gridRenderer, pathGenerator) {
@@ -151,8 +158,8 @@ class ErosionController {
     const cellsToErodeCount = Math.max(1, Math.ceil(currentErodableCells.length * erosionPercentage));
     console.log(`Eroding ${cellsToErodeCount} of ${currentErodableCells.length} available cells`);
     
-    // Randomly select cells to erode
-    const cellsToErode = this.selectCellsToErode(currentErodableCells, cellsToErodeCount);
+    // Randomly select cells to erode - use utility function
+    const cellsToErode = selectCellsToErode(currentErodableCells, cellsToErodeCount);
     
     // Begin flashing these cells to indicate imminent removal
     this.startFlashingCells(cellsToErode);
@@ -174,204 +181,58 @@ class ErosionController {
     }, 3000); // 3 seconds of flashing before removal
   }
   
-/**
- * Identify which cells are currently erodable (adjacent to sea)
- * Modified to exclude currently selected cells
- * @return {Array} Array of erodable cell coordinates
- */
-identifyCurrentErodableCells() {
-  // Get all island cells from the grid renderer
-  const allCells = this.gridRenderer.getIslandCells();
-  const erodableCells = [];
-  
-  // Create a map of all cells in the grid for adjacency checks
-  const cellMap = new Map();
-  allCells.forEach(cell => {
-    cellMap.set(`${cell.x},${cell.y}`, cell);
-  });
-  
-  // Get path cells to exclude
-  const pathMap = new Map();
-  this.gridRenderer.getPathCells().forEach(cell => {
-    pathMap.set(`${cell.x},${cell.y}`, cell);
-  });
-  
-  // Create a map of currently selected cells
-  const selectedCellMap = new Map();
-  
-  // Check if gridRenderer has selected cells
-  if (this.gridRenderer && this.gridRenderer.selectedCells) {
-    // Convert grid coordinates (35,35 centered) to path coordinates (0,0 centered)
-    const centerX = 35;
-    const centerY = 35;
-    
-    // Add all selected cells to the map
-    this.gridRenderer.selectedCells.forEach(selectedCell => {
-      // Convert to path coordinates (centered at 0,0)
-      const pathX = selectedCell.x - centerX;
-      const pathY = selectedCell.y - centerY;
-      // Create a key in the same format as other cell maps
-      const key = `${pathX},${pathY}`;
-      
-      // Store in map and log for debugging
-      selectedCellMap.set(key, true);
-      console.log(`Excluding selected cell at grid(${selectedCell.x}, ${selectedCell.y}) / path(${pathX}, ${pathY}) from erosion`);
-    });
-  }
-  
-  // Check each cell to see if it's adjacent to a sea cell
-  for (const cell of allCells) {
-    // Skip path cells - they can't be eroded yet
-    if (pathMap.has(`${cell.x},${cell.y}`)) {
-      continue;
-    }
-    
-    // NEW: Skip cells that are currently selected by the user
-    if (selectedCellMap.has(`${cell.x},${cell.y}`)) {
-      console.log(`Skipping selected cell at path(${cell.x}, ${cell.y}) - protected from erosion`);
-      continue;
-    }
-    
-    // Skip cells that are already flashing/scheduled for removal
-    if (this.flashingCells.has(`${cell.x},${cell.y}`)) {
-      continue;
-    }
-    
-    // Check if this cell is adjacent to sea (or a soon-to-be sea cell)
-    let adjacentToSea = false;
-    const directions = [[0, -1], [1, 0], [0, 1], [-1, 0]]; // Up, right, down, left
-    
-    for (const [dx, dy] of directions) {
-      const adjX = cell.x + dx;
-      const adjY = cell.y + dy;
-      const key = `${adjX},${adjY}`;
-      
-      // If adjacent cell is not in our cellMap, it's a sea cell
-      if (!cellMap.has(key)) {
-        adjacentToSea = true;
-        break;
-      }
-    }
-    
-    if (adjacentToSea) {
-      erodableCells.push(cell);
-    }
-  }
-  
-  console.log(`Found ${erodableCells.length} erodable cells (excluding selected cells)`);
-  return erodableCells;
-}
-  
   /**
-   * Select cells to erode, with some pairs selection
-   * @param {Array} erodableCells - Array of cells eligible for erosion
-   * @param {number} count - Number of cells to erode
-   * @return {Array} Array of cells to erode
+   * Identify which cells are currently erodable (adjacent to sea)
+   * Using the utility function for consistent edge detection
+   * @return {Array} Array of erodable cell coordinates
    */
-  selectCellsToErode(erodableCells, count) {
-    if (erodableCells.length <= count) {
-      return [...erodableCells]; // Return all cells if we need more than available
-    }
+  identifyCurrentErodableCells() {
+    // Get all island cells from the grid renderer
+    const allCells = this.gridRenderer.getIslandCells();
     
-    const selectedCells = [];
-    const remainingCells = [...erodableCells];
-    const cellMap = new Map();
-    
-    // Create a cell map for adjacency checks
-    erodableCells.forEach(cell => {
-      cellMap.set(`${cell.x},${cell.y}`, cell);
+    // Create a map of path cells to exclude
+    const pathMap = new Map();
+    this.gridRenderer.getPathCells().forEach(cell => {
+      pathMap.set(`${cell.x},${cell.y}`, cell);
     });
     
-    // Find possible pairs (adjacent erodable cells)
-    const possiblePairs = [];
-    const directions = [[0, -1], [1, 0], [0, 1], [-1, 0]]; // Up, right, down, left
+    // Create a map of currently selected cells
+    const selectedCellMap = new Map();
     
-    for (const cell of erodableCells) {
-      for (const [dx, dy] of directions) {
-        const adjX = cell.x + dx;
-        const adjY = cell.y + dy;
-        const key = `${adjX},${adjY}`;
-        
-        // If adjacent cell is also erodable, form a pair
-        if (cellMap.has(key)) {
-          const pairId = [
-            `${Math.min(cell.x, adjX)},${Math.min(cell.y, adjY)}`,
-            `${Math.max(cell.x, adjX)},${Math.max(cell.y, adjY)}`
-          ].join('-');
-          
-          possiblePairs.push({
-            id: pairId,
-            cells: [
-              { x: cell.x, y: cell.y },
-              { x: adjX, y: adjY }
-            ]
-          });
-        }
-      }
-    }
-    
-    // Remove duplicates
-    const uniquePairs = [];
-    const seenIds = new Set();
-    for (const pair of possiblePairs) {
-      if (!seenIds.has(pair.id)) {
-        uniquePairs.push(pair);
-        seenIds.add(pair.id);
-      }
-    }
-    
-    // Shuffle pairs for randomness
-    const shuffledPairs = this.shuffleArray(uniquePairs);
-    
-    // Strategy:
-    // 1. Decide how many pairs vs. singles to select
-    // 2. Select that many pairs and singles
-    
-    let remainingToSelect = count;
-    
-    // With 50% chance, prioritize pairs, otherwise prioritize singles
-    const prioritizePairs = Math.random() < 0.5;
-    
-    if (prioritizePairs && shuffledPairs.length > 0) {
-      // Select pairs first (up to half of the total count, in pairs of 2)
-      const maxPairs = Math.min(
-        shuffledPairs.length,
-        Math.floor(count / 2)
-      );
+    // Check if gridRenderer has selected cells
+    if (this.gridRenderer && this.gridRenderer.selectedCells) {
+      // Convert grid coordinates (35,35 centered) to path coordinates (0,0 centered)
+      const centerX = 35;
+      const centerY = 35;
       
-      for (let i = 0; i < maxPairs && remainingToSelect >= 2; i++) {
-        const pair = shuffledPairs[i];
+      // Add all selected cells to the map
+      this.gridRenderer.selectedCells.forEach(selectedCell => {
+        // Convert to path coordinates (centered at 0,0)
+        const pathX = selectedCell.x - centerX;
+        const pathY = selectedCell.y - centerY;
+        // Create a key in the same format as other cell maps
+        const key = `${pathX},${pathY}`;
         
-        // Add both cells from the pair
-        selectedCells.push(...pair.cells);
-        
-        // Mark these cells as used
-        pair.cells.forEach(cell => {
-          const idx = remainingCells.findIndex(c => c.x === cell.x && c.y === cell.y);
-          if (idx !== -1) {
-            remainingCells.splice(idx, 1);
-          }
-        });
-        
-        remainingToSelect -= 2;
-      }
+        // Store in map
+        selectedCellMap.set(key, true);
+      });
     }
     
-    // Fill remaining count with individual cells
-    if (remainingToSelect > 0 && remainingCells.length > 0) {
-      // Shuffle remaining cells
-      const shuffledRemaining = this.shuffleArray(remainingCells);
-      
-      // Take as many as needed
-      const additionalCells = shuffledRemaining.slice(0, remainingToSelect);
-      selectedCells.push(...additionalCells);
-    }
+    // Use the utility function to identify erodable cells
+    // Pass the set of already flashing cells to exclude them
+    const erodableCells = identifyErodableCells(
+      allCells,
+      pathMap,
+      selectedCellMap,
+      this.flashingCells
+    );
     
-    console.log(`Selected ${selectedCells.length} cells for erosion`);
-    return selectedCells;
+    console.log(`Found ${erodableCells.length} erodable cells (excluding selected cells)`);
+    return erodableCells;
   }
-  
-  /**
+
+
+/**
    * Start flashing cells to indicate imminent removal
    * @param {Array} cells - Array of cells to flash
    */
@@ -506,20 +367,6 @@ identifyCurrentErodableCells() {
     
     // Show message
     messageContainer.style.display = 'block';
-  }
-  
-  /**
-   * Shuffle array using Fisher-Yates algorithm
-   * @param {Array} array - Array to shuffle
-   * @return {Array} Shuffled array
-   */
-  shuffleArray(array) {
-    const newArray = [...array]; // Create a copy to avoid modifying original
-    for (let i = newArray.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
-    }
-    return newArray;
   }
 }
 
