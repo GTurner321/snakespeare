@@ -27,7 +27,7 @@ constructor(options = {}) {
     },
     cellSize: options.cellSize || 50,
     randomFillPercentage: options.randomFillPercentage !== undefined ? options.randomFillPercentage : 0,
-    initialErosionPercentage: options.initialErosionPercentage !== undefined ? options.initialErosionPercentage : 0.25, // Add initial erosion percentage with default 25%
+    initialErosionPercentage: options.initialErosionPercentage !== undefined ? options.initialErosionPercentage : 0.15, // Add initial erosion percentage with default 15%
   };
   
   // Override default gridSize if provided with correct structure
