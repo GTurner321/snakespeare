@@ -27,6 +27,7 @@ constructor(options = {}) {
     },
     cellSize: options.cellSize || 50,
     randomFillPercentage: options.randomFillPercentage !== undefined ? options.randomFillPercentage : 0,
+    initialErosionPercentage: options.initialErosionPercentage !== undefined ? options.initialErosionPercentage : 0.25, // Add initial erosion percentage with default 25%
   };
   
   // Override default gridSize if provided with correct structure
@@ -69,9 +70,14 @@ constructor(options = {}) {
   this.phrases = [];
   this.phraseTemplate = null; // Store the underscores template
   this.highestHintLevelUsed = 0; // Track the highest hint level used for the current phrase
+  this.initialErosionPercentage = this.options.initialErosionPercentage; // Store for easy access
     
   // Initialize components
   this.pathGenerator = new PathGenerator();
+  
+  // Pass the initial erosion percentage to the path generator
+  this.pathGenerator.initialErosionPercentage = this.initialErosionPercentage;
+  console.log(`Initial erosion percentage set to ${this.initialErosionPercentage * 100}%`);
   
   // Pass gridSize correctly to GridRenderer
   this.gridRenderer = new GridRenderer(this.options.gridContainerId, {
@@ -1094,6 +1100,30 @@ showHintMismatchMessage(conflict) {
   setTimeout(() => {
     messageContainer.style.display = 'none';
   }, 4000);
+}
+
+/**
+ * Set the initial erosion percentage used when generating islands
+ * @param {number} percentage - Value between 0 and 1 (e.g., 0.25 for 25%)
+ * @return {boolean} Success flag
+ */
+setInitialErosionPercentage(percentage) {
+  // Validate input
+  if (typeof percentage !== 'number' || percentage < 0 || percentage > 1) {
+    console.error('Initial erosion percentage must be a number between 0 and 1');
+    return false;
+  }
+  
+  // Update the percentage in both the controller and path generator
+  this.initialErosionPercentage = percentage;
+  this.options.initialErosionPercentage = percentage;
+  
+  if (this.pathGenerator) {
+    this.pathGenerator.initialErosionPercentage = percentage;
+    console.log(`Initial erosion percentage updated to ${percentage * 100}%`);
+  }
+  
+  return true;
 }
   
 /**
