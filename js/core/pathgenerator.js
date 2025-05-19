@@ -25,6 +25,9 @@ class PathGenerator {
     ];
     // Maximum grid limits to ensure path stays within 71x71 bounds
     this.maxDistance = 35; // Since 71/2 = 35.5
+
+  // Add this new property:
+  this.initialErosionPercentage = 0.25; // 25% default for initial island formation
     
     // Distribution of letters for weighted random selection
     this.letterDistribution = [
@@ -412,12 +415,16 @@ class PathGenerator {
     // Step 7: Combine all layers
     this.islandCells = [...this.islandCells, ...layer2Cells, ...processedLayer3];
     
-    // Step 8: NEW APPROACH - Use the edge-based erosion algorithm 
-    // to remove cells naturally from the outside
-    const pathCellsArray = this.path.map(cell => ({ x: cell.x, y: cell.y }));
-    this.islandCells = applyInitialErosion(this.islandCells, pathCellsArray, 0.25);
-    
-    console.log(`After edge-based erosion: ${this.islandCells.length} cells remain`);
+// Step 8: NEW APPROACH - Use the edge-based erosion algorithm 
+// to remove cells naturally from the outside using configurable percentage
+const pathCellsArray = this.path.map(cell => ({ x: cell.x, y: cell.y }));
+this.islandCells = applyInitialErosion(
+  this.islandCells, 
+  pathCellsArray, 
+  this.initialErosionPercentage
+);
+
+console.log(`After edge-based erosion (${this.initialErosionPercentage * 100}%): ${this.islandCells.length} cells remain`);
     
     // Step 9: Identify which cells are erodable (adjacent to sea) - using utility function
     this.identifyErodableCells();
