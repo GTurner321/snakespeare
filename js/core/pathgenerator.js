@@ -27,7 +27,7 @@ class PathGenerator {
     this.maxDistance = 35; // Since 71/2 = 35.5
 
   // Add this new property:
-  this.initialErosionPercentage = 0.25; // 25% default for initial island formation
+  this.initialErosionPercentage = 0.15; // 15% default for initial island formation
     
     // Distribution of letters for weighted random selection
     this.letterDistribution = [
