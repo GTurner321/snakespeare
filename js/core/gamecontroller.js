@@ -1023,6 +1023,10 @@ showSuccessMessage() {
  * Handle flashing the snake cells for a completed word
  * @param {number} wordIndex - Index of the completed word
  */
+/**
+ * Improved flashCompletedWord method with better transition handling
+ * @param {number} wordIndex - Index of the completed word
+ */
 flashCompletedWord(wordIndex) {
   const wordBoundary = this.wordBoundaries[wordIndex];
   if (!wordBoundary) return;
@@ -1033,28 +1037,50 @@ flashCompletedWord(wordIndex) {
   const selectedCells = this.gridRenderer.selectedCells;
   if (!selectedCells || selectedCells.length === 0) return;
   
-  // Get word length
-  const wordLength = wordBoundary.word.length;
+  // Get word length - make sure to count only alphabetic characters
+  const wordLength = wordBoundary.word.replace(/[^a-zA-Z0-9]/g, '').length;
   
   // Use most recently selected cells
   const cellsToFlash = Math.min(wordLength, selectedCells.length);
   const recentCells = [...selectedCells].slice(-cellsToFlash);
   
-  console.log(`Flashing ${recentCells.length} cells`);
+  console.log(`Flashing ${recentCells.length} cells for word completion`);
   
-  // Flash each cell
+  // Flash each cell with improved handling
   recentCells.forEach(cell => {
     const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
     if (cellElement) {
-      // Remove existing class and force reflow
-      cellElement.classList.remove('word-completed-flash');
-      void cellElement.offsetWidth;
+      // Store original transition and background values
+      const originalTransition = cellElement.style.transition;
+      const originalBackground = cellElement.style.backgroundColor;
       
-      // Add animation class
+      // Clear any existing animations
+      cellElement.style.animation = 'none';
+      
+      // Remove existing flash class and force reflow
+      cellElement.classList.remove('word-completed-flash');
+      void cellElement.offsetWidth; // Force reflow
+      
+      // Temporarily suspend other transitions
+      cellElement.style.transition = 'none';
+      void cellElement.offsetWidth; // Force style recalculation
+      
+      // Add flash class and explicit style
       cellElement.classList.add('word-completed-flash');
       
-      // Remove class after animation
-      setTimeout(() => cellElement.classList.remove('word-completed-flash'), 600);
+      // Log for debugging
+      console.log(`Applied word-completed-flash to cell (${cell.x}, ${cell.y})`);
+      
+      // Remove class and restore original properties after animation
+      setTimeout(() => {
+        // Remove flash class
+        cellElement.classList.remove('word-completed-flash');
+        
+        // Restore original properties
+        cellElement.style.transition = originalTransition;
+        
+        console.log(`Removed word-completed-flash from cell (${cell.x}, ${cell.y})`);
+      }, 600); // Match this with animation duration (500ms) plus a small buffer
     }
   });
 }
@@ -1778,20 +1804,21 @@ updateHintButtonStyles() {
 injectWordCompletionCSS() {
   if (document.getElementById('word-completion-css')) return;
   
-  console.log('Injecting word completion CSS');
+  console.log('Injecting word completion CSS with improved specificity');
   const style = document.createElement('style');
   style.id = 'word-completion-css';
   style.textContent = `
-    /* Animation for word completion flash effect */
+    /* Animation for word completion flash effect - IMPROVED */
     @keyframes word-completed-flash {
-      0% { background-color: var(--maingreen); }
-      50% { background-color: #3b9c68; /* Darker green */ }
-      100% { background-color: var(--maingreen); }
+      0% { background-color: var(--maingreen) !important; }
+      50% { background-color: #3b9c68 !important; /* Darker green */ }
+      100% { background-color: var(--maingreen) !important; }
     }
     
-    /* Class applied to cells when a word is completed */
-    .word-completed-flash {
+    /* Class applied to cells when a word is completed - IMPROVED */
+    .grid-cell.word-completed-flash {
       animation: word-completed-flash 0.5s ease-in-out !important;
+      transition: none !important; /* Override any existing transitions */
     }
     
     /* Style for completed word characters in phrase display */
