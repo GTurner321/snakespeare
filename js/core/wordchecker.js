@@ -1,139 +1,41 @@
-// Modified WordChecker.js with improved debugging and fixes
+// SIMPLIFIED VERSION OF WORDCHECKER.JS
+// Focus on reliable loading and initialization
+
+/**
+ * Word Checker Module for Grid Game
+ * Provides word-by-word completion checking and visual feedback
+ */
 
 class WordChecker {
-  /**
-   * Constructor for WordChecker
-   * @param {GameController} gameController - Reference to the game controller
-   */
   constructor(gameController) {
+    console.log("WordChecker constructor called");
     this.gameController = gameController;
-    this.enabled = true; // Toggle for enabling/disabling word feedback
-    this.completedWords = new Set(); // Track which words have been completed
-    this.wordBoundaries = []; // Store the start/end indices of words in the phrase
-    this.currentPhraseHTML = ''; // Store the current phrase HTML with styling
-    this.debugMode = true; // Enable extra console logging
+    this.enabled = true;
+    this.completedWords = new Set();
+    this.wordBoundaries = [];
     
-    // Make it globally accessible for debugging
+    // Make it globally accessible
     window.wordChecker = this;
     
-    // Log initialization
-    console.log('WordChecker constructor called with gameController:', !!gameController);
+    // Add required CSS immediately
+    this.injectCSS();
     
-    // Add debugging button to page for testing
-    this.addDebugButton();
-    
-    // Set up initialization after a short delay
-    setTimeout(() => this.initialize(), 1000); // Increased delay
+    // Initialize with delay to ensure GameController is fully loaded
+    setTimeout(() => {
+      console.log("WordChecker delayed initialization");
+      this.initialize();
+    }, 1500);
   }
   
   /**
-   * Add a debug button to the page for easy testing
+   * Inject required CSS
    */
-  addDebugButton() {
-    if (!this.debugMode) return;
+  injectCSS() {
+    if (document.getElementById('wordchecker-css')) return;
     
-    // Create button container
-    const btnContainer = document.createElement('div');
-    btnContainer.style.position = 'fixed';
-    btnContainer.style.bottom = '10px';
-    btnContainer.style.right = '10px';
-    btnContainer.style.zIndex = '9999';
-    
-    // Create button
-    const debugBtn = document.createElement('button');
-    debugBtn.innerText = 'Debug WordChecker';
-    debugBtn.style.padding = '5px 10px';
-    debugBtn.style.backgroundColor = '#f44336';
-    debugBtn.style.color = 'white';
-    debugBtn.style.border = 'none';
-    debugBtn.style.borderRadius = '4px';
-    debugBtn.style.cursor = 'pointer';
-    
-    // Add click event
-    debugBtn.addEventListener('click', () => {
-      this.runDiagnostics();
-    });
-    
-    // Add to page
-    btnContainer.appendChild(debugBtn);
-    document.body.appendChild(btnContainer);
-  }
-  
-  /**
-   * Run diagnostics for debugging
-   */
-  runDiagnostics() {
-    console.group('WordChecker Diagnostics');
-    console.log('Enabled:', this.enabled);
-    console.log('Completed words:', [...this.completedWords]);
-    console.log('Word boundaries:', this.wordBoundaries);
-    console.log('Current phrase:', this.gameController.currentPhrase?.letterlist);
-    console.log('Phrase template:', this.gameController.phraseTemplate);
-    
-    // Check phrase display
-    const displayElement = document.getElementById('phrase-text');
-    console.log('Phrase display element:', !!displayElement);
-    if (displayElement) {
-      console.log('Current display text:', displayElement.textContent);
-      console.log('Current display HTML:', displayElement.innerHTML);
-    }
-    
-    // Check selected cells
-    const selectedCells = this.gameController.gridRenderer?.selectedCells || [];
-    console.log('Selected cells:', selectedCells.length);
-    
-    // Force CSS check
-    this.checkCSSApplication();
-    
-    // Try forcing word check
-    if (this.wordBoundaries.length > 0) {
-      for (let i = 0; i < this.wordBoundaries.length; i++) {
-        const isCompleted = this.isWordCompleted(i);
-        console.log(`Word ${i} "${this.wordBoundaries[i].word}": completed = ${isCompleted}`);
-        
-        if (isCompleted && !this.completedWords.has(i)) {
-          console.log(`Force completing word ${i}`);
-          this.completedWords.add(i);
-          this.updateWordTextColor(i);
-          this.flashCompletedWord(i);
-        }
-      }
-    } else {
-      console.log('No word boundaries parsed yet');
-      this.parseWordBoundaries();
-    }
-    
-    console.groupEnd();
-  }
-  
-  /**
-   * Check if CSS is properly applied
-   */
-  checkCSSApplication() {
-    // Check if our styles exist
-    const styleElements = document.querySelectorAll('style');
-    let foundStyles = false;
-    
-    styleElements.forEach(style => {
-      if (style.textContent.includes('word-completed-flash')) {
-        foundStyles = true;
-      }
-    });
-    
-    console.log('Found WordChecker CSS styles:', foundStyles);
-    
-    // If not found, inject them
-    if (!foundStyles) {
-      this.injectCriticalCSS();
-    }
-  }
-  
-  /**
-   * Inject critical CSS if not found
-   */
-  injectCriticalCSS() {
+    console.log("Injecting WordChecker CSS");
     const style = document.createElement('style');
-    style.id = 'wordchecker-critical-css';
+    style.id = 'wordchecker-css';
     style.textContent = `
       /* Animation for word completion flash effect */
       @keyframes word-completed-flash {
@@ -144,7 +46,7 @@ class WordChecker {
       
       /* Class applied to cells when a word is completed */
       .word-completed-flash {
-        animation: word-completed-flash 0.5s ease-in-out;
+        animation: word-completed-flash 0.5s ease-in-out !important;
       }
       
       /* Style for completed word characters in phrase display */
@@ -158,216 +60,149 @@ class WordChecker {
         color: #999999 !important; /* Light grey */
       }
     `;
-    
     document.head.appendChild(style);
-    console.log('Injected critical CSS');
   }
   
   /**
-   * Initialize the word checker
+   * Initialize and add debug button
    */
   initialize() {
-    console.log('WordChecker.initialize() called');
-    
-    // Ensure we have gameController
     if (!this.gameController) {
-      console.error('No gameController available');
+      console.error("WordChecker: No gameController found");
       return;
     }
     
-    // Check if we have access to required methods
-    if (!this.gameController.handleSelectionChange) {
-      console.error('gameController.handleSelectionChange not available');
-    }
+    console.log("WordChecker initializing with gameController:", !!this.gameController);
     
-    if (!this.gameController.updatePhraseWithHints) {
-      console.error('gameController.updatePhraseWithHints not available');
-    }
+    // Add a debug button
+    this.addDebugButton();
     
-    if (!this.gameController.loadPhrase) {
-      console.error('gameController.loadPhrase not available');
-    }
-    
-    // Parse word boundaries for the current phrase
+    // Parse initial word boundaries
     this.parseWordBoundaries();
     
-    // Setup hooks
-    this.setupSelectionChangeHook();
-    this.setupPhraseUpdateHook();
-    this.setupLoadPhraseHook();
+    // Set up hooks
+    this.setupHooks();
     
-    // Initial text color setup
-    setTimeout(() => {
-      this.initialTextSetup();
-    }, 1000);
-    
-    console.log('WordChecker initialization complete');
+    console.log("WordChecker initialization complete");
   }
   
   /**
-   * Initial text setup to ensure all text starts grey
+   * Add a simple debug button
    */
-  initialTextSetup() {
-    const displayElement = document.getElementById('phrase-text');
-    if (!displayElement) {
-      console.error('Cannot find phrase-text element');
-      return;
-    }
+  addDebugButton() {
+    const btn = document.createElement('button');
+    btn.textContent = 'Debug WordChecker';
+    btn.style.position = 'fixed';
+    btn.style.bottom = '10px';
+    btn.style.right = '10px';
+    btn.style.zIndex = '9999';
+    btn.style.padding = '8px 12px';
+    btn.style.backgroundColor = '#f44336';
+    btn.style.color = 'white';
+    btn.style.border = 'none';
+    btn.style.borderRadius = '4px';
+    btn.style.cursor = 'pointer';
     
-    // Inject CSS directly if not already present
-    this.injectCriticalCSS();
-    
-    // Set all characters to light grey initially
-    const phraseCharSpans = displayElement.querySelectorAll('.phrase-char');
-    if (phraseCharSpans.length === 0) {
-      console.warn('No phrase character spans found');
-    }
-    
-    phraseCharSpans.forEach(span => {
-      // Store original color if not already grey
-      if (span.style.color !== '#999999') {
-        span.dataset.originalColor = span.style.color || '';
-      }
-      
-      // Set to grey
-      span.style.color = '#999999';
+    btn.addEventListener('click', () => {
+      console.log("Debug button clicked");
+      this.debug();
     });
     
-    console.log(`Set ${phraseCharSpans.length} character spans to grey`);
-    
-    // Check any completed words immediately
-    this.checkForCompletedWords();
+    document.body.appendChild(btn);
+    console.log("Debug button added");
   }
   
   /**
-   * Sets up a hook into the game controller's handleSelectionChange method
+   * Set up all necessary hooks in one method
    */
-  setupSelectionChangeHook() {
-    if (!this.gameController || !this.gameController.handleSelectionChange) {
-      console.error('GameController or handleSelectionChange not available');
-      return;
-    }
+  setupHooks() {
+    if (!this.gameController) return;
     
-    // Store original method
-    const originalHandleSelectionChange = this.gameController.handleSelectionChange;
+    console.log("Setting up WordChecker hooks");
     
-    // Replace with our hooked version
-    this.gameController.handleSelectionChange = () => {
-      // Call original method first
-      originalHandleSelectionChange.call(this.gameController);
-      
-      // Then check for word completion
-      if (this.enabled) {
-        // Add a small delay to allow the phrase to update first
-        setTimeout(() => {
-          this.checkForCompletedWords();
-        }, 50);
-      }
-    };
-    
-    console.log('Selection change hook established');
-  }
-  
-  /**
-   * Sets up a hook into the game controller's updatePhraseWithHints method
-   */
-  setupPhraseUpdateHook() {
-    if (!this.gameController || !this.gameController.updatePhraseWithHints) {
-      console.error('GameController or updatePhraseWithHints not available');
-      return;
-    }
-    
-    // Store original method
-    const originalUpdatePhraseWithHints = this.gameController.updatePhraseWithHints;
-    
-    // Replace with our hooked version
-    this.gameController.updatePhraseWithHints = function() {
-      // Call original method first
-      originalUpdatePhraseWithHints.call(this);
-      
-      // Get WordChecker instance
-      const wordChecker = window.wordChecker;
-      if (!wordChecker) return;
-      
-      // Get display element
-      const displayElement = document.getElementById('phrase-text');
-      if (!displayElement) return;
-      
-      // First store the current HTML
-      wordChecker.currentPhraseHTML = displayElement.innerHTML;
-      
-      // Apply light grey to all non-completed characters
-      const phraseCharSpans = displayElement.querySelectorAll('.phrase-char');
-      phraseCharSpans.forEach(span => {
-        if (!span.classList.contains('completed-word-char')) {
-          span.style.color = '#999999';
+    // 1. Hook into handleSelectionChange
+    if (this.gameController.handleSelectionChange) {
+      const original = this.gameController.handleSelectionChange;
+      this.gameController.handleSelectionChange = function() {
+        original.apply(this, arguments);
+        
+        // Check for completed words after selection
+        if (window.wordChecker) {
+          setTimeout(() => window.wordChecker.checkForCompletedWords(), 100);
         }
-      });
-      
-      // Re-apply black to completed words
-      if (wordChecker.completedWords.size > 0) {
-        [...wordChecker.completedWords].forEach(wordIndex => {
-          wordChecker.updateWordTextColor(wordIndex);
-        });
-      }
-    };
-    
-    console.log('Phrase update hook established');
-  }
-  
-  /**
-   * Sets up a hook into the game controller's loadPhrase method
-   */
-  setupLoadPhraseHook() {
-    if (!this.gameController || !this.gameController.loadPhrase) {
-      console.error('GameController or loadPhrase not available');
-      return;
+      };
+      console.log("Selection change hook established");
+    } else {
+      console.error("handleSelectionChange method not found");
     }
     
-    // Store original method
-    const originalLoadPhrase = this.gameController.loadPhrase;
+    // 2. Hook into updatePhraseWithHints
+    if (this.gameController.updatePhraseWithHints) {
+      const original = this.gameController.updatePhraseWithHints;
+      this.gameController.updatePhraseWithHints = function() {
+        original.apply(this, arguments);
+        
+        // Apply grey color to phrase text
+        const displayEl = document.getElementById('phrase-text');
+        if (displayEl) {
+          const phraseChars = displayEl.querySelectorAll('.phrase-char');
+          phraseChars.forEach(span => {
+            if (!span.classList.contains('completed-word-char')) {
+              span.style.color = '#999999';
+            }
+          });
+        }
+        
+        // Reapply completed word styling
+        if (window.wordChecker) {
+          window.wordChecker.reapplyCompletedWordStyling();
+        }
+      };
+      console.log("Phrase update hook established");
+    } else {
+      console.error("updatePhraseWithHints method not found");
+    }
     
-    // Replace with our hooked version
-    this.gameController.loadPhrase = async function(phraseData) {
-      // Call original method with await since it's async
-      await originalLoadPhrase.call(this, phraseData);
-      
-      // Get WordChecker instance
-      const wordChecker = window.wordChecker;
-      if (!wordChecker) return;
-      
-      // Reset word checker state for new phrase
-      wordChecker.parseWordBoundaries();
-      wordChecker.completedWords = new Set();
-      
-      // Log phrase data
-      if (wordChecker.debugMode) {
-        console.log('New phrase loaded:', phraseData);
-        console.log('Letter list:', phraseData.letterlist);
-        console.log('Word boundaries:', wordChecker.wordBoundaries);
-      }
-      
-      // Initial text color setup after a delay
-      setTimeout(() => {
-        wordChecker.initialTextSetup();
-      }, 1000);
-    };
-    
-    console.log('Load phrase hook established');
+    // 3. Hook into loadPhrase
+    if (this.gameController.loadPhrase) {
+      const original = this.gameController.loadPhrase;
+      this.gameController.loadPhrase = async function() {
+        const result = await original.apply(this, arguments);
+        
+        // Reset word checker for new phrase
+        if (window.wordChecker) {
+          setTimeout(() => {
+            window.wordChecker.parseWordBoundaries();
+            window.wordChecker.completedWords = new Set();
+          }, 500);
+        }
+        
+        return result;
+      };
+      console.log("Load phrase hook established");
+    } else {
+      console.error("loadPhrase method not found");
+    }
   }
   
   /**
-   * Parses the phrase to identify word boundaries
+   * Parse word boundaries from the current phrase
    */
   parseWordBoundaries() {
-    if (!this.gameController.currentPhrase || !this.gameController.currentPhrase.letterlist) {
-      console.warn('No current phrase available for parsing word boundaries');
+    if (!this.gameController || !this.gameController.currentPhrase) {
+      console.error("Cannot parse word boundaries - no current phrase");
       return;
     }
     
     const letterList = this.gameController.currentPhrase.letterlist;
-    this.wordBoundaries = [];
+    if (!letterList) {
+      console.error("Cannot parse word boundaries - no letterlist");
+      return;
+    }
     
+    console.log("Parsing word boundaries from:", letterList);
+    
+    this.wordBoundaries = [];
     let currentWordStart = null;
     let inWord = false;
     
@@ -400,254 +235,195 @@ class WordChecker {
       });
     }
     
-    console.log('Word boundaries parsed:', this.wordBoundaries);
-    
-    // Reset completed words tracker
-    this.completedWords = new Set();
+    console.log("Parsed word boundaries:", this.wordBoundaries);
   }
   
   /**
-   * Checks if a specific word in the phrase is correctly filled
-   * @param {number} wordIndex - Index of the word to check
-   * @return {boolean} True if the word is completed correctly
-   */
-  isWordCompleted(wordIndex) {
-    if (!this.enabled || wordIndex < 0 || wordIndex >= this.wordBoundaries.length) {
-      return false;
-    }
-    
-    // If word is already marked as completed, return true
-    if (this.completedWords.has(wordIndex)) {
-      return true;
-    }
-    
-    // Get the word boundary
-    const wordBoundary = this.wordBoundaries[wordIndex];
-    if (!wordBoundary) {
-      console.error(`No word boundary found for index ${wordIndex}`);
-      return false;
-    }
-    
-    // Get the display element
-    const displayElement = document.getElementById('phrase-text');
-    if (!displayElement) {
-      console.error('No phrase-text element found');
-      return false;
-    }
-    
-    // Get the current text content
-    const currentPhraseText = displayElement.textContent;
-    if (!currentPhraseText) {
-      console.error('Empty phrase text content');
-      return false;
-    }
-    
-    // Ensure the word boundaries are within the text range
-    if (wordBoundary.start >= currentPhraseText.length || wordBoundary.end >= currentPhraseText.length) {
-      console.error(`Word boundary (${wordBoundary.start}-${wordBoundary.end}) outside text range (0-${currentPhraseText.length - 1})`);
-      return false;
-    }
-    
-    // Extract the current word from the display
-    const currentWord = currentPhraseText.substring(wordBoundary.start, wordBoundary.end + 1);
-    
-    // Extract the expected word from the original phrase
-    const expectedWord = this.gameController.currentPhrase.letterlist.substring(
-      wordBoundary.start, wordBoundary.end + 1
-    );
-    
-    // Check if the current word matches the expected word (no underscores)
-    const isComplete = currentWord.indexOf('_') === -1;
-    const isCorrect = currentWord.toUpperCase() === expectedWord.toUpperCase();
-    
-    if (this.debugMode) {
-      console.log(`Word check - Index: ${wordIndex}, Word: "${wordBoundary.word}"`);
-      console.log(`Current: "${currentWord}", Expected: "${expectedWord}"`);
-      console.log(`Complete: ${isComplete}, Correct: ${isCorrect}`);
-    }
-    
-    return isComplete && isCorrect;
-  }
-  
-  /**
-   * Checks for newly completed words and handles visual feedback
+   * Check for completed words
    */
   checkForCompletedWords() {
-    if (!this.enabled) return;
+    if (!this.enabled || !this.gameController) return;
     
-    // If no word boundaries parsed yet, do it now
     if (this.wordBoundaries.length === 0) {
       this.parseWordBoundaries();
-      if (this.wordBoundaries.length === 0) {
-        console.warn('Failed to parse word boundaries');
-        return;
-      }
+      if (this.wordBoundaries.length === 0) return;
     }
     
-    // Get display element
+    console.log("Checking for completed words");
+    
     const displayElement = document.getElementById('phrase-text');
-    if (!displayElement) {
-      console.error('No phrase-text element found');
-      return;
-    }
+    if (!displayElement) return;
     
-    // Check each word to see if it's newly completed
-    let anyNewCompletions = false;
+    const currentText = displayElement.textContent;
     
+    // Check each word
     for (let i = 0; i < this.wordBoundaries.length; i++) {
       // Skip already completed words
       if (this.completedWords.has(i)) continue;
       
-      // Check if this word is now complete
-      if (this.isWordCompleted(i)) {
-        // Mark word as completed
+      const wordBoundary = this.wordBoundaries[i];
+      
+      // Extract word from current display
+      const currentWord = currentText.substring(wordBoundary.start, wordBoundary.end + 1);
+      
+      // Extract expected word from phrase
+      const expectedWord = this.gameController.currentPhrase.letterlist.substring(
+        wordBoundary.start, wordBoundary.end + 1
+      );
+      
+      // Check if word is complete and correct
+      const isComplete = !currentWord.includes('_');
+      const isCorrect = currentWord.toUpperCase() === expectedWord.toUpperCase();
+      
+      console.log(`Word ${i} "${wordBoundary.word}": complete=${isComplete}, correct=${isCorrect}`);
+      
+      if (isComplete && isCorrect) {
+        console.log(`Word "${wordBoundary.word}" completed!`);
         this.completedWords.add(i);
-        anyNewCompletions = true;
-        
-        console.log(`Word completed: "${this.wordBoundaries[i].word}"`);
-        
-        // Flash the cells for this word
         this.flashCompletedWord(i);
-        
-        // Update the text color for this word
         this.updateWordTextColor(i);
       }
-    }
-    
-    if (anyNewCompletions) {
-      console.log('Words completed:', [...this.completedWords]);
     }
   }
   
   /**
-   * Handles flashing the snake cells for a completed word
-   * @param {number} wordIndex - Index of the completed word
+   * Reapply styling to all completed words
+   */
+  reapplyCompletedWordStyling() {
+    if (this.completedWords.size === 0) return;
+    
+    console.log("Reapplying styling to completed words");
+    
+    for (const wordIndex of this.completedWords) {
+      this.updateWordTextColor(wordIndex);
+    }
+  }
+  
+  /**
+   * Flash cells for completed word
    */
   flashCompletedWord(wordIndex) {
     if (!this.enabled) return;
     
-    // Get the selected cells that make up the word
-    const selectedCells = this.gameController.gridRenderer.selectedCells;
     const wordBoundary = this.wordBoundaries[wordIndex];
+    if (!wordBoundary) return;
     
-    // If no boundary found or no cells selected, return
-    if (!wordBoundary || selectedCells.length === 0) {
-      console.error(`Cannot flash - No boundary found for word ${wordIndex} or no selected cells`);
-      return;
-    }
+    console.log(`Flashing cells for word "${wordBoundary.word}"`);
     
-    // We need to determine which selected cells correspond to the completed word
-    // Start by getting the word length (excluding spaces and punctuation)
-    const expectedWordLength = wordBoundary.word.length;
+    // Get selected cells
+    const selectedCells = this.gameController.gridRenderer.selectedCells;
+    if (!selectedCells || selectedCells.length === 0) return;
     
-    // Get the most recent cells that could form this word
-    // Ensure we don't exceed the number of selected cells
-    const cellsToUse = Math.min(expectedWordLength, selectedCells.length);
-    const recentCells = [...selectedCells].slice(-cellsToUse);
+    // Get word length
+    const wordLength = wordBoundary.word.length;
     
-    console.log(`Flashing ${recentCells.length} cells for word "${wordBoundary.word}"`);
+    // Use most recently selected cells
+    const cellsToFlash = Math.min(wordLength, selectedCells.length);
+    const recentCells = [...selectedCells].slice(-cellsToFlash);
     
-    // Flash those cells
-    for (const cell of recentCells) {
+    console.log(`Flashing ${recentCells.length} cells`);
+    
+    // Flash each cell
+    recentCells.forEach(cell => {
       const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
       if (cellElement) {
-        // Remove any existing animation class first to reset animation
+        // Remove existing class and force reflow
         cellElement.classList.remove('word-completed-flash');
-        
-        // Force a reflow to restart animation
         void cellElement.offsetWidth;
         
-        // Add special class for flashing darker green
+        // Add animation class
         cellElement.classList.add('word-completed-flash');
         
-        // Remove the class after the flash (600ms)
-        setTimeout(() => {
-          cellElement.classList.remove('word-completed-flash');
-        }, 600);
-      } else {
-        console.warn(`Cell element not found for coordinates ${cell.x},${cell.y}`);
+        // Remove class after animation
+        setTimeout(() => cellElement.classList.remove('word-completed-flash'), 600);
       }
-    }
+    });
   }
   
   /**
-   * Updates the text color for a completed word in the phrase display
-   * @param {number} wordIndex - Index of the completed word
+   * Update text color for completed word
    */
   updateWordTextColor(wordIndex) {
-    const displayElement = document.getElementById('phrase-text');
-    if (!displayElement) {
-      console.error('No phrase-text element found');
-      return;
-    }
-    
-    // Get the word boundary
     const wordBoundary = this.wordBoundaries[wordIndex];
-    if (!wordBoundary) {
-      console.error(`No word boundary found for index ${wordIndex}`);
-      return;
-    }
+    if (!wordBoundary) return;
     
     console.log(`Updating text color for word "${wordBoundary.word}"`);
     
-    // Get all character spans
+    const displayElement = document.getElementById('phrase-text');
+    if (!displayElement) return;
+    
+    // Get all spans
     const spans = displayElement.querySelectorAll('.phrase-char');
+    if (spans.length === 0) return;
     
-    // Process spans within the word boundaries
-    let updatedCount = 0;
-    
-    for (let j = wordBoundary.start; j <= wordBoundary.end; j++) {
-      if (j < spans.length) {
-        const span = spans[j];
-        span.style.color = 'black';
-        span.style.fontWeight = 'bold';
-        span.classList.add('completed-word-char');
-        updatedCount++;
+    // Update spans for this word
+    for (let i = wordBoundary.start; i <= wordBoundary.end; i++) {
+      if (i < spans.length) {
+        spans[i].style.color = 'black';
+        spans[i].style.fontWeight = 'bold';
+        spans[i].classList.add('completed-word-char');
       }
     }
-    
-    console.log(`Updated ${updatedCount} character spans to black`);
   }
   
   /**
-   * Toggles the word completion feedback feature
-   * @param {boolean|null} enable - True to enable, false to disable, null to toggle
-   * @return {boolean} Current enabled state
+   * Debug method to help diagnose issues
    */
-  toggle(enable = null) {
-    // If enable is provided, set to that value; otherwise toggle current value
-    this.enabled = (enable !== null) ? enable : !this.enabled;
+  debug() {
+    console.group("WordChecker Debug");
     
-    console.log(`Word completion feedback ${this.enabled ? 'enabled' : 'disabled'}`);
+    // 1. Check if WordChecker is properly loaded
+    console.log("WordChecker loaded:", !!window.wordChecker);
     
-    // If disabling, reset any visual changes
-    if (!this.enabled) {
-      // Reset phrase display to all light grey
-      const displayElement = document.getElementById('phrase-text');
-      if (displayElement) {
-        const phraseCharSpans = displayElement.querySelectorAll('.phrase-char');
-        phraseCharSpans.forEach(span => {
-          span.style.color = '#999999'; // Light grey for all characters
-          span.style.fontWeight = 'normal';
-          span.classList.remove('completed-word-char');
-        });
+    // 2. Check game controller
+    console.log("GameController reference:", !!this.gameController);
+    
+    if (this.gameController) {
+      // 3. Check current phrase
+      console.log("Current phrase:", this.gameController.currentPhrase?.letterlist);
+      
+      // 4. Check word boundaries
+      console.log("Word boundaries:", this.wordBoundaries);
+      
+      // 5. Check phrase display
+      const displayEl = document.getElementById('phrase-text');
+      console.log("Phrase display element:", !!displayEl);
+      if (displayEl) {
+        console.log("Current display text:", displayEl.textContent);
       }
       
-      // Clear completed words tracking
-      this.completedWords = new Set();
-    } else {
-      // If enabling, recheck all words
-      for (let i = 0; i < this.wordBoundaries.length; i++) {
-        if (this.isWordCompleted(i)) {
-          this.completedWords.add(i);
-          this.updateWordTextColor(i);
-        }
+      // 6. Check selected cells
+      console.log("Selected cells:", this.gameController.gridRenderer?.selectedCells?.length || 0);
+      
+      // 7. Try to force parse word boundaries
+      this.parseWordBoundaries();
+      
+      // 8. Try to force check for completed words
+      this.checkForCompletedWords();
+      
+      // 9. Check CSS
+      const style = document.getElementById('wordchecker-css');
+      console.log("CSS injected:", !!style);
+      if (!style) {
+        console.log("Re-injecting CSS");
+        this.injectCSS();
+      }
+      
+      // 10. Force grey color on all phrase chars
+      if (displayEl) {
+        const spans = displayEl.querySelectorAll('.phrase-char');
+        spans.forEach(span => {
+          if (!span.classList.contains('completed-word-char')) {
+            span.style.color = '#999999';
+          }
+        });
+        console.log(`Set ${spans.length} spans to grey`);
       }
     }
     
-    return this.enabled;
+    console.groupEnd();
   }
 }
 
-// Export the class for use in other modules
+// Export the class
 export default WordChecker;
