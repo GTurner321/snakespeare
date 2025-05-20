@@ -16,6 +16,10 @@ class GameController {
  * Modified constructor for GameController
  * Adds initialization of erosion controller
  */
+/**
+ * Modified constructor for GameController
+ * Adds initialization of word completion functionality
+ */
 constructor(options = {}) {
   // Default options with proper structure for gridSize
   this.options = {
@@ -153,6 +157,16 @@ constructor(options = {}) {
       }
     }, 50);
   });
+  
+  // ====== WORD COMPLETION FUNCTIONALITY ======
+  
+  // Word completion properties
+  this.enableWordCompletionFeedback = true;    // Toggle for enabling/disabling word feedback
+  this.completedWords = new Set();             // Track which words have been completed
+  this.wordBoundaries = [];                    // Store the start/end indices of words in the phrase
+  
+  // Inject CSS for word completion effects
+  this.injectWordCompletionCSS();
 }
   
 /**
@@ -837,6 +851,74 @@ updatePhraseFromSelections(selectedLetters) {
     displayElement.textContent = selectedString || "Select letters to form a phrase";
   }
 }
+
+/**
+ * Update the text color for a completed word in the phrase display
+ * @param {number} wordIndex - Index of the completed word
+ */
+updateWordTextColor(wordIndex) {
+  const wordBoundary = this.wordBoundaries[wordIndex];
+  if (!wordBoundary) return;
+  
+  console.log(`Updating text color for word "${wordBoundary.word}"`);
+  
+  const displayElement = document.getElementById('phrase-text');
+  if (!displayElement) return;
+  
+  // Get all spans
+  const spans = displayElement.querySelectorAll('.phrase-char');
+  if (spans.length === 0) return;
+  
+  // Update spans for this word
+  for (let i = wordBoundary.start; i <= wordBoundary.end; i++) {
+    if (i < spans.length) {
+      spans[i].style.color = 'black';
+      spans[i].style.fontWeight = 'bold';
+      spans[i].classList.add('completed-word-char');
+    }
+  }
+}
+  
+/**
+ * Check if a specific word in the phrase is correctly filled
+ * @param {number} wordIndex - Index of the word to check
+ * @return {boolean} True if the word is completed correctly
+ */
+isWordCompleted(wordIndex) {
+  if (!this.enableWordCompletionFeedback || wordIndex < 0 || wordIndex >= this.wordBoundaries.length) {
+    return false;
+  }
+  
+  // If word is already marked as completed, return true
+  if (this.completedWords.has(wordIndex)) {
+    return true;
+  }
+  
+  const wordBoundary = this.wordBoundaries[wordIndex];
+  const displayElement = document.getElementById('phrase-text');
+  if (!displayElement) return false;
+  
+  const currentPhraseText = displayElement.textContent;
+  
+  // Ensure the word boundaries are within the text range
+  if (wordBoundary.start >= currentPhraseText.length || wordBoundary.end >= currentPhraseText.length) {
+    return false;
+  }
+  
+  // Extract the current word from the display
+  const currentWord = currentPhraseText.substring(wordBoundary.start, wordBoundary.end + 1);
+  
+  // Extract the expected word from the original phrase
+  const expectedWord = this.currentPhrase.letterlist.substring(
+    wordBoundary.start, wordBoundary.end + 1
+  );
+  
+  // Check if the current word matches the expected word (no underscores)
+  const isComplete = currentWord.indexOf('_') === -1;
+  const isCorrect = currentWord.toUpperCase() === expectedWord.toUpperCase();
+  
+  return isComplete && isCorrect;
+}
   
 /**
  * Updated checkPhraseCompleted method to work with any selection
@@ -865,12 +947,92 @@ checkPhraseCompleted() {
   // Check if we've selected exactly the right number of letters (excluding start cell)
   return validSelectedLetters.length === targetLetterCount;
 }
+
+/**
+ * Check for newly completed words and handle visual feedback
+ */
+checkForCompletedWords() {
+  if (!this.enableWordCompletionFeedback) return;
+  
+  // If no word boundaries parsed yet, do it now
+  if (this.wordBoundaries.length === 0) {
+    this.parseWordBoundaries();
+    if (this.wordBoundaries.length === 0) return;
+  }
+  
+  // Check each word to see if it's newly completed
+  let anyNewCompletions = false;
+  
+  for (let i = 0; i < this.wordBoundaries.length; i++) {
+    // Skip already completed words
+    if (this.completedWords.has(i)) continue;
+    
+    // Check if this word is now complete
+    if (this.isWordCompleted(i)) {
+      // Mark word as completed
+      this.completedWords.add(i);
+      anyNewCompletions = true;
+      
+      console.log(`Word completed: "${this.wordBoundaries[i].word}"`);
+      
+      // Flash the cells for this word
+      this.flashCompletedWord(i);
+      
+      // Update the text color for this word
+      this.updateWordTextColor(i);
+    }
+  }
+  
+  if (anyNewCompletions) {
+    console.log('Words completed:', [...this.completedWords]);
+  }
+}
   
 showSuccessMessage() {
   // Do nothing - Shakespeare response will show instead
   console.log('Success message suppressed - Shakespeare response will be shown instead');
 }
 
+/**
+ * Handle flashing the snake cells for a completed word
+ * @param {number} wordIndex - Index of the completed word
+ */
+flashCompletedWord(wordIndex) {
+  const wordBoundary = this.wordBoundaries[wordIndex];
+  if (!wordBoundary) return;
+  
+  console.log(`Flashing cells for word "${wordBoundary.word}"`);
+  
+  // Get selected cells
+  const selectedCells = this.gridRenderer.selectedCells;
+  if (!selectedCells || selectedCells.length === 0) return;
+  
+  // Get word length
+  const wordLength = wordBoundary.word.length;
+  
+  // Use most recently selected cells
+  const cellsToFlash = Math.min(wordLength, selectedCells.length);
+  const recentCells = [...selectedCells].slice(-cellsToFlash);
+  
+  console.log(`Flashing ${recentCells.length} cells`);
+  
+  // Flash each cell
+  recentCells.forEach(cell => {
+    const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
+    if (cellElement) {
+      // Remove existing class and force reflow
+      cellElement.classList.remove('word-completed-flash');
+      void cellElement.offsetWidth;
+      
+      // Add animation class
+      cellElement.classList.add('word-completed-flash');
+      
+      // Remove class after animation
+      setTimeout(() => cellElement.classList.remove('word-completed-flash'), 600);
+    }
+  });
+}
+  
 /**
  * Display an incorrect message when the wrong phrase is found
  */
@@ -1412,6 +1574,58 @@ parseCSV(csvData) {
     return [];
   }
 }
+
+/**
+ * Parse word boundaries from the current phrase
+ */
+parseWordBoundaries() {
+  console.log('Parsing word boundaries');
+  
+  if (!this.currentPhrase || !this.currentPhrase.letterlist) {
+    console.log('No current phrase to parse');
+    return;
+  }
+  
+  const letterList = this.currentPhrase.letterlist;
+  this.wordBoundaries = [];
+  
+  let currentWordStart = null;
+  let inWord = false;
+  
+  // Parse through the letterlist character by character
+  for (let i = 0; i < letterList.length; i++) {
+    const char = letterList[i];
+    const isAlphaNumeric = /[a-zA-Z0-9]/.test(char);
+    
+    if (isAlphaNumeric && !inWord) {
+      // Start of a new word
+      currentWordStart = i;
+      inWord = true;
+    } else if (!isAlphaNumeric && inWord) {
+      // End of a word
+      this.wordBoundaries.push({
+        start: currentWordStart,
+        end: i - 1,
+        word: letterList.substring(currentWordStart, i)
+      });
+      inWord = false;
+    }
+  }
+  
+  // Handle case where phrase ends with a word
+  if (inWord) {
+    this.wordBoundaries.push({
+      start: currentWordStart,
+      end: letterList.length - 1,
+      word: letterList.substring(currentWordStart)
+    });
+  }
+  
+  console.log('Word boundaries parsed:', this.wordBoundaries);
+  
+  // Reset completed words tracker
+  this.completedWords = new Set();
+}
   
 /**
  * Load a random phrase from the loaded phrases
@@ -1434,6 +1648,45 @@ async loadRandomPhrase() {
   await this.loadPhrase(randomPhrase);
 }
 
+/**
+ * Toggle the word completion feedback feature
+ * @param {boolean|null} enable - True to enable, false to disable, null to toggle current state
+ * @return {boolean} Current enabled state
+ */
+toggleWordCompletionFeedback(enable = null) {
+  // If enable is provided, set to that value; otherwise toggle current value
+  this.enableWordCompletionFeedback = (enable !== null) ? enable : !this.enableWordCompletionFeedback;
+  
+  console.log(`Word completion feedback ${this.enableWordCompletionFeedback ? 'enabled' : 'disabled'}`);
+  
+  // If disabling, reset any visual changes
+  if (!this.enableWordCompletionFeedback) {
+    // Reset phrase display to all light grey
+    const displayElement = document.getElementById('phrase-text');
+    if (displayElement) {
+      const phraseCharSpans = displayElement.querySelectorAll('.phrase-char');
+      phraseCharSpans.forEach(span => {
+        span.style.color = '#999999'; // Light grey for all characters
+        span.style.fontWeight = 'normal';
+        span.classList.remove('completed-word-char');
+      });
+    }
+    
+    // Clear completed words tracking
+    this.completedWords = new Set();
+  } else {
+    // If enabling, recheck all words
+    for (let i = 0; i < this.wordBoundaries.length; i++) {
+      if (this.isWordCompleted(i)) {
+        this.completedWords.add(i);
+        this.updateWordTextColor(i);
+      }
+    }
+  }
+  
+  return this.enableWordCompletionFeedback;
+}
+  
 setHintLevel(level) {
   if (this.gridRenderer) {
     // Don't allow going back to a lower level
@@ -1483,6 +1736,42 @@ updateHintButtonStyles() {
       button.style.color = '';  // Reset to default
     }
   });
+}
+
+/**
+ * Inject CSS for word completion effects
+ */
+injectWordCompletionCSS() {
+  if (document.getElementById('word-completion-css')) return;
+  
+  console.log('Injecting word completion CSS');
+  const style = document.createElement('style');
+  style.id = 'word-completion-css';
+  style.textContent = `
+    /* Animation for word completion flash effect */
+    @keyframes word-completed-flash {
+      0% { background-color: var(--maingreen); }
+      50% { background-color: #3b9c68; /* Darker green */ }
+      100% { background-color: var(--maingreen); }
+    }
+    
+    /* Class applied to cells when a word is completed */
+    .word-completed-flash {
+      animation: word-completed-flash 0.5s ease-in-out !important;
+    }
+    
+    /* Style for completed word characters in phrase display */
+    .completed-word-char {
+      color: black !important;
+      font-weight: bold !important;
+    }
+    
+    /* Initial style for all phrase characters */
+    #phrase-text .phrase-char:not(.completed-word-char) {
+      color: #999999 !important; /* Light grey */
+    }
+  `;
+  document.head.appendChild(style);
 }
   
 /**
