@@ -562,35 +562,86 @@ window.SnakePath = class SnakePath {
  * Flashes specific snake pieces in the given cells - Fixed to handle all piece types
  * @param {Array} cellsToFlash - Array of cells containing snake pieces to flash
  */
+
+/**
+ * Super robust method to flash ALL types of snake pieces in cells
+ * @param {Array} cellsToFlash - Array of cells containing snake pieces to flash
+ */
 flashSnakePiecesInCells(cellsToFlash) {
   if (!cellsToFlash || cellsToFlash.length === 0) return;
   
-  console.log(`SnakePath: Flashing snake pieces in ${cellsToFlash.length} cells`);
+  console.log(`SnakePath: Attempting to flash snake pieces in ${cellsToFlash.length} cells`);
   
-  // Collect all snake pieces from the specified cells
+  // Use a more direct and aggressive approach to find ALL pieces
   const snakePieces = [];
+  
+  // First try the normal querySelector approach
+  let foundAnyPieces = false;
   
   cellsToFlash.forEach(cell => {
     const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
     if (cellElement) {
-      // Get ALL snake pieces in this cell including head pieces
-      const pieces = cellElement.querySelectorAll('.snake-piece');
-      if (pieces.length > 0) {
-        console.log(`Found ${pieces.length} snake pieces in cell (${cell.x}, ${cell.y})`);
-        
-        // Log detail about each piece for debugging
-        pieces.forEach((piece, index) => {
-          const pieceType = piece.getAttribute('data-piece-type') || piece.className;
-          console.log(`  - Piece ${index + 1}: ${pieceType}`);
-          snakePieces.push(piece);
-        });
+      // Try multiple selector strategies to ensure we get ALL possible pieces
+      
+      // Strategy 1: Standard class selector
+      const standardPieces = cellElement.querySelectorAll('.snake-piece');
+      
+      // Strategy 2: Partial class match selector
+      const partialClassPieces = cellElement.querySelectorAll('[class*="snake-"]');
+      
+      // Strategy 3: Look for specific piece types
+      const headPieces = cellElement.querySelectorAll('.snake-head');
+      const tailPieces = cellElement.querySelectorAll('.snake-tail');
+      const straightPieces = cellElement.querySelectorAll('.snake-straight');
+      const curvedPieces = cellElement.querySelectorAll('.snake-curved');
+      
+      // Strategy 4: Look for img elements
+      const imgElements = cellElement.querySelectorAll('img');
+      
+      // Log detailed diagnostics
+      console.log(`Cell (${cell.x}, ${cell.y}) contents:`);
+      console.log(`  - Standard pieces: ${standardPieces.length}`);
+      console.log(`  - Partial class pieces: ${partialClassPieces.length}`);
+      console.log(`  - Head pieces: ${headPieces.length}`);
+      console.log(`  - Tail pieces: ${tailPieces.length}`);
+      console.log(`  - Straight pieces: ${straightPieces.length}`);
+      console.log(`  - Curved pieces: ${curvedPieces.length}`);
+      console.log(`  - Total img elements: ${imgElements.length}`);
+      
+      // Combine all unique pieces
+      const allPiecesSet = new Set([
+        ...Array.from(standardPieces),
+        ...Array.from(partialClassPieces),
+        ...Array.from(headPieces),
+        ...Array.from(tailPieces),
+        ...Array.from(straightPieces),
+        ...Array.from(curvedPieces),
+        // Also include any img elements that might be snake pieces
+        ...Array.from(imgElements).filter(img => 
+          img.className && img.className.includes('snake') || 
+          (img.src && img.src.includes('piece'))
+        )
+      ]);
+      
+      const combinedPieces = Array.from(allPiecesSet);
+      
+      if (combinedPieces.length > 0) {
+        console.log(`  - COMBINED unique pieces found: ${combinedPieces.length}`);
+        foundAnyPieces = true;
+        combinedPieces.forEach(piece => snakePieces.push(piece));
       } else {
-        console.log(`No snake pieces found in cell (${cell.x}, ${cell.y})`);
+        console.log(`  - NO snake pieces found in this cell after all strategies`);
+        
+        // Last resort - dump the first few characters of the cell HTML for inspection
+        const htmlPreview = cellElement.outerHTML.substring(0, 100) + '...';
+        console.log(`  - Cell HTML preview: ${htmlPreview}`);
       }
     } else {
       console.log(`Could not find cell element for (${cell.x}, ${cell.y})`);
     }
   });
+  
+  // Fallback if no pieces found...
   
   if (snakePieces.length === 0) {
     console.log('No snake pieces found in the specified cells');
@@ -599,17 +650,46 @@ flashSnakePiecesInCells(cellsToFlash) {
   
   console.log(`Found a total of ${snakePieces.length} snake pieces to flash`);
   
-  // Flash the snake pieces twice (off-on, off-on) with 250ms intervals
+  // Special direct flash method that bypasses any style or visibility issues
+  this.directFlashElements(snakePieces);
+}
+
+/**
+ * Direct flash method that uses multiple techniques to ensure visibility toggling works
+ * @param {Array} elements - Elements to flash
+ */
+directFlashElements(elements) {
+  if (!elements || elements.length === 0) return;
+  
+  // Store original properties for restoration
+  const originalProperties = elements.map(el => ({
+    element: el,
+    visibility: el.style.visibility,
+    display: el.style.display,
+    opacity: el.style.opacity
+  }));
+  
+  // Flash counter
   let flashCount = 0;
-  const maxFlashes = 4; // 2 complete cycles (off-on, off-on)
+  const maxFlashes = 4; // 2 complete cycles
   
   const flashInterval = setInterval(() => {
     // Toggle visibility
     const isVisible = flashCount % 2 === 0;
     
-    snakePieces.forEach(piece => {
-      // Force all pieces to toggle visibility, including the head
-      piece.style.visibility = isVisible ? 'hidden' : 'visible';
+    elements.forEach(el => {
+      // Try multiple approaches to ensure the element toggles properly
+      if (isVisible) {
+        // Hide using multiple properties
+        el.style.visibility = 'hidden';
+        // For the head piece which might have special styling:
+        el.style.opacity = '0';
+      } else {
+        // Show using multiple properties
+        el.style.visibility = 'visible';
+        // For the head piece which might have special styling:
+        el.style.opacity = '1';
+      }
     });
     
     flashCount++;
@@ -618,14 +698,16 @@ flashSnakePiecesInCells(cellsToFlash) {
     if (flashCount >= maxFlashes) {
       clearInterval(flashInterval);
       
-      // Ensure snake pieces are visible at the end
-      snakePieces.forEach(piece => {
-        piece.style.visibility = 'visible';
+      // Restore original properties
+      originalProperties.forEach(prop => {
+        prop.element.style.visibility = prop.visibility;
+        prop.element.style.display = prop.display;
+        prop.element.style.opacity = prop.opacity;
       });
       
-      console.log('Word completion snake flash animation complete');
+      console.log('Flash animation complete');
     }
-  }, 250); // 250ms = quarter of a second for faster word completion feedback
+  }, 250);
 }
   
   /**
