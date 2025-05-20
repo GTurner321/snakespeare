@@ -60,6 +60,7 @@
         import GameController from './js/core/gamecontroller.js';
         import IslandRenderer from './js/core/islandrenderer.js';
         import SnakePath from './js/core/snakepath.js';
+        import WordChecker from './js/core/wordchecker.js';
         
         // Initialize game when DOM is loaded
         document.addEventListener('DOMContentLoaded', () => {
@@ -97,6 +98,25 @@
                         console.error('Error initializing SnakePath:', error);
                     }
                 }, 500);
+            });
+            
+            // Initialize WordChecker after game is initialized
+            document.addEventListener('gameInitialized', (e) => {
+                console.log('Game initialized, setting up WordChecker...');
+                try {
+                    // Create word checker with reference to game controller
+                    const wordChecker = new WordChecker(gameController);
+                    
+                    // Set up all necessary hooks
+                    setTimeout(() => {
+                        wordChecker.setupSelectionChangeHook();
+                        wordChecker.setupPhraseUpdateHook();
+                        wordChecker.setupLoadPhraseHook();
+                        console.log('WordChecker initialized and connected');
+                    }, 500);
+                } catch (error) {
+                    console.error('Error initializing WordChecker:', error);
+                }
             });
             
             // Load phrase data from CSV
