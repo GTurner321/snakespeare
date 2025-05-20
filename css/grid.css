@@ -6,6 +6,7 @@
    1. Game Container & General Layout
    2a. Grid Container & Cells
    2b. Snake cells
+   2c. Wordchecker
    3. Scroll Areas (Replacing Arrow Buttons)
    4. Phrase Display
    5. Menu System (Replacing Refresh Buttons)
@@ -579,6 +580,36 @@ body {
         /* Prevent highlight color on tap */
         -webkit-tap-highlight-color: transparent;
     }
+}
+
+/* ==========================================================================
+   2c. Wordchecker
+   ========================================================================== */
+
+/* CSS for Word Checker Functionality - Add to grid.css */
+
+/* Animation for word completion flash effect */
+@keyframes word-completed-flash {
+  0% { background-color: var(--maingreen); }
+  50% { background-color: #3b9c68; /* Darker green */ }
+  100% { background-color: var(--maingreen); }
+}
+
+/* Class applied to cells when a word is completed */
+.word-completed-flash {
+  animation: word-completed-flash 0.5s ease-in-out;
+}
+
+/* Style for completed word characters in phrase display */
+.completed-word-char {
+  color: black !important;
+  font-weight: bold !important;
+}
+
+/* Initial style for all phrase characters */
+#phrase-text .phrase-char:not(.completed-word-char) {
+  color: #999999; /* Light grey */
+  transition: color 0.3s ease, font-weight 0.3s ease;
 }
 
 /* ==========================================================================
