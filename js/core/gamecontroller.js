@@ -1016,7 +1016,8 @@ showSuccessMessage() {
 }
 
 /**
- * Enhanced flashCompletedWord method to ensure the last cells are included
+ * Precisely flash only the cells for the current word
+ * Replace your existing flashCompletedWord method in GameController.js
  * @param {number} wordIndex - Index of the completed word
  */
 flashCompletedWord(wordIndex) {
@@ -1029,17 +1030,34 @@ flashCompletedWord(wordIndex) {
   const selectedCells = this.gridRenderer.selectedCells;
   if (!selectedCells || selectedCells.length === 0) return;
   
-  // Count the number of alphanumeric characters in the word (excluding punctuation)
+  // Get exact count of alphanumeric characters in the word
   const wordLetterCount = wordBoundary.word.replace(/[^a-zA-Z0-9]/g, '').length;
   
   console.log(`Word "${wordBoundary.word}" has ${wordLetterCount} alphanumeric characters`);
   
-  // ENHANCED: Include a buffer to ensure we don't miss any cells
-  const cellsToTake = Math.min(wordLetterCount + 2, selectedCells.length);
-// Take cells from the end of the selection with buffer
-  const cellsToFlash = selectedCells.slice(-cellsToTake);
+  // Calculate the start index for the most recent word cells
+  // This ensures we get EXACTLY the cells for the current word, no more, no less
+  let startIndex = 0;
   
-  console.log(`Will flash the last ${cellsToFlash.length} selected cells for word completion (including ${cellsToTake - wordLetterCount} buffer cells)`);
+  // We need to count back from the most recently selected cells
+  // Start with all selected cells
+  let lettersSoFar = 0;
+  
+  // Iterate through selected cells from newest to oldest
+  for (let i = selectedCells.length - 1; i >= 0; i--) {
+    lettersSoFar++;
+    
+    // Stop when we've found all letters for the current word
+    if (lettersSoFar >= wordLetterCount) {
+      startIndex = i;
+      break;
+    }
+  }
+  
+  // Extract exactly the cells for this word
+  const cellsToFlash = selectedCells.slice(startIndex);
+  
+  console.log(`Will flash exactly ${cellsToFlash.length} cells for this word (from index ${startIndex})`);
   
   // Check if we can use the snakePath utility to flash pieces
   if (window.snakePath && typeof window.snakePath.flashSnakePiecesInCells === 'function') {
