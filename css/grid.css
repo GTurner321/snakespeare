@@ -607,7 +607,7 @@ body {
   font-weight: bold !important;
 }
 
-/* Style for punctuation and special characters - always black */
+/* Style for punctuation and special characters - always black, excluding underscores */
 .phrase-char.punctuation-char {
   color: black !important;
 }
@@ -619,6 +619,11 @@ body {
 
 /* Initial style for all other phrase characters */
 #phrase-text .phrase-char:not(.completed-word-char):not(.punctuation-char):not(.hint-letter) {
+  color: #999999 !important; /* Light grey */
+}
+
+/* Ensure underscore characters are always grey */
+.phrase-char[data-char="_"] {
   color: #999999 !important; /* Light grey */
 }
 
