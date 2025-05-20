@@ -1016,7 +1016,7 @@ showSuccessMessage() {
 }
 
 /**
- * Improved flashCompletedWord method to ensure all cells flash properly
+ * Improved flashCompletedWord method to flash only the pieces for the latest word
  * @param {number} wordIndex - Index of the completed word
  */
 flashCompletedWord(wordIndex) {
@@ -1029,11 +1029,15 @@ flashCompletedWord(wordIndex) {
   const selectedCells = this.gridRenderer.selectedCells;
   if (!selectedCells || selectedCells.length === 0) return;
   
-  // Let's use ALL the selected cells to ensure we don't miss any
-  // For very long selections, this might be too many, but it's better than missing cells
-  const cellsToFlash = [...selectedCells];
+  // Count the number of alphanumeric characters in the word (excluding punctuation)
+  const wordLetterCount = wordBoundary.word.replace(/[^a-zA-Z0-9]/g, '').length;
   
-  console.log(`Will flash all ${cellsToFlash.length} selected cells for word completion`);
+  console.log(`Word "${wordBoundary.word}" has ${wordLetterCount} alphanumeric characters`);
+  
+  // Take the last N cells that correspond to this word
+  const cellsToFlash = selectedCells.slice(-wordLetterCount);
+  
+  console.log(`Will flash the last ${cellsToFlash.length} selected cells for word completion`);
   
   // Check if we can use the snakePath utility to flash pieces
   if (window.snakePath && typeof window.snakePath.flashSnakePiecesInCells === 'function') {
@@ -1048,6 +1052,7 @@ flashCompletedWord(wordIndex) {
     cellsToFlash.forEach(cell => {
       const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
       if (cellElement) {
+        // Find all snake pieces including the head
         const pieces = cellElement.querySelectorAll('.snake-piece');
         if (pieces.length > 0) {
           console.log(`Found ${pieces.length} snake pieces in cell (${cell.x}, ${cell.y})`);
@@ -1059,7 +1064,7 @@ flashCompletedWord(wordIndex) {
     });
     
     if (snakePieces.length === 0) {
-      console.log('No snake pieces found in any of the selected cells');
+      console.log('No snake pieces found in the word cells');
       return;
     }
     
@@ -1093,7 +1098,7 @@ flashCompletedWord(wordIndex) {
     }, 250); // 250ms = quarter of a second for faster word completion feedback
   }
 }
-
+  
 /**
  * Flashes specific snake pieces in the given cells - Enhanced for debugging
  * @param {Array} cellsToFlash - Array of cells containing snake pieces to flash
