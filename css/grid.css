@@ -617,13 +617,13 @@ body {
   color: black !important;
 }
 
-/* Initial style for all other phrase characters */
-#phrase-text .phrase-char:not(.completed-word-char):not(.punctuation-char):not(.hint-letter) {
+/* Ensure underscore characters are always grey */
+.phrase-char[data-char="_"] {
   color: #999999 !important; /* Light grey */
 }
 
-/* Ensure underscore characters are always grey */
-.phrase-char[data-char="_"] {
+/* Initial style for all remaining characters */
+#phrase-text .phrase-char:not(.completed-word-char):not(.punctuation-char):not(.hint-letter):not([data-char="_"]) {
   color: #999999 !important; /* Light grey */
 }
 
