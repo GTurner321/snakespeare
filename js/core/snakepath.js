@@ -557,6 +557,61 @@ window.SnakePath = class SnakePath {
       }
     }
   }
+
+/**
+ * Flashes specific snake pieces in the given cells
+ * @param {Array} cellsToFlash - Array of cells containing snake pieces to flash
+ */
+flashSnakePiecesInCells(cellsToFlash) {
+  if (!cellsToFlash || cellsToFlash.length === 0) return;
+  
+  console.log(`SnakePath: Flashing snake pieces in ${cellsToFlash.length} cells`);
+  
+  // Collect all snake pieces from the specified cells
+  const snakePieces = [];
+  
+  cellsToFlash.forEach(cell => {
+    const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
+    if (cellElement) {
+      const pieces = cellElement.querySelectorAll('.snake-piece');
+      pieces.forEach(piece => snakePieces.push(piece));
+    }
+  });
+  
+  if (snakePieces.length === 0) {
+    console.log('No snake pieces found in the specified cells');
+    return;
+  }
+  
+  console.log(`Found ${snakePieces.length} snake pieces to flash`);
+  
+  // Flash the snake pieces twice (off-on, off-on) with 250ms intervals
+  let flashCount = 0;
+  const maxFlashes = 4; // 2 complete cycles (off-on, off-on)
+  
+  const flashInterval = setInterval(() => {
+    // Toggle visibility
+    const isVisible = flashCount % 2 === 0;
+    
+    snakePieces.forEach(piece => {
+      piece.style.visibility = isVisible ? 'hidden' : 'visible';
+    });
+    
+    flashCount++;
+    
+    // Stop after max flashes
+    if (flashCount >= maxFlashes) {
+      clearInterval(flashInterval);
+      
+      // Ensure snake pieces are visible at the end
+      snakePieces.forEach(piece => {
+        piece.style.visibility = 'visible';
+      });
+      
+      console.log('Word completion snake flash animation complete');
+    }
+  }, 250); // 250ms = quarter of a second for faster word completion feedback
+}
   
   /**
    * Public method to force a snake path update
