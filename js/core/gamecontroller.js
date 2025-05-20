@@ -1016,7 +1016,7 @@ showSuccessMessage() {
 }
 
 /**
- * Improved flashCompletedWord method to flash only the pieces for the latest word
+ * Enhanced flashCompletedWord method to ensure the last cells are included
  * @param {number} wordIndex - Index of the completed word
  */
 flashCompletedWord(wordIndex) {
@@ -1034,10 +1034,12 @@ flashCompletedWord(wordIndex) {
   
   console.log(`Word "${wordBoundary.word}" has ${wordLetterCount} alphanumeric characters`);
   
-  // Take the last N cells that correspond to this word
-  const cellsToFlash = selectedCells.slice(-wordLetterCount);
+  // ENHANCED: Include a buffer to ensure we don't miss any cells
+  const cellsToTake = Math.min(wordLetterCount + 2, selectedCells.length);
+// Take cells from the end of the selection with buffer
+  const cellsToFlash = selectedCells.slice(-cellsToTake);
   
-  console.log(`Will flash the last ${cellsToFlash.length} selected cells for word completion`);
+  console.log(`Will flash the last ${cellsToFlash.length} selected cells for word completion (including ${cellsToTake - wordLetterCount} buffer cells)`);
   
   // Check if we can use the snakePath utility to flash pieces
   if (window.snakePath && typeof window.snakePath.flashSnakePiecesInCells === 'function') {
@@ -1052,14 +1054,9 @@ flashCompletedWord(wordIndex) {
     cellsToFlash.forEach(cell => {
       const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
       if (cellElement) {
-        // Find all snake pieces including the head
-        const pieces = cellElement.querySelectorAll('.snake-piece');
-        if (pieces.length > 0) {
-          console.log(`Found ${pieces.length} snake pieces in cell (${cell.x}, ${cell.y})`);
-          pieces.forEach(piece => snakePieces.push(piece));
-        } else {
-          console.log(`No snake pieces found in cell (${cell.x}, ${cell.y})`);
-        }
+        // Try multiple selector strategies to ensure we get ALL pieces
+        const allPieces = cellElement.querySelectorAll('img[class*="snake-"], .snake-piece');
+        allPieces.forEach(piece => snakePieces.push(piece));
       }
     });
     
@@ -1075,11 +1072,12 @@ flashCompletedWord(wordIndex) {
     const maxFlashes = 4; // 2 complete cycles (off-on, off-on)
     
     const flashInterval = setInterval(() => {
-      // Toggle visibility
+      // Toggle visibility and opacity
       const isVisible = flashCount % 2 === 0;
       
       snakePieces.forEach(piece => {
         piece.style.visibility = isVisible ? 'hidden' : 'visible';
+        piece.style.opacity = isVisible ? '0' : '1';
       });
       
       flashCount++;
@@ -1091,6 +1089,7 @@ flashCompletedWord(wordIndex) {
         // Ensure snake pieces are visible at the end
         snakePieces.forEach(piece => {
           piece.style.visibility = 'visible';
+          piece.style.opacity = '1';
         });
         
         console.log('Word completion snake flash animation complete');
