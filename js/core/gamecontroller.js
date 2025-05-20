@@ -1016,14 +1016,14 @@ showSuccessMessage() {
 }
 
 /**
- * Improved flashCompletedWord method with better transition handling
+ * Flash the snake pieces for a completed word
  * @param {number} wordIndex - Index of the completed word
  */
 flashCompletedWord(wordIndex) {
   const wordBoundary = this.wordBoundaries[wordIndex];
   if (!wordBoundary) return;
   
-  console.log(`Flashing cells for word "${wordBoundary.word}"`);
+  console.log(`Flashing snake pieces for word "${wordBoundary.word}"`);
   
   // Get selected cells
   const selectedCells = this.gridRenderer.selectedCells;
@@ -1032,44 +1032,64 @@ flashCompletedWord(wordIndex) {
   // Get word length - count only alphanumeric characters
   const wordLength = wordBoundary.word.replace(/[^a-zA-Z0-9]/g, '').length;
   
-  // Use most recently selected cells
+  // Use most recently selected cells that correspond to the word
   const cellsToFlash = Math.min(wordLength, selectedCells.length);
   const recentCells = [...selectedCells].slice(-cellsToFlash);
   
-  console.log(`Flashing ${recentCells.length} cells for word completion`);
+  console.log(`Will flash ${recentCells.length} cells for word completion`);
   
-  // Flash each cell with improved handling
-  recentCells.forEach(cell => {
-    const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
-    if (cellElement) {
-      // Store original transition and background values
-      const originalTransition = cellElement.style.transition;
-      
-      // Temporarily suspend other transitions
-      cellElement.style.transition = 'none';
-      
-      // Remove existing flash class and force reflow
-      cellElement.classList.remove('word-completed-flash');
-      void cellElement.offsetWidth; // Force reflow
-      
-      // Add flash class with inline style reinforcement
-      cellElement.classList.add('word-completed-flash');
-      
-      // Log for debugging
-      console.log(`Applied word-completed-flash to cell (${cell.x}, ${cell.y})`);
-      
-      // Remove class and restore original properties after animation
-      setTimeout(() => {
-        // Remove flash class
-        cellElement.classList.remove('word-completed-flash');
-        
-        // Restore original transition
-        cellElement.style.transition = originalTransition;
-        
-        console.log(`Removed word-completed-flash from cell (${cell.x}, ${cell.y})`);
-      }, 600); // Match this with animation duration (500ms) plus a small buffer
+  // Check if we can use the snakePath utility to flash pieces
+  if (window.snakePath && typeof window.snakePath.flashSnakePiecesInCells === 'function') {
+    // Use snakePath's method if available
+    window.snakePath.flashSnakePiecesInCells(recentCells);
+  } 
+  // Otherwise implement the flashing directly
+  else {
+    // Collect all snake pieces from the specified cells
+    const snakePieces = [];
+    
+    recentCells.forEach(cell => {
+      const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
+      if (cellElement) {
+        const pieces = cellElement.querySelectorAll('.snake-piece');
+        pieces.forEach(piece => snakePieces.push(piece));
+      }
+    });
+    
+    if (snakePieces.length === 0) {
+      console.log('No snake pieces found in the specified cells');
+      return;
     }
-  });
+    
+    console.log(`Found ${snakePieces.length} snake pieces to flash`);
+    
+    // Flash the snake pieces twice (off-on, off-on) with 250ms intervals
+    let flashCount = 0;
+    const maxFlashes = 4; // 2 complete cycles (off-on, off-on)
+    
+    const flashInterval = setInterval(() => {
+      // Toggle visibility
+      const isVisible = flashCount % 2 === 0;
+      
+      snakePieces.forEach(piece => {
+        piece.style.visibility = isVisible ? 'hidden' : 'visible';
+      });
+      
+      flashCount++;
+      
+      // Stop after max flashes
+      if (flashCount >= maxFlashes) {
+        clearInterval(flashInterval);
+        
+        // Ensure snake pieces are visible at the end
+        snakePieces.forEach(piece => {
+          piece.style.visibility = 'visible';
+        });
+        
+        console.log('Word completion snake flash animation complete');
+      }
+    }, 250); // 250ms = quarter of a second for faster word completion feedback
+  }
 }
   
 /**
