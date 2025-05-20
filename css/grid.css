@@ -597,7 +597,7 @@ body {
 
 /* Class applied to cells when a word is completed */
 .word-completed-flash {
-  animation: word-completed-flash 0.5s ease-in-out;
+  animation: word-completed-flash 0.5s ease-in-out !important;
 }
 
 /* Style for completed word characters in phrase display */
@@ -608,8 +608,7 @@ body {
 
 /* Initial style for all phrase characters */
 #phrase-text .phrase-char:not(.completed-word-char) {
-  color: #999999; /* Light grey */
-  transition: color 0.3s ease, font-weight 0.3s ease;
+  color: #999999 !important; /* Light grey */
 }
 
 /* ==========================================================================
