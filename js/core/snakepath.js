@@ -559,7 +559,7 @@ window.SnakePath = class SnakePath {
   }
 
 /**
- * Flashes specific snake pieces in the given cells
+ * Flashes specific snake pieces in the given cells - Fixed to handle all piece types
  * @param {Array} cellsToFlash - Array of cells containing snake pieces to flash
  */
 flashSnakePiecesInCells(cellsToFlash) {
@@ -573,8 +573,22 @@ flashSnakePiecesInCells(cellsToFlash) {
   cellsToFlash.forEach(cell => {
     const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
     if (cellElement) {
+      // Get ALL snake pieces in this cell including head pieces
       const pieces = cellElement.querySelectorAll('.snake-piece');
-      pieces.forEach(piece => snakePieces.push(piece));
+      if (pieces.length > 0) {
+        console.log(`Found ${pieces.length} snake pieces in cell (${cell.x}, ${cell.y})`);
+        
+        // Log detail about each piece for debugging
+        pieces.forEach((piece, index) => {
+          const pieceType = piece.getAttribute('data-piece-type') || piece.className;
+          console.log(`  - Piece ${index + 1}: ${pieceType}`);
+          snakePieces.push(piece);
+        });
+      } else {
+        console.log(`No snake pieces found in cell (${cell.x}, ${cell.y})`);
+      }
+    } else {
+      console.log(`Could not find cell element for (${cell.x}, ${cell.y})`);
     }
   });
   
@@ -583,7 +597,7 @@ flashSnakePiecesInCells(cellsToFlash) {
     return;
   }
   
-  console.log(`Found ${snakePieces.length} snake pieces to flash`);
+  console.log(`Found a total of ${snakePieces.length} snake pieces to flash`);
   
   // Flash the snake pieces twice (off-on, off-on) with 250ms intervals
   let flashCount = 0;
@@ -594,6 +608,7 @@ flashSnakePiecesInCells(cellsToFlash) {
     const isVisible = flashCount % 2 === 0;
     
     snakePieces.forEach(piece => {
+      // Force all pieces to toggle visibility, including the head
       piece.style.visibility = isVisible ? 'hidden' : 'visible';
     });
     
