@@ -586,18 +586,19 @@ body {
    2c. Wordchecker
    ========================================================================== */
 
-/* CSS for Word Checker Functionality - Add to grid.css */
+/* CSS for Word Checker Functionality */
 
-/* Animation for word completion flash effect */
+/* Animation for word completion flash effect - IMPROVED */
 @keyframes word-completed-flash {
-  0% { background-color: var(--maingreen); }
-  50% { background-color: #3b9c68; /* Darker green */ }
-  100% { background-color: var(--maingreen); }
+  0% { background-color: var(--maingreen) !important; }
+  50% { background-color: #3b9c68 !important; /* Darker green */ }
+  100% { background-color: var(--maingreen) !important; }
 }
 
-/* Class applied to cells when a word is completed */
-.word-completed-flash {
+/* Class applied to cells when a word is completed - IMPROVED */
+.grid-cell.word-completed-flash {
   animation: word-completed-flash 0.5s ease-in-out !important;
+  transition: none !important; /* Override any existing transitions */
 }
 
 /* Style for completed word characters in phrase display */
@@ -606,9 +607,32 @@ body {
   font-weight: bold !important;
 }
 
-/* Initial style for all phrase characters */
-#phrase-text .phrase-char:not(.completed-word-char) {
+/* Style for punctuation and special characters - always black */
+.phrase-char.punctuation-char {
+  color: black !important;
+}
+
+/* Style for revealed hint letters - also black from the start */
+.phrase-char.hint-letter {
+  color: black !important;
+}
+
+/* Initial style for all other phrase characters */
+#phrase-text .phrase-char:not(.completed-word-char):not(.punctuation-char):not(.hint-letter) {
   color: #999999 !important; /* Light grey */
+}
+
+/* Animation for hint letter matches */
+@keyframes hint-letter-pulse {
+  0% { font-weight: normal; transform: scale(1); }
+  50% { font-weight: bold; transform: scale(1.2); color: #4CAF50; }
+  100% { font-weight: normal; transform: scale(1); }
+}
+
+/* Class to apply the hint matching animation */
+.hint-letter-match {
+  display: inline-block;
+  animation: hint-letter-pulse 1s ease-in-out;
 }
 
 /* ==========================================================================
