@@ -1016,7 +1016,7 @@ showSuccessMessage() {
 }
 
 /**
- * Flash the snake pieces for a completed word
+ * Improved flashCompletedWord method to ensure all cells flash properly
  * @param {number} wordIndex - Index of the completed word
  */
 flashCompletedWord(wordIndex) {
@@ -1029,39 +1029,41 @@ flashCompletedWord(wordIndex) {
   const selectedCells = this.gridRenderer.selectedCells;
   if (!selectedCells || selectedCells.length === 0) return;
   
-  // Get word length - count only alphanumeric characters
-  const wordLength = wordBoundary.word.replace(/[^a-zA-Z0-9]/g, '').length;
+  // Let's use ALL the selected cells to ensure we don't miss any
+  // For very long selections, this might be too many, but it's better than missing cells
+  const cellsToFlash = [...selectedCells];
   
-  // Use most recently selected cells that correspond to the word
-  const cellsToFlash = Math.min(wordLength, selectedCells.length);
-  const recentCells = [...selectedCells].slice(-cellsToFlash);
-  
-  console.log(`Will flash ${recentCells.length} cells for word completion`);
+  console.log(`Will flash all ${cellsToFlash.length} selected cells for word completion`);
   
   // Check if we can use the snakePath utility to flash pieces
   if (window.snakePath && typeof window.snakePath.flashSnakePiecesInCells === 'function') {
     // Use snakePath's method if available
-    window.snakePath.flashSnakePiecesInCells(recentCells);
+    window.snakePath.flashSnakePiecesInCells(cellsToFlash);
   } 
   // Otherwise implement the flashing directly
   else {
     // Collect all snake pieces from the specified cells
     const snakePieces = [];
     
-    recentCells.forEach(cell => {
+    cellsToFlash.forEach(cell => {
       const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
       if (cellElement) {
         const pieces = cellElement.querySelectorAll('.snake-piece');
-        pieces.forEach(piece => snakePieces.push(piece));
+        if (pieces.length > 0) {
+          console.log(`Found ${pieces.length} snake pieces in cell (${cell.x}, ${cell.y})`);
+          pieces.forEach(piece => snakePieces.push(piece));
+        } else {
+          console.log(`No snake pieces found in cell (${cell.x}, ${cell.y})`);
+        }
       }
     });
     
     if (snakePieces.length === 0) {
-      console.log('No snake pieces found in the specified cells');
+      console.log('No snake pieces found in any of the selected cells');
       return;
     }
     
-    console.log(`Found ${snakePieces.length} snake pieces to flash`);
+    console.log(`Found a total of ${snakePieces.length} snake pieces to flash`);
     
     // Flash the snake pieces twice (off-on, off-on) with 250ms intervals
     let flashCount = 0;
@@ -1090,6 +1092,68 @@ flashCompletedWord(wordIndex) {
       }
     }, 250); // 250ms = quarter of a second for faster word completion feedback
   }
+}
+
+/**
+ * Flashes specific snake pieces in the given cells - Enhanced for debugging
+ * @param {Array} cellsToFlash - Array of cells containing snake pieces to flash
+ */
+flashSnakePiecesInCells(cellsToFlash) {
+  if (!cellsToFlash || cellsToFlash.length === 0) return;
+  
+  console.log(`SnakePath: Flashing snake pieces in ${cellsToFlash.length} cells`);
+  
+  // Collect all snake pieces from the specified cells
+  const snakePieces = [];
+  
+  cellsToFlash.forEach(cell => {
+    const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
+    if (cellElement) {
+      const pieces = cellElement.querySelectorAll('.snake-piece');
+      if (pieces.length > 0) {
+        console.log(`Found ${pieces.length} snake pieces in cell (${cell.x}, ${cell.y})`);
+        pieces.forEach(piece => snakePieces.push(piece));
+      } else {
+        console.log(`No snake pieces found in cell (${cell.x}, ${cell.y})`);
+      }
+    } else {
+      console.log(`Could not find cell element for (${cell.x}, ${cell.y})`);
+    }
+  });
+  
+  if (snakePieces.length === 0) {
+    console.log('No snake pieces found in the specified cells');
+    return;
+  }
+  
+  console.log(`Found a total of ${snakePieces.length} snake pieces to flash`);
+  
+  // Flash the snake pieces twice (off-on, off-on) with 250ms intervals
+  let flashCount = 0;
+  const maxFlashes = 4; // 2 complete cycles (off-on, off-on)
+  
+  const flashInterval = setInterval(() => {
+    // Toggle visibility
+    const isVisible = flashCount % 2 === 0;
+    
+    snakePieces.forEach(piece => {
+      piece.style.visibility = isVisible ? 'hidden' : 'visible';
+    });
+    
+    flashCount++;
+    
+    // Stop after max flashes
+    if (flashCount >= maxFlashes) {
+      clearInterval(flashInterval);
+      
+      // Ensure snake pieces are visible at the end
+      snakePieces.forEach(piece => {
+        piece.style.visibility = 'visible';
+      });
+      
+      console.log('Word completion snake flash animation complete');
+    }
+  }, 250); // 250ms = quarter of a second for faster word completion feedback
 }
   
 /**
