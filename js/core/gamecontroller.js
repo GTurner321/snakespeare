@@ -370,6 +370,9 @@ checkHintLetterConflict(selectedLetters) {
   return false;
 }
   
+/**
+ * Modified handleSelectionChange method to check for completed words
+ */
 handleSelectionChange() {
   // Get selected letters
   const selectedLetters = this.gridRenderer.getSelectedLetters();
@@ -426,7 +429,11 @@ handleSelectionChange() {
       this.showIncorrectMessage();
     }
   }
+  
+  // NEW: Check for completed words
+  this.checkForCompletedWords();
 }
+
   
 /**
  * New method to check if the selected phrase is correct
@@ -582,6 +589,10 @@ fillPhraseTemplate(template, phrase, selectedLetters) {
  * This separates the display update from the selection handling logic
  * Also adds pulsing animation when a specific hint letter is matched
  */
+/**
+ * Updated updatePhraseWithHints to ensure selected letters immediately update
+ * Modified to handle word completion text coloring
+ */
 updatePhraseWithHints() {
   if (!this.gridRenderer || !this.currentPhrase || !this.phraseTemplate) {
     return;
@@ -729,6 +740,21 @@ updatePhraseWithHints() {
     });
   }
   
+  // NEW: Apply light grey to all non-completed characters
+  const phraseCharSpans = displayElement.querySelectorAll('.phrase-char');
+  phraseCharSpans.forEach(span => {
+    if (!span.classList.contains('completed-word-char')) {
+      span.style.color = '#999999';
+    }
+  });
+  
+  // NEW: Re-apply black to completed words
+  if (this.completedWords.size > 0) {
+    [...this.completedWords].forEach(wordIndex => {
+      this.updateWordTextColor(wordIndex);
+    });
+  }
+  
   // Adjust phrase display height if needed
   if (this.scrollHandler && this.scrollHandler.adjustPhraseDisplayHeight) {
     setTimeout(() => {
@@ -736,7 +762,7 @@ updatePhraseWithHints() {
     }, 50);
   }
 }
-
+  
 /**
  * Helper method to find newly matched hint letters
  * This will only return hint letter positions that were just matched in this update
@@ -1293,6 +1319,10 @@ setInitialErosionPercentage(percentage) {
  * Fixes both the path generation validation and async/await usage
  */
 
+/**
+ * Modified loadPhrase method for GameController.js
+ * Adds word boundary parsing for word completion feedback
+ */
 async loadPhrase(phraseData) {
   this.currentPhrase = phraseData;
   
@@ -1318,6 +1348,10 @@ async loadPhrase(phraseData) {
     this.gridRenderer.setHintLevel(0);
     this.updateHintButtonStyles(); // Update button styles
   }
+  
+  // NEW: Parse word boundaries for word completion feedback
+  this.parseWordBoundaries();
+  this.completedWords = new Set();
   
   // Track generation attempts
   let generationSuccessful = false;
