@@ -31,26 +31,6 @@
             pointer-events: none !important;
             display: block !important;
         }
-        
-        /* Word Checker Styles */
-        @keyframes word-completed-flash {
-          0% { background-color: var(--maingreen); }
-          50% { background-color: #3b9c68; /* Darker green */ }
-          100% { background-color: var(--maingreen); }
-        }
-        
-        .word-completed-flash {
-          animation: word-completed-flash 0.5s ease-in-out !important;
-        }
-        
-        .completed-word-char {
-          color: black !important;
-          font-weight: bold !important;
-        }
-        
-        #phrase-text .phrase-char:not(.completed-word-char) {
-          color: #999999 !important; /* Light grey */
-        }
     </style>
 </head>
 <body>
@@ -80,9 +60,6 @@
         import GameController from './js/core/gamecontroller.js';
         import IslandRenderer from './js/core/islandrenderer.js';
         import SnakePath from './js/core/snakepath.js';
-        
-        // Load WordChecker dynamically (more reliable)
-        let wordChecker = null;
         
         // Initialize game when DOM is loaded
         document.addEventListener('DOMContentLoaded', () => {
@@ -120,35 +97,6 @@
                         console.error('Error initializing SnakePath:', error);
                     }
                 }, 500);
-            });
-            
-            // Load WordChecker dynamically after game initialization
-            document.addEventListener('gameInitialized', async (e) => {
-                try {
-                    console.log('Game initialized, loading WordChecker...');
-                    
-                    // Import WordChecker module dynamically to avoid loading issues
-                    const WordCheckerModule = await import('./js/core/wordchecker.js');
-                    const WordChecker = WordCheckerModule.default;
-                    
-                    console.log('WordChecker module loaded:', !!WordChecker);
-                    
-                    // Create WordChecker instance
-                    wordChecker = new WordChecker(gameController);
-                    console.log('WordChecker instance created');
-                    
-                    // For debugging
-                    window.checkWords = () => {
-                        if (wordChecker) {
-                            console.log('Manually checking for completed words');
-                            wordChecker.debug();
-                        } else {
-                            console.error('WordChecker not available');
-                        }
-                    };
-                } catch (error) {
-                    console.error('Error loading WordChecker:', error);
-                }
             });
             
             // Load phrase data from CSV
