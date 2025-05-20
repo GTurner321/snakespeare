@@ -584,6 +584,9 @@ fillPhraseTemplate(template, phrase, selectedLetters) {
   return templateArray.join('');
 }
 
+/**
+ * Modified updatePhraseWithHints to properly handle punctuation and underscore characters
+ */
 updatePhraseWithHints() {
   if (!this.gridRenderer || !this.currentPhrase || !this.phraseTemplate) {
     return;
@@ -689,22 +692,25 @@ updatePhraseWithHints() {
   let phraseHtml = '';
   for (let i = 0; i < templateArray.length; i++) {
     const hintLetter = hintLetters.find(h => h.position === i);
+    const currentChar = templateArray[i];
     
     // Wrap each character in a span with data attributes
-    const char = templateArray[i];
-    
     // Check if this is a hint letter
     if (hintLetter) {
       // Add data attributes for hint letters
-      phraseHtml += `<span class="phrase-char hint-letter" data-index="${i}" data-path-index="${hintLetter.pathIndex}">${char}</span>`;
+      phraseHtml += `<span class="phrase-char hint-letter" data-index="${i}" data-path-index="${hintLetter.pathIndex}" data-char="${currentChar}">${currentChar}</span>`;
     } 
-    // Check if this is a punctuation character - should be black from the start
-    else if (!/[a-zA-Z0-9_]/.test(letterlistArray[i])) {
-      phraseHtml += `<span class="phrase-char punctuation-char" data-index="${i}">${letterlistArray[i]}</span>`;
+    // Check if this is a punctuation character (not alphanumeric AND not an underscore)
+    else if (!/[a-zA-Z0-9_]/.test(currentChar) && currentChar !== '_') {
+      phraseHtml += `<span class="phrase-char punctuation-char" data-index="${i}" data-char="${currentChar}">${currentChar}</span>`;
     } 
+    // Check if this is an underscore - special styling
+    else if (currentChar === '_') {
+      phraseHtml += `<span class="phrase-char" data-index="${i}" data-char="_">${currentChar}</span>`;
+    }
     // Regular character
     else {
-      phraseHtml += `<span class="phrase-char" data-index="${i}">${char}</span>`;
+      phraseHtml += `<span class="phrase-char" data-index="${i}" data-char="${currentChar}">${currentChar}</span>`;
     }
   }
   
@@ -1036,7 +1042,7 @@ flashCompletedWord(wordIndex) {
   recentCells.forEach(cell => {
     const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
     if (cellElement) {
-      // Store original transition
+      // Store original transition and background values
       const originalTransition = cellElement.style.transition;
       
       // Temporarily suspend other transitions
@@ -1046,7 +1052,7 @@ flashCompletedWord(wordIndex) {
       cellElement.classList.remove('word-completed-flash');
       void cellElement.offsetWidth; // Force reflow
       
-      // Add flash class
+      // Add flash class with inline style reinforcement
       cellElement.classList.add('word-completed-flash');
       
       // Log for debugging
@@ -1059,6 +1065,8 @@ flashCompletedWord(wordIndex) {
         
         // Restore original transition
         cellElement.style.transition = originalTransition;
+        
+        console.log(`Removed word-completed-flash from cell (${cell.x}, ${cell.y})`);
       }, 600); // Match this with animation duration (500ms) plus a small buffer
     }
   });
