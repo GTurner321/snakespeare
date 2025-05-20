@@ -584,15 +584,6 @@ fillPhraseTemplate(template, phrase, selectedLetters) {
   return templateArray.join('');
 }
 
-/**
- * Updated updatePhraseWithHints to ensure selected letters immediately update
- * This separates the display update from the selection handling logic
- * Also adds pulsing animation when a specific hint letter is matched
- */
-/**
- * Updated updatePhraseWithHints to ensure selected letters immediately update
- * Modified to handle word completion text coloring
- */
 updatePhraseWithHints() {
   if (!this.gridRenderer || !this.currentPhrase || !this.phraseTemplate) {
     return;
@@ -662,7 +653,7 @@ updatePhraseWithHints() {
   const startCell = this.gridRenderer.grid[centerY][centerX];
   const isStartSelected = startCell.isSelected;
   
-  // FIXED: If start cell is selected and has a letter, fill in the first letter position
+  // If start cell is selected and has a letter, fill in the first letter position
   if (isStartSelected && startCell.letter && startCell.letter.trim() !== '') {
     console.log(`Start cell is selected with letter '${startCell.letter}', adding to first position`);
     const firstLetterPos = alphaPositions[0]; // First letter position
@@ -702,10 +693,17 @@ updatePhraseWithHints() {
     // Wrap each character in a span with data attributes
     const char = templateArray[i];
     
+    // Check if this is a hint letter
     if (hintLetter) {
       // Add data attributes for hint letters
       phraseHtml += `<span class="phrase-char hint-letter" data-index="${i}" data-path-index="${hintLetter.pathIndex}">${char}</span>`;
-    } else {
+    } 
+    // Check if this is a punctuation character - should be black from the start
+    else if (!/[a-zA-Z0-9_]/.test(letterlistArray[i])) {
+      phraseHtml += `<span class="phrase-char punctuation-char" data-index="${i}">${letterlistArray[i]}</span>`;
+    } 
+    // Regular character
+    else {
       phraseHtml += `<span class="phrase-char" data-index="${i}">${char}</span>`;
     }
   }
@@ -740,15 +738,7 @@ updatePhraseWithHints() {
     });
   }
   
-  // NEW: Apply light grey to all non-completed characters
-  const phraseCharSpans = displayElement.querySelectorAll('.phrase-char');
-  phraseCharSpans.forEach(span => {
-    if (!span.classList.contains('completed-word-char')) {
-      span.style.color = '#999999';
-    }
-  });
-  
-  // NEW: Re-apply black to completed words
+  // Re-apply black to completed words
   if (this.completedWords.size > 0) {
     [...this.completedWords].forEach(wordIndex => {
       this.updateWordTextColor(wordIndex);
@@ -1020,10 +1010,6 @@ showSuccessMessage() {
 }
 
 /**
- * Handle flashing the snake cells for a completed word
- * @param {number} wordIndex - Index of the completed word
- */
-/**
  * Improved flashCompletedWord method with better transition handling
  * @param {number} wordIndex - Index of the completed word
  */
@@ -1037,7 +1023,7 @@ flashCompletedWord(wordIndex) {
   const selectedCells = this.gridRenderer.selectedCells;
   if (!selectedCells || selectedCells.length === 0) return;
   
-  // Get word length - make sure to count only alphabetic characters
+  // Get word length - count only alphanumeric characters
   const wordLength = wordBoundary.word.replace(/[^a-zA-Z0-9]/g, '').length;
   
   // Use most recently selected cells
@@ -1050,22 +1036,17 @@ flashCompletedWord(wordIndex) {
   recentCells.forEach(cell => {
     const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
     if (cellElement) {
-      // Store original transition and background values
+      // Store original transition
       const originalTransition = cellElement.style.transition;
-      const originalBackground = cellElement.style.backgroundColor;
       
-      // Clear any existing animations
-      cellElement.style.animation = 'none';
+      // Temporarily suspend other transitions
+      cellElement.style.transition = 'none';
       
       // Remove existing flash class and force reflow
       cellElement.classList.remove('word-completed-flash');
       void cellElement.offsetWidth; // Force reflow
       
-      // Temporarily suspend other transitions
-      cellElement.style.transition = 'none';
-      void cellElement.offsetWidth; // Force style recalculation
-      
-      // Add flash class and explicit style
+      // Add flash class
       cellElement.classList.add('word-completed-flash');
       
       // Log for debugging
@@ -1076,10 +1057,8 @@ flashCompletedWord(wordIndex) {
         // Remove flash class
         cellElement.classList.remove('word-completed-flash');
         
-        // Restore original properties
+        // Restore original transition
         cellElement.style.transition = originalTransition;
-        
-        console.log(`Removed word-completed-flash from cell (${cell.x}, ${cell.y})`);
       }, 600); // Match this with animation duration (500ms) plus a small buffer
     }
   });
@@ -1636,7 +1615,7 @@ parseCSV(csvData) {
 }
 
 /**
- * Parse word boundaries from the current phrase
+ * Modified parseWordBoundaries to handle punctuation characters better
  */
 parseWordBoundaries() {
   console.log('Parsing word boundaries');
@@ -1662,12 +1641,14 @@ parseWordBoundaries() {
       currentWordStart = i;
       inWord = true;
     } else if (!isAlphaNumeric && inWord) {
-      // End of a word
-      this.wordBoundaries.push({
-        start: currentWordStart,
-        end: i - 1,
-        word: letterList.substring(currentWordStart, i)
-      });
+      // End of a word - only include if it has at least one character
+      if (i > currentWordStart) {
+        this.wordBoundaries.push({
+          start: currentWordStart,
+          end: i - 1,
+          word: letterList.substring(currentWordStart, i)
+        });
+      }
       inWord = false;
     }
   }
@@ -1804,7 +1785,7 @@ updateHintButtonStyles() {
 injectWordCompletionCSS() {
   if (document.getElementById('word-completion-css')) return;
   
-  console.log('Injecting word completion CSS with improved specificity');
+  console.log('Injecting word completion CSS with grammar and hint handling');
   const style = document.createElement('style');
   style.id = 'word-completion-css';
   style.textContent = `
@@ -1827,8 +1808,18 @@ injectWordCompletionCSS() {
       font-weight: bold !important;
     }
     
-    /* Initial style for all phrase characters */
-    #phrase-text .phrase-char:not(.completed-word-char) {
+    /* Style for punctuation and special characters - always black */
+    .phrase-char.punctuation-char {
+      color: black !important;
+    }
+    
+    /* Style for revealed hint letters - also black from the start */
+    .phrase-char.hint-letter {
+      color: black !important;
+    }
+    
+    /* Initial style for all other phrase characters */
+    #phrase-text .phrase-char:not(.completed-word-char):not(.punctuation-char):not(.hint-letter) {
       color: #999999 !important; /* Light grey */
     }
   `;
