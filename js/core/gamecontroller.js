@@ -1045,7 +1045,7 @@ flashCompletedWord(wordIndex) {
   setTimeout(() => {
     console.log("Delayed flash starting after allowing snake pieces to update");
     this.delayedFlashWordCells(cellsToFlash);
-  }, 300); // 300ms delay to allow snake piece updates to complete
+  }, 1000); // 1000ms delay to allow snake piece updates to complete
 }
 
 /**
