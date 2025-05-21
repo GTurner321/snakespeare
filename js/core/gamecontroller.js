@@ -764,8 +764,7 @@ updatePhraseWithHints() {
 }
   
 /**
- * Helper method to find newly matched hint letters
- * This will only return hint letter positions that were just matched in this update
+ * Enhanced findNewlyMatchedHintLetters to check for matching hint letters
  * @param {Array} hintLetters - Array of hint letter information
  * @return {Array} Array of newly matched hint letter positions
  */
@@ -778,34 +777,34 @@ findNewlyMatchedHintLetters(hintLetters) {
     return newlyMatchedPositions;
   }
   
-  // Get the most recently selected cell (if any)
+  // Get selected cells
   const selectedCells = this.gridRenderer.selectedCells;
   if (!selectedCells.length) {
     return newlyMatchedPositions;
   }
   
-  // Get the most recently selected cell (last in the array)
-  const lastSelectedCell = selectedCells[selectedCells.length - 1];
-  if (!lastSelectedCell) {
-    return newlyMatchedPositions;
-  }
-  
-  // Get the path index for this cell
-  const cell = this.gridRenderer.grid[lastSelectedCell.y][lastSelectedCell.x];
-  if (!cell || cell.pathIndex === undefined) {
-    return newlyMatchedPositions;
-  }
-  
-  // Find hint letters that match this path index
+  // Check all hint letters, not just those that correspond to the last selected cell
   hintLetters.forEach(hint => {
-    if (hint.pathIndex === cell.pathIndex) {
+    // Get the hint's path index
+    const hintPathIndex = hint.pathIndex;
+    
+    // Check if we have a selected cell that corresponds to this hint letter
+    const matchingCell = selectedCells.find(cell => {
+      const gridCell = this.gridRenderer.grid[cell.y][cell.x];
+      return gridCell && gridCell.pathIndex === hintPathIndex;
+    });
+    
+    // If we found a matching cell, this hint letter is matched
+    if (matchingCell) {
       newlyMatchedPositions.push(hint.position);
     }
   });
   
+  console.log('Newly matched hint letters:', newlyMatchedPositions);
   return newlyMatchedPositions;
 }
-  
+
+
 /**
  * Enhanced fillPhraseTemplateWithHints method to properly handle apostrophes
  */
@@ -846,6 +845,9 @@ fillPhraseTemplateWithHints(template, phrase, revealedLetters) {
   return templateArray.join('');
 }
   
+/**
+ * Modified updatePhraseFromSelections to properly handle apostrophes
+ */
 updatePhraseFromSelections(selectedLetters) {
   const displayElement = document.getElementById('phrase-text');
   if (!displayElement || !this.currentPhrase) return;
@@ -856,15 +858,50 @@ updatePhraseFromSelections(selectedLetters) {
   
   // If we have a phrase and template
   if (this.phraseTemplate) {
-    // Fill in the template with selected letters using letterlist instead of phrase
-    const updatedDisplay = this.fillPhraseTemplate(
-      this.phraseTemplate,
-      this.currentPhrase.letterlist, // Changed from phrase to letterlist
-      selectedLetters
-    );
+    // Create a mapping from path indices to phrase positions
+    const letterlistArray = this.currentPhrase.letterlist.split('');
+    const alphaPositions = [];
+    let alphaIndex = 0;
+    
+    // CRITICAL FIX: Include apostrophes in valid character mapping
+    for (let i = 0; i < letterlistArray.length; i++) {
+      if (/[a-zA-Z0-9']/.test(letterlistArray[i])) {
+        alphaPositions[alphaIndex] = i;
+        alphaIndex++;
+      }
+    }
+    
+    // Start with the template
+    const templateArray = this.phraseTemplate.split('');
+    
+    // Check if start cell is selected and has a letter
+    const centerX = 35;
+    const centerY = 35;
+    const startCell = this.gridRenderer.grid[centerY][centerX];
+    const isStartSelected = startCell.isSelected;
+    
+    // If start cell is selected, fill in first position
+    if (isStartSelected && startCell.letter && startCell.letter.trim() !== '') {
+      const firstLetterPos = alphaPositions[0];
+      if (firstLetterPos !== undefined) {
+        templateArray[firstLetterPos] = startCell.letter.toUpperCase();
+      }
+    }
+    
+    // Now apply the selected letters in sequence
+    for (let i = 0; i < selectedLetters.length; i++) {
+      // Calculate the correct position in the phrase (+1 to skip start cell position)
+      const letterPosition = i + 1;
+      if (letterPosition < alphaPositions.length) {
+        const phrasePos = alphaPositions[letterPosition];
+        if (phrasePos !== undefined) {
+          templateArray[phrasePos] = selectedLetters[i].letter.toUpperCase();
+        }
+      }
+    }
     
     // Display the updated template
-    displayElement.textContent = updatedDisplay;
+    displayElement.textContent = templateArray.join('');
     
     // Adjust phrase display height
     if (this.scrollHandler && this.scrollHandler.adjustPhraseDisplayHeight) {
@@ -876,7 +913,7 @@ updatePhraseFromSelections(selectedLetters) {
     displayElement.textContent = selectedString || "Select letters to form a phrase";
   }
 }
-
+  
 /**
  * Update the text color for a completed word in the phrase display
  * @param {number} wordIndex - Index of the completed word
@@ -905,7 +942,7 @@ updateWordTextColor(wordIndex) {
 }
   
 /**
- * Enhanced isWordCompleted method to properly handle apostrophes and hint letters
+ * Enhanced isWordCompleted to handle hint letters properly
  * @param {number} wordIndex - Index of the word to check
  * @return {boolean} True if the word is completed correctly
  */
@@ -920,58 +957,67 @@ isWordCompleted(wordIndex) {
   }
   
   const wordBoundary = this.wordBoundaries[wordIndex];
+  
+  // First extract all valid characters for this word (alphanumeric + apostrophes)
+  const wordChars = this.currentPhrase.letterlist
+    .substring(wordBoundary.start, wordBoundary.end + 1)
+    .split('')
+    .filter(char => /[a-zA-Z0-9']/.test(char));
+  
+  // Count total valid characters
+  const totalChars = wordChars.length;
+  
+  // Get the phrase display span elements
   const displayElement = document.getElementById('phrase-text');
   if (!displayElement) return false;
   
-  // IMPROVED: Use the actual spans to determine completion
-  const phraseChars = Array.from(displayElement.querySelectorAll('.phrase-char'));
-  
-  // Find all character spans that belong to this word
-  const wordChars = phraseChars.filter((span, i) => 
-    i >= wordBoundary.start && i <= wordBoundary.end
+  // Get character spans for this word
+  const spans = Array.from(displayElement.querySelectorAll('.phrase-char'));
+  const wordSpans = spans.filter((span, i) => 
+    i >= wordBoundary.start && i <= wordBoundary.end && /[a-zA-Z0-9']/.test(span.getAttribute('data-char'))
   );
   
-  // Count total alphanumeric characters (including apostrophes) in the word
-  const validWordChars = wordChars.filter(span => {
-    const char = span.getAttribute('data-char');
-    return /[a-zA-Z0-9']/.test(char);
+  // Count filled spans (non-underscore) and hint letters
+  let filledCount = 0;
+  let hintCount = 0;
+  let hintsMatch = true;  // Track if selected letters match hint letters
+  
+  wordSpans.forEach(span => {
+    const isUnderscore = span.textContent === '_';
+    const isHint = span.classList.contains('hint-letter');
+    
+    // Count hints
+    if (isHint) {
+      hintCount++;
+      
+      // For hint letters, check if there's a corresponding selection
+      // by looking at the hint-letter-match class
+      if (span.classList.contains('hint-letter-match')) {
+        filledCount++;  // Count matched hint letters as filled
+      } else {
+        hintsMatch = false;  // Some hint letter doesn't match
+      }
+    } 
+    // Count filled non-hint positions
+    else if (!isUnderscore) {
+      filledCount++;
+    }
   });
   
-  // Count all non-underscore characters (filled in spots)
-  const filledCharCount = validWordChars.filter(span => 
-    span.textContent !== '_'
-  ).length;
+  // To be complete:
+  // 1. All positions must be filled (filledCount == totalChars)
+  // 2. All hint letters must match their corresponding selections
+  const isComplete = filledCount === totalChars && hintsMatch;
   
-  // Count hint letters (which are always filled)
-  const hintLetterCount = validWordChars.filter(span => 
-    span.classList.contains('hint-letter') || span.classList.contains('revealed-char')
-  ).length;
-  
-  // Count selected letters (non-hint, non-underscore)
-  const selectedLetterCount = filledCharCount - hintLetterCount;
-  
-  // Count cells that need to be selected by the user
-  // CRITICAL: This should equal the total valid chars minus hint letters
-  const requiredSelections = validWordChars.length - hintLetterCount;
-  
-  // Debug logs to check counts
   console.log(`Word "${wordBoundary.word}" completion check:`, {
-    validChars: validWordChars.length,
-    filledChars: filledCharCount,
-    hintLetters: hintLetterCount,
-    selectedLetters: selectedLetterCount,
-    requiredSelections
+    total: totalChars,
+    filled: filledCount,
+    hints: hintCount,
+    hintsMatch,
+    isComplete
   });
   
-  // Check if user has selected enough cells to complete the word
-  // CRITICAL: The word should only be considered complete when the user
-  // has selected exactly the right number of required cells
-  const hasCorrectSelectionCount = selectedLetterCount === requiredSelections;
-  
-  // Check if all characters are filled (no underscores)
-  const hasNoUnderscores = !wordChars.some(span => span.textContent === '_');
-  
-  return hasNoUnderscores && hasCorrectSelectionCount;
+  return isComplete;
 }
   
 /**
@@ -1054,7 +1100,7 @@ showSuccessMessage() {
 }
 
 /**
- * Enhanced flashCompletedWord method to properly flash all word cells
+ * Completely revamped flashCompletedWord to ensure consistent flashing
  * @param {number} wordIndex - Index of the completed word
  */
 flashCompletedWord(wordIndex) {
@@ -1063,128 +1109,85 @@ flashCompletedWord(wordIndex) {
   
   console.log(`Flashing snake pieces for word "${wordBoundary.word}"`);
   
-  // Get the phrase display element
-  const displayElement = document.getElementById('phrase-text');
-  if (!displayElement) return;
+  // Calculate all valid character positions in the word
+  const wordChars = this.currentPhrase.letterlist
+    .substring(wordBoundary.start, wordBoundary.end + 1)
+    .split('')
+    .map((char, index) => {
+      return {
+        char,
+        index: wordBoundary.start + index
+      };
+    })
+    .filter(item => /[a-zA-Z0-9']/.test(item.char));
   
-  // Get all character spans in this word
-  const phraseChars = Array.from(displayElement.querySelectorAll('.phrase-char'));
-  const wordChars = phraseChars.filter((span, i) => 
-    i >= wordBoundary.start && i <= wordBoundary.end
-  );
+  // Map path indices to positions in the phrase
+  const letterlistArray = this.currentPhrase.letterlist.split('');
+  const pathIndices = [];
   
-  // Filter to only alphanumeric and apostrophe characters
-  const validWordChars = wordChars.filter(span => {
-    const char = span.getAttribute('data-char');
-    return /[a-zA-Z0-9']/.test(char);
+  // Create a mapping of letter positions to path indices
+  wordChars.forEach(charInfo => {
+    // Find the overall position in letterlist
+    const posInLetterlist = charInfo.index;
+    
+    // Count how many valid chars (a-z, 0-9, ') are before this position
+    let validCharCount = 0;
+    for (let i = 0; i < posInLetterlist; i++) {
+      if (/[a-zA-Z0-9']/.test(letterlistArray[i])) {
+        validCharCount++;
+      }
+    }
+    
+    // The path index corresponds to the valid char count
+    pathIndices.push(validCharCount);
   });
   
-  // Get all path indices for letters in this word
-  const wordPathIndices = validWordChars
-    .filter(span => span.dataset.pathIndex) // Only spans with path indices
-    .map(span => parseInt(span.dataset.pathIndex, 10));
+  console.log(`Word "${wordBoundary.word}" path indices:`, pathIndices);
   
-  // Add any missing indices by examining the entire path
-  if (this.currentPath) {
-    // Create a letter count for word (count alphanumeric + apostrophes)
-    const letterCount = wordBoundary.word.replace(/[^a-zA-Z0-9']/g, '').length;
-    
-    // We need to find which path indices correspond to this word
-    // Map phrase positions to path indices
-    const letterlistArray = this.currentPhrase.letterlist.split('');
-    const alphaPositions = [];
-    let alphaIndex = 0;
-    
-    // Find positions of all alphanumeric characters and apostrophes
-    for (let i = 0; i < letterlistArray.length; i++) {
-      if (/[a-zA-Z0-9']/.test(letterlistArray[i])) {
-        alphaPositions[alphaIndex] = i;
-        alphaIndex++;
-      }
-    }
-    
-    // Get the path indices for this word
-    const allWordPathIndices = [];
-    for (let i = wordBoundary.start; i <= wordBoundary.end; i++) {
-      const char = letterlistArray[i];
-      if (/[a-zA-Z0-9']/.test(char)) {
-        // Find the path index for this letter position
-        const posInLetterlist = i;
-        // Find which alphaPosition this is
-        const alphaPosition = alphaPositions.indexOf(posInLetterlist);
-        if (alphaPosition !== -1) {
-          allWordPathIndices.push(alphaPosition);
-        }
-      }
-    }
-    
-    console.log(`Word "${wordBoundary.word}" path indices: ${allWordPathIndices.join(', ')}`);
-    
-    // Merge with existing indices to ensure we have all of them
-    allWordPathIndices.forEach(index => {
-      if (!wordPathIndices.includes(index)) {
-        wordPathIndices.push(index);
-      }
-    });
-  }
-  
-  // Now we have all the path indices for this word
-  console.log(`Final path indices for word "${wordBoundary.word}": ${wordPathIndices.join(', ')}`);
-  
-  // Get all cells that correspond to these path indices
+  // Find all cells corresponding to these path indices
   const cellsToFlash = [];
   
-  // Include the start cell if it's the first word
-  const isFirstWord = wordIndex === 0;
-  if (isFirstWord) {
+  // Check for start cell (index 0)
+  if (pathIndices.includes(0)) {
     const centerX = 35;
     const centerY = 35;
     cellsToFlash.push({ x: centerX, y: centerY });
   }
   
-  // Get selected cells that match our word's path indices
+  // Check selected cells
   const selectedCells = this.gridRenderer.selectedCells;
-  for (const cell of selectedCells) {
+  selectedCells.forEach(cell => {
     const pathCell = this.gridRenderer.grid[cell.y][cell.x];
-    if (pathCell && wordPathIndices.includes(pathCell.pathIndex)) {
-      cellsToFlash.push(cell);
+    if (pathCell && pathIndices.includes(pathCell.pathIndex)) {
+      cellsToFlash.push({ x: cell.x, y: cell.y });
     }
-  }
+  });
   
-  // Also include revealed hint cells
-  const revealedLetters = this.gridRenderer.getRevealedLetters();
-  for (const revealed of revealedLetters) {
-    if (wordPathIndices.includes(revealed.pathIndex)) {
-      // This is a revealed letter for our word
-      cellsToFlash.push({
-        x: revealed.x,
-        y: revealed.y
-      });
+  // Check revealed hint cells
+  const revealedHints = this.gridRenderer.getRevealedLetters();
+  revealedHints.forEach(hint => {
+    if (pathIndices.includes(hint.pathIndex)) {
+      cellsToFlash.push({ x: hint.x, y: hint.y });
     }
-  }
+  });
   
   // Remove duplicates
-  const uniqueCells = [];
-  const seenCellKeys = new Set();
-  
-  for (const cell of cellsToFlash) {
+  const uniqueCellsMap = new Map();
+  cellsToFlash.forEach(cell => {
     const key = `${cell.x},${cell.y}`;
-    if (!seenCellKeys.has(key)) {
-      seenCellKeys.add(key);
-      uniqueCells.push(cell);
-    }
-  }
+    uniqueCellsMap.set(key, cell);
+  });
+  
+  const uniqueCells = Array.from(uniqueCellsMap.values());
   
   console.log(`Flashing ${uniqueCells.length} cells for word "${wordBoundary.word}"`);
   
-  // If we have snake pieces and cells to flash
+  // Flash the cells with improved timing for consistency
   if (window.snakePath && uniqueCells.length > 0) {
-    // Add a delay to ensure all snake pieces are rendered
+    // Ensure all snake pieces are fully rendered before flashing
     setTimeout(() => {
-      console.log('Calling flashSnakePiecesInCells with cells:', 
-        uniqueCells.map(c => `(${c.x},${c.y})`).join(', '));
       window.snakePath.flashSnakePiecesInCells(uniqueCells);
-    }, 150);
+    }, 200);
   }
 }
   
@@ -1323,7 +1326,7 @@ ensureWordCompletionCSS() {
 }
   
 /**
- * Flashes specific snake pieces in the given cells - Enhanced for debugging
+ * Completely revised flashSnakePiecesInCells with consistent timing and reliable element selection
  * @param {Array} cellsToFlash - Array of cells containing snake pieces to flash
  */
 flashSnakePiecesInCells(cellsToFlash) {
@@ -1331,57 +1334,88 @@ flashSnakePiecesInCells(cellsToFlash) {
   
   console.log(`SnakePath: Flashing snake pieces in ${cellsToFlash.length} cells`);
   
-  // Collect all snake pieces from the specified cells
-  const snakePieces = [];
-  
-  cellsToFlash.forEach(cell => {
-    const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
-    if (cellElement) {
-      const pieces = cellElement.querySelectorAll('.snake-piece');
-      if (pieces.length > 0) {
-        console.log(`Found ${pieces.length} snake pieces in cell (${cell.x}, ${cell.y})`);
-        pieces.forEach(piece => snakePieces.push(piece));
-      } else {
-        console.log(`No snake pieces found in cell (${cell.x}, ${cell.y})`);
-      }
-    } else {
-      console.log(`Could not find cell element for (${cell.x}, ${cell.y})`);
-    }
-  });
-  
-  if (snakePieces.length === 0) {
-    console.log('No snake pieces found in the specified cells');
-    return;
-  }
-  
-  console.log(`Found a total of ${snakePieces.length} snake pieces to flash`);
-  
-  // Flash the snake pieces twice (off-on, off-on) with 250ms intervals
-  let flashCount = 0;
-  const maxFlashes = 4; // 2 complete cycles (off-on, off-on)
-  
-  const flashInterval = setInterval(() => {
-    // Toggle visibility
-    const isVisible = flashCount % 2 === 0;
+  // STANDARDIZED TIMING: Always use a 200ms delay for consistency
+  setTimeout(() => {
+    // Using multiple techniques to find ALL types of snake pieces
+    let allElements = [];
     
-    snakePieces.forEach(piece => {
-      piece.style.visibility = isVisible ? 'hidden' : 'visible';
+    // APPROACH 1: Direct cell elements
+    const cellElements = [];
+    cellsToFlash.forEach(cell => {
+      const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
+      if (cellElement) {
+        cellElements.push(cellElement);
+      }
     });
     
-    flashCount++;
-    
-    // Stop after max flashes
-    if (flashCount >= maxFlashes) {
-      clearInterval(flashInterval);
+    // APPROACH 2: Find all snake pieces in these cells
+    cellElements.forEach(cellElement => {
+      // Use multiple selectors to ensure we find ALL piece types
+      const pieceCandidates = [
+        ...Array.from(cellElement.querySelectorAll('.snake-piece')),
+        ...Array.from(cellElement.querySelectorAll('[class*="snake-"]')),
+        ...Array.from(cellElement.querySelectorAll('img[src*="piece"]'))
+      ];
       
-      // Ensure snake pieces are visible at the end
-      snakePieces.forEach(piece => {
-        piece.style.visibility = 'visible';
+      // Filter out duplicates
+      const uniquePieces = Array.from(new Set(pieceCandidates));
+      allElements.push(...uniquePieces);
+      
+      // If no pieces found, create a visual indicator
+      if (uniquePieces.length === 0) {
+        // Add visual indicator overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'flash-indicator';
+        overlay.style.position = 'absolute';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        overlay.style.backgroundColor = 'rgba(76, 175, 80, 0.4)';
+        overlay.style.borderRadius = '5px';
+        overlay.style.zIndex = '700';
+        
+        cellElement.appendChild(overlay);
+        allElements.push(overlay);
+      }
+    });
+    
+    // STANDARDIZED FLASHING: Same timing and pattern for all flashing
+    let flashCount = 0;
+    const maxFlashes = 4; // 2 complete cycles (4 transitions)
+    const flashInterval = setInterval(() => {
+      // Toggle visibility
+      const isVisible = flashCount % 2 === 0;
+      
+      allElements.forEach(element => {
+        // Multiple approaches to ensure visibility changes work
+        element.style.visibility = isVisible ? 'hidden' : 'visible';
+        element.style.opacity = isVisible ? '0' : '1';
       });
       
-      console.log('Word completion snake flash animation complete');
-    }
-  }, 250); // 250ms = quarter of a second for faster word completion feedback
+      flashCount++;
+      
+      // Stop after max flashes
+      if (flashCount >= maxFlashes) {
+        clearInterval(flashInterval);
+        
+        // Restore visibility
+        allElements.forEach(element => {
+          element.style.visibility = 'visible';
+          element.style.opacity = '1';
+          
+          // Remove any overlays we created
+          if (element.className === 'flash-indicator') {
+            if (element.parentNode) {
+              element.parentNode.removeChild(element);
+            }
+          }
+        });
+        
+        console.log('Flash animation complete');
+      }
+    }, 250); // Standardized timing: 250ms per transition
+  }, 200); // Standardized delay before starting flashes
 }
   
 /**
