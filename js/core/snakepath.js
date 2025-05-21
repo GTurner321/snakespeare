@@ -560,6 +560,7 @@ window.SnakePath = class SnakePath {
 
 /**
  * Improved flashSnakePiecesInCells method for reliable flashing of all snake pieces
+ * Enhanced to work with hint letters and apostrophes
  * @param {Array} cellsToFlash - Array of cells containing snake pieces to flash
  */
 flashSnakePiecesInCells(cellsToFlash) {
@@ -569,69 +570,97 @@ flashSnakePiecesInCells(cellsToFlash) {
   
   // CRITICAL FIX: Add a short delay to ensure all snake pieces are fully rendered
   setTimeout(() => {
-    // More robust approach to finding ALL snake pieces
-    const snakePieces = [];
-    const cellElements = [];
+    // Create element collections for each approach
+    const directPieces = [];
+    const fallbackElements = [];
     
-    // First collect all cell elements
+    // APPROACH 1: Direct DOM lookups for each cell
     cellsToFlash.forEach(cell => {
       const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
       if (cellElement) {
-        cellElements.push(cellElement);
+        // Try multiple selector strategies
+        const snakePieces = cellElement.querySelectorAll('.snake-piece');
+        const partialClassPieces = cellElement.querySelectorAll('[class*="snake-"]');
+        const imgElements = cellElement.querySelectorAll('img[src*="piece"]');
+        
+        if (snakePieces.length > 0) {
+          snakePieces.forEach(p => directPieces.push(p));
+        } else if (partialClassPieces.length > 0) {
+          partialClassPieces.forEach(p => directPieces.push(p));
+        } else if (imgElements.length > 0) {
+          imgElements.forEach(p => directPieces.push(p));
+        } else {
+          // If we still can't find any snake pieces, save the cell element itself
+          // We'll create an overlay for it
+          fallbackElements.push(cellElement);
+        }
       }
     });
     
-    // CRITICAL FIX: Use multiple approaches to find all snake pieces
-    cellElements.forEach(cellElement => {
-      // Primary strategy: Most specific selector first
-      const standardPieces = cellElement.querySelectorAll('.snake-piece');
-      
-      // Backup strategy: Look for ANY elements with snake-related classes
-      const partialClassPieces = cellElement.querySelectorAll('[class*="snake-"]');
-      
-      // Last resort: Look for images with piece in the src
-      const imgElements = cellElement.querySelectorAll('img[src*="piece"]');
-      
-      // Create a Set to avoid duplicates
-      const cellPieces = new Set([
-        ...Array.from(standardPieces),
-        ...Array.from(partialClassPieces),
-        ...Array.from(imgElements).filter(img => 
-          img.src && (img.src.includes('piece') || img.className.includes('snake'))
-        )
-      ]);
-      
-      // Add all unique pieces to our collection
-      cellPieces.forEach(piece => snakePieces.push(piece));
-    });
+    console.log(`Found ${directPieces.length} direct snake pieces`);
     
-    // If still no pieces found, try a broader document-level search
-    if (snakePieces.length === 0) {
-      console.log('Fallback: Searching document-wide for snake pieces');
+    // APPROACH 2: If no pieces found with direct approach, try a different approach
+    if (directPieces.length === 0) {
+      console.log('No direct pieces found, trying alternative approaches');
       
-      // This will find ANY snake pieces in the document
-      document.querySelectorAll('.snake-piece, [class*="snake-"], img[src*="piece"]').forEach(piece => {
-        // Check if this piece belongs to one of our target cells
-        const pieceCell = piece.closest('.grid-cell');
-        if (pieceCell) {
-          const x = parseInt(pieceCell.dataset.gridX, 10);
-          const y = parseInt(pieceCell.dataset.gridY, 10);
+      // Try to find all snake pieces in the document and filter by cell
+      const allSnakePieces = document.querySelectorAll('.snake-piece, [class*="snake-"], img[src*="piece"]');
+      allSnakePieces.forEach(piece => {
+        // Find the parent cell
+        const cell = piece.closest('.grid-cell');
+        if (cell) {
+          const x = parseInt(cell.dataset.gridX, 10);
+          const y = parseInt(cell.dataset.gridY, 10);
           
-          if (cellsToFlash.some(cell => cell.x === x && cell.y === y)) {
-            snakePieces.push(piece);
+          // Check if this cell is in our flash list
+          if (cellsToFlash.some(c => c.x === x && c.y === y)) {
+            directPieces.push(piece);
           }
         }
       });
+      
+      console.log(`Found ${directPieces.length} pieces with alternative approach`);
     }
     
-    if (snakePieces.length === 0) {
-      console.log('No snake pieces found to flash after multiple attempts');
+    // Create the combined set of elements to flash
+    const allElements = [...directPieces];
+    
+    // For cells with no snake pieces, create overlay flash highlights
+    if (fallbackElements.length > 0) {
+      console.log(`Creating overlays for ${fallbackElements.length} cells`);
+      
+      fallbackElements.forEach(cellElement => {
+        // Create an overlay div
+        const overlay = document.createElement('div');
+        overlay.className = 'word-completion-highlighter';
+        overlay.style.position = 'absolute';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        overlay.style.backgroundColor = 'rgba(65, 185, 105, 0.5)';
+        overlay.style.borderRadius = '5px';
+        overlay.style.boxShadow = '0 0 15px rgba(65, 185, 105, 0.8)';
+        overlay.style.zIndex = '600';
+        overlay.style.pointerEvents = 'none';
+        
+        // Add to the cell
+        cellElement.appendChild(overlay);
+        
+        // Add to our elements to flash
+        allElements.push(overlay);
+      });
+    }
+    
+    // If we still have no elements, log and exit
+    if (allElements.length === 0) {
+      console.log('No elements found to flash after all attempts');
       return;
     }
     
-    console.log(`Found ${snakePieces.length} snake pieces to flash`);
+    console.log(`Flashing ${allElements.length} elements`);
     
-    // Flash the snake pieces with enhanced visibility control
+    // Flash the elements with enhanced visibility control
     let flashCount = 0;
     const maxFlashes = 4; // 2 complete cycles
     
@@ -639,16 +668,16 @@ flashSnakePiecesInCells(cellsToFlash) {
       // Toggle visibility
       const isVisible = flashCount % 2 === 0;
       
-      snakePieces.forEach(piece => {
+      allElements.forEach(element => {
         // Apply multiple visibility techniques for maximum reliability
-        piece.style.visibility = isVisible ? 'hidden' : 'visible';
-        piece.style.opacity = isVisible ? '0' : '1';
-        
-        // For pieces that might have special styling
         if (isVisible) {
-          piece.classList.add('flash-hidden');
+          // Hide element
+          element.style.visibility = 'hidden';
+          element.style.opacity = '0';
         } else {
-          piece.classList.remove('flash-hidden');
+          // Show element
+          element.style.visibility = 'visible';
+          element.style.opacity = '1';
         }
       });
       
@@ -658,17 +687,23 @@ flashSnakePiecesInCells(cellsToFlash) {
       if (flashCount >= maxFlashes) {
         clearInterval(flashInterval);
         
-        // Ensure all pieces are visible at the end
-        snakePieces.forEach(piece => {
-          piece.style.visibility = 'visible';
-          piece.style.opacity = '1';
-          piece.classList.remove('flash-hidden');
+        // Ensure all elements are visible at the end
+        allElements.forEach(element => {
+          element.style.visibility = 'visible';
+          element.style.opacity = '1';
+          
+          // Remove overlays
+          if (element.className === 'word-completion-highlighter') {
+            if (element.parentNode) {
+              element.parentNode.removeChild(element);
+            }
+          }
         });
         
-        console.log('Snake flash animation complete');
+        console.log('Flash animation complete');
       }
-    }, 250); // 250ms = quarter second for faster feedback
-  }, 50); // Short delay to ensure all pieces are rendered
+    }, 250); // Quarter second for flash cycle
+  }, 100); // Increased delay to 100ms to ensure all pieces are fully rendered
 }
   
 /**
