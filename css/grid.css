@@ -484,6 +484,11 @@ body {
     z-index: 11; /* Ensure head is on top */
 }
 
+.snake-piece.flash-hidden {
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
 /* Flash animation keyframes for visibility toggling */
 @keyframes flash-visibility {
   0% { visibility: visible; }
