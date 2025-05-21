@@ -807,9 +807,7 @@ findNewlyMatchedHintLetters(hintLetters) {
 }
   
 /**
- * Enhanced version of fillPhraseTemplateWithHints method for GameController.js
- * This adds detailed debugging to help identify why the first letter might be showing
- * as revealed or why consecutive letters are being revealed in level 1
+ * Enhanced fillPhraseTemplateWithHints method to properly handle apostrophes
  */
 fillPhraseTemplateWithHints(template, phrase, revealedLetters) {
   // Check if we have empty input
@@ -826,7 +824,8 @@ fillPhraseTemplateWithHints(template, phrase, revealedLetters) {
   // Track which alphanumeric characters in the phrase map to which path positions
   let pathPosition = 0;
   for (let i = 0; i < phrase.length; i++) {
-    if (/[a-zA-Z0-9]/.test(phrase[i])) {
+    // CRITICAL FIX: Include apostrophes as alphanumeric characters
+    if (/[a-zA-Z0-9']/.test(phrase[i])) {
       pathIndexToCharPosition.set(pathPosition, i);
       pathPosition++;
     }
@@ -906,8 +905,7 @@ updateWordTextColor(wordIndex) {
 }
   
 /**
- * Check if a specific word in the phrase is correctly filled
- * Modified to properly account for hint letters
+ * Enhanced isWordCompleted method to properly handle apostrophes and hint letters
  * @param {number} wordIndex - Index of the word to check
  * @return {boolean} True if the word is completed correctly
  */
@@ -925,50 +923,55 @@ isWordCompleted(wordIndex) {
   const displayElement = document.getElementById('phrase-text');
   if (!displayElement) return false;
   
-  // CRITICAL FIX: Use the child elements to better track what's filled in
-  const phraseChars = displayElement.querySelectorAll('.phrase-char');
+  // IMPROVED: Use the actual spans to determine completion
+  const phraseChars = Array.from(displayElement.querySelectorAll('.phrase-char'));
   
-  // Ensure we have enough phrase characters
-  if (phraseChars.length <= wordBoundary.end) return false;
-  
-  // Extract the current word from the display using spans
-  let isComplete = true;
-  let currentWord = '';
-  
-  // Check each character in the word
-  for (let i = wordBoundary.start; i <= wordBoundary.end; i++) {
-    const charSpan = phraseChars[i];
-    if (!charSpan) {
-      isComplete = false;
-      break;
-    }
-    
-    // Get the actual character value
-    const char = charSpan.textContent;
-    currentWord += char;
-    
-    // Check if this is still an underscore (not filled)
-    if (char === '_') {
-      isComplete = false;
-      break;
-    }
-    
-    // CRITICAL: Check if this character is a hint letter
-    const isHintLetter = charSpan.classList.contains('hint-letter');
-    const isRevealedChar = charSpan.classList.contains('revealed-char');
-    
-    // For hint letters, we don't need to check if they match the expected letter
-    // because they are always filled with the correct letter
-    // Just continue to the next character
-  }
-  
-  // Extract the expected word from the original phrase
-  const expectedWord = this.currentPhrase.letterlist.substring(
-    wordBoundary.start, wordBoundary.end + 1
+  // Find all character spans that belong to this word
+  const wordChars = phraseChars.filter((span, i) => 
+    i >= wordBoundary.start && i <= wordBoundary.end
   );
   
-  // If the word is complete (no underscores), check if it matches the expected word
-  return isComplete && currentWord.toUpperCase() === expectedWord.toUpperCase();
+  // Count total alphanumeric characters (including apostrophes) in the word
+  const validWordChars = wordChars.filter(span => {
+    const char = span.getAttribute('data-char');
+    return /[a-zA-Z0-9']/.test(char);
+  });
+  
+  // Count all non-underscore characters (filled in spots)
+  const filledCharCount = validWordChars.filter(span => 
+    span.textContent !== '_'
+  ).length;
+  
+  // Count hint letters (which are always filled)
+  const hintLetterCount = validWordChars.filter(span => 
+    span.classList.contains('hint-letter') || span.classList.contains('revealed-char')
+  ).length;
+  
+  // Count selected letters (non-hint, non-underscore)
+  const selectedLetterCount = filledCharCount - hintLetterCount;
+  
+  // Count cells that need to be selected by the user
+  // CRITICAL: This should equal the total valid chars minus hint letters
+  const requiredSelections = validWordChars.length - hintLetterCount;
+  
+  // Debug logs to check counts
+  console.log(`Word "${wordBoundary.word}" completion check:`, {
+    validChars: validWordChars.length,
+    filledChars: filledCharCount,
+    hintLetters: hintLetterCount,
+    selectedLetters: selectedLetterCount,
+    requiredSelections
+  });
+  
+  // Check if user has selected enough cells to complete the word
+  // CRITICAL: The word should only be considered complete when the user
+  // has selected exactly the right number of required cells
+  const hasCorrectSelectionCount = selectedLetterCount === requiredSelections;
+  
+  // Check if all characters are filled (no underscores)
+  const hasNoUnderscores = !wordChars.some(span => span.textContent === '_');
+  
+  return hasNoUnderscores && hasCorrectSelectionCount;
 }
   
 /**
@@ -1000,7 +1003,7 @@ checkPhraseCompleted() {
 }
 
 /**
- * Enhanced checkForCompletedWords to handle hint letters better
+ * Enhanced checkForCompletedWords method with better logging
  */
 checkForCompletedWords() {
   if (!this.enableWordCompletionFeedback) return;
@@ -1010,6 +1013,12 @@ checkForCompletedWords() {
     this.parseWordBoundaries();
     if (this.wordBoundaries.length === 0) return;
   }
+  
+  // Log all words and their status
+  console.log('Words in phrase:');
+  this.wordBoundaries.forEach((boundary, index) => {
+    console.log(`Word ${index}: "${boundary.word}" (${boundary.start}-${boundary.end}), completed: ${this.completedWords.has(index)}`);
+  });
   
   // Check each word to see if it's newly completed
   let anyNewCompletions = false;
@@ -1035,10 +1044,9 @@ checkForCompletedWords() {
   }
   
   if (anyNewCompletions) {
-    console.log('Words completed:', [...this.completedWords]);
+    console.log('Words completed:', [...this.completedWords].map(i => this.wordBoundaries[i].word).join(', '));
   }
 }
-
   
 showSuccessMessage() {
   // Do nothing - Shakespeare response will show instead
@@ -1046,7 +1054,7 @@ showSuccessMessage() {
 }
 
 /**
- * Enhanced flashCompletedWord method to handle all cell types including hint letters
+ * Enhanced flashCompletedWord method to properly flash all word cells
  * @param {number} wordIndex - Index of the completed word
  */
 flashCompletedWord(wordIndex) {
@@ -1055,80 +1063,111 @@ flashCompletedWord(wordIndex) {
   
   console.log(`Flashing snake pieces for word "${wordBoundary.word}"`);
   
-  // Calculate alphanumeric character positions in the word (including apostrophes)
-  const wordLetterCount = wordBoundary.word.replace(/[^a-zA-Z0-9']/g, '').length;
-  console.log(`Word "${wordBoundary.word}" has ${wordLetterCount} valid characters`);
+  // Get the phrase display element
+  const displayElement = document.getElementById('phrase-text');
+  if (!displayElement) return;
   
-  // Get all cells that might need to flash
+  // Get all character spans in this word
+  const phraseChars = Array.from(displayElement.querySelectorAll('.phrase-char'));
+  const wordChars = phraseChars.filter((span, i) => 
+    i >= wordBoundary.start && i <= wordBoundary.end
+  );
+  
+  // Filter to only alphanumeric and apostrophe characters
+  const validWordChars = wordChars.filter(span => {
+    const char = span.getAttribute('data-char');
+    return /[a-zA-Z0-9']/.test(char);
+  });
+  
+  // Get all path indices for letters in this word
+  const wordPathIndices = validWordChars
+    .filter(span => span.dataset.pathIndex) // Only spans with path indices
+    .map(span => parseInt(span.dataset.pathIndex, 10));
+  
+  // Add any missing indices by examining the entire path
+  if (this.currentPath) {
+    // Create a letter count for word (count alphanumeric + apostrophes)
+    const letterCount = wordBoundary.word.replace(/[^a-zA-Z0-9']/g, '').length;
+    
+    // We need to find which path indices correspond to this word
+    // Map phrase positions to path indices
+    const letterlistArray = this.currentPhrase.letterlist.split('');
+    const alphaPositions = [];
+    let alphaIndex = 0;
+    
+    // Find positions of all alphanumeric characters and apostrophes
+    for (let i = 0; i < letterlistArray.length; i++) {
+      if (/[a-zA-Z0-9']/.test(letterlistArray[i])) {
+        alphaPositions[alphaIndex] = i;
+        alphaIndex++;
+      }
+    }
+    
+    // Get the path indices for this word
+    const allWordPathIndices = [];
+    for (let i = wordBoundary.start; i <= wordBoundary.end; i++) {
+      const char = letterlistArray[i];
+      if (/[a-zA-Z0-9']/.test(char)) {
+        // Find the path index for this letter position
+        const posInLetterlist = i;
+        // Find which alphaPosition this is
+        const alphaPosition = alphaPositions.indexOf(posInLetterlist);
+        if (alphaPosition !== -1) {
+          allWordPathIndices.push(alphaPosition);
+        }
+      }
+    }
+    
+    console.log(`Word "${wordBoundary.word}" path indices: ${allWordPathIndices.join(', ')}`);
+    
+    // Merge with existing indices to ensure we have all of them
+    allWordPathIndices.forEach(index => {
+      if (!wordPathIndices.includes(index)) {
+        wordPathIndices.push(index);
+      }
+    });
+  }
+  
+  // Now we have all the path indices for this word
+  console.log(`Final path indices for word "${wordBoundary.word}": ${wordPathIndices.join(', ')}`);
+  
+  // Get all cells that correspond to these path indices
   const cellsToFlash = [];
   
-  // Get selected cells from the grid
+  // Include the start cell if it's the first word
+  const isFirstWord = wordIndex === 0;
+  if (isFirstWord) {
+    const centerX = 35;
+    const centerY = 35;
+    cellsToFlash.push({ x: centerX, y: centerY });
+  }
+  
+  // Get selected cells that match our word's path indices
   const selectedCells = this.gridRenderer.selectedCells;
-  
-  // Find cells from the phrase that are in this word's boundaries
-  // First need to map word positions to path indices
-  const letterlistArray = this.currentPhrase.letterlist.split('');
-  const alphaPositions = [];
-  let alphaIndex = 0;
-  
-  // Find positions of all valid characters (alphanumeric + apostrophes)
-  for (let i = 0; i < letterlistArray.length; i++) {
-    if (/[a-zA-Z0-9']/.test(letterlistArray[i])) {
-      alphaPositions[alphaIndex] = i;
-      alphaIndex++;
-    }
-  }
-  
-  // Create a Map from phrase position to path index
-  const positionToPathIndex = new Map();
-  for (let i = 0; i < alphaPositions.length; i++) {
-    const phrasePos = alphaPositions[i];
-    positionToPathIndex.set(phrasePos, i);
-  }
-  
-  // Now get the path indices for this word
-  const wordPathIndices = [];
-  for (let i = wordBoundary.start; i <= wordBoundary.end; i++) {
-    // Skip non-alphanumeric characters that aren't apostrophes
-    if (!/[a-zA-Z0-9']/.test(letterlistArray[i])) continue;
-    
-    const pathIndex = positionToPathIndex.get(i);
-    if (pathIndex !== undefined) {
-      wordPathIndices.push(pathIndex);
-    }
-  }
-  
-  console.log(`Word path indices: ${wordPathIndices.join(', ')}`);
-  
-  // Get all cells corresponding to this word
-  const wordCells = [];
-  
-  // First add the selected cells for this word
   for (const cell of selectedCells) {
-    // Get the path index for this cell
     const pathCell = this.gridRenderer.grid[cell.y][cell.x];
     if (pathCell && wordPathIndices.includes(pathCell.pathIndex)) {
-      wordCells.push(cell);
+      cellsToFlash.push(cell);
     }
   }
   
-  // Also check for revealed hint cells
+  // Also include revealed hint cells
   const revealedLetters = this.gridRenderer.getRevealedLetters();
   for (const revealed of revealedLetters) {
     if (wordPathIndices.includes(revealed.pathIndex)) {
       // This is a revealed letter for our word
-      wordCells.push({
+      cellsToFlash.push({
         x: revealed.x,
         y: revealed.y
       });
     }
   }
   
-  // Remove duplicates (a cell might be both selected and have a hint)
+  // Remove duplicates
   const uniqueCells = [];
   const seenCellKeys = new Set();
   
-  for (const cell of wordCells) {
+  for (const cell of cellsToFlash) {
     const key = `${cell.x},${cell.y}`;
     if (!seenCellKeys.has(key)) {
       seenCellKeys.add(key);
@@ -1136,17 +1175,19 @@ flashCompletedWord(wordIndex) {
     }
   }
   
-  console.log(`Word "${wordBoundary.word}" has ${uniqueCells.length} unique cells to flash`);
+  console.log(`Flashing ${uniqueCells.length} cells for word "${wordBoundary.word}"`);
   
-  // If we have snake pieces, flash them
+  // If we have snake pieces and cells to flash
   if (window.snakePath && uniqueCells.length > 0) {
-    // CRITICAL: Add a short delay to ensure all snake pieces are fully rendered
+    // Add a delay to ensure all snake pieces are rendered
     setTimeout(() => {
+      console.log('Calling flashSnakePiecesInCells with cells:', 
+        uniqueCells.map(c => `(${c.x},${c.y})`).join(', '));
       window.snakePath.flashSnakePiecesInCells(uniqueCells);
-    }, 200);
+    }, 150);
   }
 }
-
+  
 /**
  * Delayed flash method that allows time for snake pieces to update
  * Uses a combination of both approaches for maximum reliability
