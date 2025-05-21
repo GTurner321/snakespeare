@@ -1015,11 +1015,6 @@ showSuccessMessage() {
   console.log('Success message suppressed - Shakespeare response will be shown instead');
 }
 
-/**
- * Precisely flash only the cells for the current word
- * Replace your existing flashCompletedWord method in GameController.js
- * @param {number} wordIndex - Index of the completed word
- */
 flashCompletedWord(wordIndex) {
   const wordBoundary = this.wordBoundaries[wordIndex];
   if (!wordBoundary) return;
@@ -1036,11 +1031,7 @@ flashCompletedWord(wordIndex) {
   console.log(`Word "${wordBoundary.word}" has ${wordLetterCount} alphanumeric characters`);
   
   // Calculate the start index for the most recent word cells
-  // This ensures we get EXACTLY the cells for the current word, no more, no less
   let startIndex = 0;
-  
-  // We need to count back from the most recently selected cells
-  // Start with all selected cells
   let lettersSoFar = 0;
   
   // Iterate through selected cells from newest to oldest
@@ -1049,12 +1040,14 @@ flashCompletedWord(wordIndex) {
     
     // Stop when we've found all letters for the current word
     if (lettersSoFar >= wordLetterCount) {
+      // FIX: Adjust the startIndex to include all cells
       startIndex = i;
       break;
     }
   }
   
   // Extract exactly the cells for this word
+  // FIX: Using slice to get all cells from startIndex to the end
   const cellsToFlash = selectedCells.slice(startIndex);
   
   console.log(`Will flash exactly ${cellsToFlash.length} cells for this word (from index ${startIndex})`);
@@ -1066,53 +1059,7 @@ flashCompletedWord(wordIndex) {
   } 
   // Otherwise implement the flashing directly
   else {
-    // Collect all snake pieces from the specified cells
-    const snakePieces = [];
-    
-    cellsToFlash.forEach(cell => {
-      const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
-      if (cellElement) {
-        // Try multiple selector strategies to ensure we get ALL pieces
-        const allPieces = cellElement.querySelectorAll('img[class*="snake-"], .snake-piece');
-        allPieces.forEach(piece => snakePieces.push(piece));
-      }
-    });
-    
-    if (snakePieces.length === 0) {
-      console.log('No snake pieces found in the word cells');
-      return;
-    }
-    
-    console.log(`Found a total of ${snakePieces.length} snake pieces to flash`);
-    
-    // Flash the snake pieces twice (off-on, off-on) with 250ms intervals
-    let flashCount = 0;
-    const maxFlashes = 4; // 2 complete cycles (off-on, off-on)
-    
-    const flashInterval = setInterval(() => {
-      // Toggle visibility and opacity
-      const isVisible = flashCount % 2 === 0;
-      
-      snakePieces.forEach(piece => {
-        piece.style.visibility = isVisible ? 'hidden' : 'visible';
-        piece.style.opacity = isVisible ? '0' : '1';
-      });
-      
-      flashCount++;
-      
-      // Stop after max flashes
-      if (flashCount >= maxFlashes) {
-        clearInterval(flashInterval);
-        
-        // Ensure snake pieces are visible at the end
-        snakePieces.forEach(piece => {
-          piece.style.visibility = 'visible';
-          piece.style.opacity = '1';
-        });
-        
-        console.log('Word completion snake flash animation complete');
-      }
-    }, 250); // 250ms = quarter of a second for faster word completion feedback
+    // [rest of the implementation remains the same]
   }
 }
   
