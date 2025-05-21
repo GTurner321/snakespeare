@@ -1016,7 +1016,7 @@ showSuccessMessage() {
 }
 
 /**
- * Precisely flash only the cells for the current word
+ * Completely rewritten flashCompletedWord method to handle timing issues with snake pieces
  * @param {number} wordIndex - Index of the completed word
  */
 flashCompletedWord(wordIndex) {
@@ -1034,82 +1034,152 @@ flashCompletedWord(wordIndex) {
   
   console.log(`Word "${wordBoundary.word}" has ${wordLetterCount} alphanumeric characters`);
   
-  // FIXED APPROACH: Instead of backward counting, let's identify the word cells more accurately
-  // The problem is likely that we're not accounting for all cells properly
+  // Take the most recent N cells, where N is the word letter count
+  const totalCells = selectedCells.length;
+  const startIndex = Math.max(0, totalCells - wordLetterCount);
+  const cellsToFlash = selectedCells.slice(startIndex);
   
-  // First, determine which cells form this word (from most recently selected backwards)
-  const wordCells = [];
-  let currentCellIndex = selectedCells.length - 1;
+  console.log(`Will flash exactly ${cellsToFlash.length} cells for word "${wordBoundary.word}"`);
   
-  // First, try to identify the most recently selected cells that match our word length
-  // Start from the most recently selected cell and work backwards
-  while (wordCells.length < wordLetterCount && currentCellIndex >= 0) {
-    wordCells.unshift(selectedCells[currentCellIndex]);
-    currentCellIndex--;
-  }
+  // IMPORTANT: Add a delay to allow snake pieces to be fully updated/rendered
+  setTimeout(() => {
+    console.log("Delayed flash starting after allowing snake pieces to update");
+    this.delayedFlashWordCells(cellsToFlash);
+  }, 300); // 300ms delay to allow snake piece updates to complete
+}
+
+/**
+ * Delayed flash method that allows time for snake pieces to update
+ * Uses a combination of both approaches for maximum reliability
+ * @param {Array} cells - Array of cells to flash
+ */
+delayedFlashWordCells(cells) {
+  if (!cells || cells.length === 0) return;
   
-  // If we don't have enough cells, something's wrong, but we'll use what we have
-  if (wordCells.length < wordLetterCount) {
-    console.warn(`Could only find ${wordCells.length} cells but need ${wordLetterCount} for word "${wordBoundary.word}"`);
-  }
+  console.log(`Delayed flashing ${cells.length} cells`);
   
-  console.log(`Will flash exactly ${wordCells.length} cells for this word`);
+  // Ensure CSS is added
+  this.ensureWordCompletionCSS();
   
-  // Check if we can use the snakePath utility to flash pieces
-  if (window.snakePath && typeof window.snakePath.flashSnakePiecesInCells === 'function') {
-    // Use snakePath's method if available
-    window.snakePath.flashSnakePiecesInCells(wordCells);
-  } 
-  // Otherwise implement the flashing directly
-  else {
-    // Collect all snake pieces from the specified cells
-    const snakePieces = [];
-    
-    wordCells.forEach(cell => {
-      const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
-      if (cellElement) {
-        // Try multiple selector strategies to ensure we get ALL pieces
-        const allPieces = cellElement.querySelectorAll('img[class*="snake-"], .snake-piece');
-        allPieces.forEach(piece => snakePieces.push(piece));
-      }
-    });
-    
-    if (snakePieces.length === 0) {
-      console.log('No snake pieces found in the word cells');
-      return;
-    }
-    
-    console.log(`Found a total of ${snakePieces.length} snake pieces to flash`);
-    
-    // Flash the snake pieces twice (off-on, off-on) with 250ms intervals
-    let flashCount = 0;
-    const maxFlashes = 4; // 2 complete cycles (off-on, off-on)
-    
-    const flashInterval = setInterval(() => {
-      // Toggle visibility and opacity
-      const isVisible = flashCount % 2 === 0;
+  // Collect all snake pieces from the cells AND create backup highlighters
+  const snakePieces = [];
+  const highlighters = [];
+  
+  cells.forEach(cell => {
+    const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
+    if (cellElement) {
+      // 1. Try to find snake pieces first
+      const pieces = cellElement.querySelectorAll('.snake-piece, [class*="snake-"], img[src*="piece"]');
+      pieces.forEach(piece => snakePieces.push(piece));
       
+      // 2. Create a highlighter as backup
+      const highlighter = document.createElement('div');
+      highlighter.className = 'word-completion-highlighter';
+      cellElement.appendChild(highlighter);
+      highlighters.push(highlighter);
+      
+      // 3. Add a class to the cell itself for additional visual feedback
+      cellElement.classList.add('word-completed-flash');
+    }
+  });
+  
+  console.log(`Found ${snakePieces.length} snake pieces and created ${highlighters.length} backup highlighters`);
+  
+  // Flash both snake pieces and highlighters for redundancy
+  let flashCount = 0;
+  const maxFlashes = 4; // 2 complete cycles
+  
+  const flashInterval = setInterval(() => {
+    // Toggle visibility
+    const isVisible = flashCount % 2 === 0;
+    
+    // 1. Toggle snake pieces if available
+    if (snakePieces.length > 0) {
       snakePieces.forEach(piece => {
         piece.style.visibility = isVisible ? 'hidden' : 'visible';
         piece.style.opacity = isVisible ? '0' : '1';
       });
+    }
+    
+    // 2. Toggle highlighters as backup
+    highlighters.forEach(highlighter => {
+      highlighter.style.opacity = isVisible ? '0' : '1';
+    });
+    
+    flashCount++;
+    
+    // Stop after max flashes
+    if (flashCount >= maxFlashes) {
+      clearInterval(flashInterval);
       
-      flashCount++;
+      // Clean up and restore visibility
+      snakePieces.forEach(piece => {
+        piece.style.visibility = 'visible';
+        piece.style.opacity = '1';
+      });
       
-      // Stop after max flashes
-      if (flashCount >= maxFlashes) {
-        clearInterval(flashInterval);
-        
-        // Ensure snake pieces are visible at the end
-        snakePieces.forEach(piece => {
-          piece.style.visibility = 'visible';
-          piece.style.opacity = '1';
-        });
-        
-        console.log('Word completion snake flash animation complete');
-      }
-    }, 250); // 250ms = quarter of a second for faster word completion feedback
-  }
+      // Remove the highlighters
+      highlighters.forEach(highlighter => {
+        if (highlighter && highlighter.parentNode) {
+          highlighter.parentNode.removeChild(highlighter);
+        }
+      });
+      
+      // Remove the flash class from cells
+      cells.forEach(cell => {
+        const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
+        if (cellElement) {
+          cellElement.classList.remove('word-completed-flash');
+        }
+      });
+      
+      console.log('Word completion flash animation complete');
+    }
+  }, 250);
+}
+
+/**
+ * Ensure CSS for word completion effects exists
+ */
+ensureWordCompletionCSS() {
+  if (document.getElementById('word-completion-highlighter-css')) return;
+  
+  const style = document.createElement('style');
+  style.id = 'word-completion-highlighter-css';
+  style.textContent = `
+    /* Animation for cell background flashing */
+    @keyframes word-completed-flash {
+      0% { background-color: var(--maingreen) !important; }
+      50% { background-color: #3b9c68 !important; /* Darker green */ }
+      100% { background-color: var(--maingreen) !important; }
+    }
+    
+    /* Class for cells when a word is completed */
+    .grid-cell.word-completed-flash {
+      animation: word-completed-flash 0.5s ease-in-out !important;
+      z-index: 10 !important;
+    }
+    
+    /* Highlighter styling */
+    .word-completion-highlighter {
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      background-color: rgba(65, 185, 105, 0.5) !important;
+      border-radius: 5px !important;
+      box-shadow: 0 0 15px rgba(65, 185, 105, 0.8) !important;
+      z-index: 550 !important; /* Above snake pieces */
+      pointer-events: none !important;
+      transition: opacity 0.25s ease-in-out !important;
+      opacity: 1 !important;
+      will-change: opacity !important;
+    }
+  `;
+  document.head.appendChild(style);
+  
+  console.log('Added word completion CSS');
 }
   
 /**
