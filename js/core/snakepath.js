@@ -559,101 +559,118 @@ window.SnakePath = class SnakePath {
   }
 
 /**
- * Flashes specific snake pieces in the given cells - Fixed to handle all piece types
- * @param {Array} cellsToFlash - Array of cells containing snake pieces to flash
- */
-
-/**
- * Super robust method to flash ALL types of snake pieces in cells
+ * Improved flashSnakePiecesInCells method for reliable flashing of all snake pieces
  * @param {Array} cellsToFlash - Array of cells containing snake pieces to flash
  */
 flashSnakePiecesInCells(cellsToFlash) {
   if (!cellsToFlash || cellsToFlash.length === 0) return;
   
-  console.log(`SnakePath: Attempting to flash snake pieces in ${cellsToFlash.length} cells`);
+  console.log(`SnakePath: Flashing snake pieces in ${cellsToFlash.length} cells`);
   
-  // Use a more direct and aggressive approach to find ALL pieces
-  const snakePieces = [];
-  
-  // First try the normal querySelector approach
-  let foundAnyPieces = false;
-  
-  cellsToFlash.forEach(cell => {
-    const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
-    if (cellElement) {
-      // Try multiple selector strategies to ensure we get ALL possible pieces
-      
-      // Strategy 1: Standard class selector
+  // CRITICAL FIX: Add a short delay to ensure all snake pieces are fully rendered
+  setTimeout(() => {
+    // More robust approach to finding ALL snake pieces
+    const snakePieces = [];
+    const cellElements = [];
+    
+    // First collect all cell elements
+    cellsToFlash.forEach(cell => {
+      const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
+      if (cellElement) {
+        cellElements.push(cellElement);
+      }
+    });
+    
+    // CRITICAL FIX: Use multiple approaches to find all snake pieces
+    cellElements.forEach(cellElement => {
+      // Primary strategy: Most specific selector first
       const standardPieces = cellElement.querySelectorAll('.snake-piece');
       
-      // Strategy 2: Partial class match selector
+      // Backup strategy: Look for ANY elements with snake-related classes
       const partialClassPieces = cellElement.querySelectorAll('[class*="snake-"]');
       
-      // Strategy 3: Look for specific piece types
-      const headPieces = cellElement.querySelectorAll('.snake-head');
-      const tailPieces = cellElement.querySelectorAll('.snake-tail');
-      const straightPieces = cellElement.querySelectorAll('.snake-straight');
-      const curvedPieces = cellElement.querySelectorAll('.snake-curved');
+      // Last resort: Look for images with piece in the src
+      const imgElements = cellElement.querySelectorAll('img[src*="piece"]');
       
-      // Strategy 4: Look for img elements
-      const imgElements = cellElement.querySelectorAll('img');
-      
-      // Log detailed diagnostics
-      console.log(`Cell (${cell.x}, ${cell.y}) contents:`);
-      console.log(`  - Standard pieces: ${standardPieces.length}`);
-      console.log(`  - Partial class pieces: ${partialClassPieces.length}`);
-      console.log(`  - Head pieces: ${headPieces.length}`);
-      console.log(`  - Tail pieces: ${tailPieces.length}`);
-      console.log(`  - Straight pieces: ${straightPieces.length}`);
-      console.log(`  - Curved pieces: ${curvedPieces.length}`);
-      console.log(`  - Total img elements: ${imgElements.length}`);
-      
-      // Combine all unique pieces
-      const allPiecesSet = new Set([
+      // Create a Set to avoid duplicates
+      const cellPieces = new Set([
         ...Array.from(standardPieces),
         ...Array.from(partialClassPieces),
-        ...Array.from(headPieces),
-        ...Array.from(tailPieces),
-        ...Array.from(straightPieces),
-        ...Array.from(curvedPieces),
-        // Also include any img elements that might be snake pieces
         ...Array.from(imgElements).filter(img => 
-          img.className && img.className.includes('snake') || 
-          (img.src && img.src.includes('piece'))
+          img.src && (img.src.includes('piece') || img.className.includes('snake'))
         )
       ]);
       
-      const combinedPieces = Array.from(allPiecesSet);
+      // Add all unique pieces to our collection
+      cellPieces.forEach(piece => snakePieces.push(piece));
+    });
+    
+    // If still no pieces found, try a broader document-level search
+    if (snakePieces.length === 0) {
+      console.log('Fallback: Searching document-wide for snake pieces');
       
-      if (combinedPieces.length > 0) {
-        console.log(`  - COMBINED unique pieces found: ${combinedPieces.length}`);
-        foundAnyPieces = true;
-        combinedPieces.forEach(piece => snakePieces.push(piece));
-      } else {
-        console.log(`  - NO snake pieces found in this cell after all strategies`);
-        
-        // Last resort - dump the first few characters of the cell HTML for inspection
-        const htmlPreview = cellElement.outerHTML.substring(0, 100) + '...';
-        console.log(`  - Cell HTML preview: ${htmlPreview}`);
-      }
-    } else {
-      console.log(`Could not find cell element for (${cell.x}, ${cell.y})`);
+      // This will find ANY snake pieces in the document
+      document.querySelectorAll('.snake-piece, [class*="snake-"], img[src*="piece"]').forEach(piece => {
+        // Check if this piece belongs to one of our target cells
+        const pieceCell = piece.closest('.grid-cell');
+        if (pieceCell) {
+          const x = parseInt(pieceCell.dataset.gridX, 10);
+          const y = parseInt(pieceCell.dataset.gridY, 10);
+          
+          if (cellsToFlash.some(cell => cell.x === x && cell.y === y)) {
+            snakePieces.push(piece);
+          }
+        }
+      });
     }
-  });
-  
-  // Fallback if no pieces found...
-  
-  if (snakePieces.length === 0) {
-    console.log('No snake pieces found in the specified cells');
-    return;
-  }
-  
-  console.log(`Found a total of ${snakePieces.length} snake pieces to flash`);
-  
-  // Special direct flash method that bypasses any style or visibility issues
-  this.directFlashElements(snakePieces);
+    
+    if (snakePieces.length === 0) {
+      console.log('No snake pieces found to flash after multiple attempts');
+      return;
+    }
+    
+    console.log(`Found ${snakePieces.length} snake pieces to flash`);
+    
+    // Flash the snake pieces with enhanced visibility control
+    let flashCount = 0;
+    const maxFlashes = 4; // 2 complete cycles
+    
+    const flashInterval = setInterval(() => {
+      // Toggle visibility
+      const isVisible = flashCount % 2 === 0;
+      
+      snakePieces.forEach(piece => {
+        // Apply multiple visibility techniques for maximum reliability
+        piece.style.visibility = isVisible ? 'hidden' : 'visible';
+        piece.style.opacity = isVisible ? '0' : '1';
+        
+        // For pieces that might have special styling
+        if (isVisible) {
+          piece.classList.add('flash-hidden');
+        } else {
+          piece.classList.remove('flash-hidden');
+        }
+      });
+      
+      flashCount++;
+      
+      // Stop after max flashes
+      if (flashCount >= maxFlashes) {
+        clearInterval(flashInterval);
+        
+        // Ensure all pieces are visible at the end
+        snakePieces.forEach(piece => {
+          piece.style.visibility = 'visible';
+          piece.style.opacity = '1';
+          piece.classList.remove('flash-hidden');
+        });
+        
+        console.log('Snake flash animation complete');
+      }
+    }, 250); // 250ms = quarter second for faster feedback
+  }, 50); // Short delay to ensure all pieces are rendered
 }
-
+  
 /**
  * Direct flash method that uses multiple techniques to ensure visibility toggling works
  * @param {Array} elements - Elements to flash
