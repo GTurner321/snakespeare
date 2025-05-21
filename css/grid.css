@@ -587,6 +587,17 @@ body {
     }
 }
 
+/* Add to your CSS for standardized flashing */
+@keyframes standardized-flash {
+  0% { visibility: visible; opacity: 1; }
+  50% { visibility: hidden; opacity: 0; }
+  100% { visibility: visible; opacity: 1; }
+}
+
+.flashing-animation {
+  animation: standardized-flash 0.5s ease-in-out 2; /* Run 2 cycles */
+}
+
 /* ==========================================================================
    2c. Wordchecker
    ========================================================================== */
