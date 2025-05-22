@@ -127,24 +127,23 @@ class PathGenerator {
    * @return {Array} Array of letters without spaces or punctuation
    */
   parseLetterList(letterList) {
-    // Define a regex pattern for characters to include (letters and numbers only)
-    const includePattern = /[a-zA-Z0-9]/;
+  // FIXED: For PATH GENERATION, exclude apostrophes (they're not selectable)
+  // but include them in phrase display
+  const includePattern = /[a-zA-Z0-9]/; // Exclude apostrophes from path
+  
+  if (typeof letterList === 'string') {
+    // Filter out apostrophes and non-alphanumeric characters for path generation
+    const filtered = letterList.split('')
+      .filter(char => includePattern.test(char));
     
-    // Always treat it as a single string
-    if (typeof letterList === 'string') {
-      // Filter out non-alphanumeric characters when splitting the string
-      const filtered = letterList.split('')
-        .filter(char => includePattern.test(char));
-      
-      return filtered;
-    }
-    // If it's already an array
-    else if (Array.isArray(letterList)) {
-      return letterList.filter(char => includePattern.test(char));
-    }
-    // Default fallback
-    return "TESTPHRASE".split('');
+    return filtered;
   }
+  else if (Array.isArray(letterList)) {
+    return letterList.filter(char => includePattern.test(char));
+  }
+  
+  return "TESTPHRASE".split('');
+}
   
   /**
    * Add a position to the path
