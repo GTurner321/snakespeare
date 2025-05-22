@@ -562,13 +562,16 @@ window.SnakePath = class SnakePath {
  * Improved flashSnakePiecesInCells method for reliable flashing of all snake pieces
  * Enhanced to work with hint letters and apostrophes
  * @param {Array} cellsToFlash - Array of cells containing snake pieces to flash
+ * @param {Object} options - Optional configuration { flashOnce: boolean }
  */
-flashSnakePiecesInCells(cellsToFlash) {
+flashSnakePiecesInCells(cellsToFlash, options = {}) {
   if (!cellsToFlash || cellsToFlash.length === 0) return;
   
   console.log(`SnakePath: Flashing snake pieces in ${cellsToFlash.length} cells`);
   
-  // CRITICAL FIX: Add a short delay to ensure all snake pieces are fully rendered
+  // TIMING FIX: Use consistent delay for all calls
+  const standardDelay = 300; // Increased from 100ms for better consistency
+  
   setTimeout(() => {
     // Create element collections for each approach
     const directPieces = [];
@@ -660,14 +663,15 @@ flashSnakePiecesInCells(cellsToFlash) {
     
     console.log(`Flashing ${allElements.length} elements`);
     
-    // Flash the elements with enhanced visibility control
+    // TIMING FIX: Configurable flash cycles and consistent timing
     let flashCount = 0;
-    const maxFlashes = 4; // 2 complete cycles
+    const maxFlashes = options.flashOnce ? 2 : 4; // NEW: Support single flash option
     
     const flashInterval = setInterval(() => {
       // Toggle visibility
       const isVisible = flashCount % 2 === 0;
       
+      // TIMING FIX: Apply changes to ALL elements simultaneously
       allElements.forEach(element => {
         // Apply multiple visibility techniques for maximum reliability
         if (isVisible) {
@@ -687,7 +691,7 @@ flashSnakePiecesInCells(cellsToFlash) {
       if (flashCount >= maxFlashes) {
         clearInterval(flashInterval);
         
-        // Ensure all elements are visible at the end
+        // TIMING FIX: Restore ALL elements simultaneously
         allElements.forEach(element => {
           element.style.visibility = 'visible';
           element.style.opacity = '1';
@@ -702,8 +706,9 @@ flashSnakePiecesInCells(cellsToFlash) {
         
         console.log('Flash animation complete');
       }
-    }, 250); // Quarter second for flash cycle
-  }, 100); // Increased delay to 100ms to ensure all pieces are fully rendered
+    }, 250); // TIMING FIX: Consistent quarter second timing for all flashes
+    
+  }, standardDelay); // TIMING FIX: Consistent delay for all calls
 }
   
 /**
