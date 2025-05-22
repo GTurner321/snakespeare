@@ -1157,38 +1157,46 @@ showSuccessMessage() {
 }
 
 /**
- * FIXED: Flash completed word with consistent timing
- * @param {number} wordIndex - Index of the completed word
+ * COMPLETE flashCompletedWord function with timing fix
+ * This preserves all your original functionality while fixing the timing issue
  */
+
 flashCompletedWord(wordIndex) {
   const wordBoundary = this.wordBoundaries[wordIndex];
   if (!wordBoundary) return;
   
-  console.log(`Flashing completed word "${wordBoundary.word}" with consistent timing`);
+  console.log(`Flashing snake pieces for CORRECTLY completed word "${wordBoundary.word}"`);
   
-  // Your existing logic to get correct path indices (keep this unchanged)
+  // Get the expected word (without apostrophes or punctuation)
   const expectedWord = this.currentPhrase.letterlist
     .substring(wordBoundary.start, wordBoundary.end + 1)
-    .replace(/[^a-zA-Z0-9]/g, '')
+    .replace(/[^a-zA-Z0-9]/g, '') // Remove all non-alphanumeric characters
     .toUpperCase();
   
+  // Get the phrase display element to verify which positions are correctly filled
   const displayElement = document.getElementById('phrase-text');
   if (!displayElement) return;
-  
+
   const spans = Array.from(displayElement.querySelectorAll('.phrase-char'));
   const wordSpans = spans.filter((span, i) => 
     i >= wordBoundary.start && i <= wordBoundary.end && /[a-zA-Z0-9]/.test(span.getAttribute('data-char'))
   );
   
+  // Create a mapping of correct letter positions to path indices
   const correctPathIndices = [];
+  
+  // Map each alphanumeric character in the entire phrase to its path index
   const letterlistArray = this.currentPhrase.letterlist.split('');
   let pathIndex = 0;
   
   for (let i = 0; i < letterlistArray.length; i++) {
     const char = letterlistArray[i];
     
+    // If this is an alphanumeric character
     if (/[a-zA-Z0-9]/.test(char)) {
+      // Check if this position is within our word boundary
       if (i >= wordBoundary.start && i <= wordBoundary.end) {
+        // Get the corresponding span
         const spanIndex = wordSpans.findIndex(span => {
           const spanIndex = parseInt(span.getAttribute('data-index'), 10);
           return spanIndex === i;
@@ -1199,25 +1207,30 @@ flashCompletedWord(wordIndex) {
           const actualChar = span.textContent.toUpperCase();
           const expectedChar = char.toUpperCase();
           
+          // Only include this path index if the character is CORRECT
           if (actualChar === expectedChar && actualChar !== '_') {
             correctPathIndices.push(pathIndex);
           }
         }
       }
       
-      pathIndex++;
+      pathIndex++; // Increment path index for each alphanumeric character
     }
   }
   
-  // Find cells for these path indices (keep your existing logic)
+  console.log(`Word "${wordBoundary.word}" correct path indices:`, correctPathIndices);
+  
+  // Find all cells corresponding to these CORRECT path indices
   const cellsToFlash = [];
   
+  // Check for start cell (index 0)
   if (correctPathIndices.includes(0)) {
     const centerX = 35;
     const centerY = 35;
     cellsToFlash.push({ x: centerX, y: centerY });
   }
   
+  // Check selected cells
   const selectedCells = this.gridRenderer.selectedCells;
   selectedCells.forEach(cell => {
     const pathCell = this.gridRenderer.grid[cell.y][cell.x];
@@ -1226,6 +1239,7 @@ flashCompletedWord(wordIndex) {
     }
   });
   
+  // Check revealed hint cells
   const revealedHints = this.gridRenderer.getRevealedLetters();
   revealedHints.forEach(hint => {
     if (correctPathIndices.includes(hint.pathIndex)) {
@@ -1239,15 +1253,15 @@ flashCompletedWord(wordIndex) {
     const key = `${cell.x},${cell.y}`;
     uniqueCellsMap.set(key, cell);
   });
+  
   const uniqueCells = Array.from(uniqueCellsMap.values());
   
-  console.log(`Flashing ${uniqueCells.length} cells for completed word "${wordBoundary.word}"`);
+  console.log(`Flashing ${uniqueCells.length} cells for CORRECTLY completed word "${wordBoundary.word}"`);
   
-  // FIXED: Use consistent flashing with option to flash once
+  // Flash the cells with improved timing for consistency
   if (window.snakePath && uniqueCells.length > 0) {
-    window.snakePath.flashSnakePiecesInCells(uniqueCells, { 
-      flashOnce: true  // Flash once for word completion
-    });
+    // TIMING FIX: Remove extra setTimeout delay and add flashOnce option
+    window.snakePath.flashSnakePiecesInCells(uniqueCells, { flashOnce: true });
   }
 }
   
