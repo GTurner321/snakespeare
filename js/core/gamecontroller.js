@@ -946,8 +946,10 @@ updateWordTextColor(wordIndex) {
 }
   
 /**
- * FIXED: isWordCompleted to properly handle hint letters
- * Only mark word as complete when ALL user-selectable positions are filled correctly
+ * FIXED: isWordCompleted with proper hint letter end-of-word checking
+ * Prevents premature completion when hint letters exist at end of word
+ * 
+ * REPLACE your existing isWordCompleted() method with this version
  */
 isWordCompleted(wordIndex) {
   if (!this.enableWordCompletionFeedback || wordIndex < 0 || wordIndex >= this.wordBoundaries.length) {
@@ -961,15 +963,14 @@ isWordCompleted(wordIndex) {
   
   const wordBoundary = this.wordBoundaries[wordIndex];
   
-  // Get all alphanumeric characters in this word (including apostrophes for boundary but not for letter counting)
-  const wordText = this.currentPhrase.letterlist.substring(wordBoundary.start, wordBoundary.end + 1);
+  // Get all alphanumeric characters in this word
   const expectedLetters = [];
-  const letterPositions = []; // Track positions of each letter in the original phrase
+  const letterPositions = [];
   
   // Build array of expected letters and their positions
   for (let i = wordBoundary.start; i <= wordBoundary.end; i++) {
     const char = this.currentPhrase.letterlist[i];
-    if (/[a-zA-Z0-9]/.test(char)) { // Only alphanumeric characters count as letters
+    if (/[a-zA-Z0-9]/.test(char)) {
       expectedLetters.push(char.toUpperCase());
       letterPositions.push(i);
     }
@@ -986,71 +987,94 @@ isWordCompleted(wordIndex) {
   
   const spans = Array.from(displayElement.querySelectorAll('.phrase-char'));
   
-  // Check each letter position in the word
-  let userFilledCount = 0;
-  let userCorrectCount = 0;
-  let hintFilledCount = 0;
+  // CRITICAL NEW CHECK: Before checking completion, verify if there are unmatched hint letters in this word
+  let hasUnmatchedHintLetters = false;
   
+  for (let i = 0; i < expectedLetters.length; i++) {
+    const phrasePosition = letterPositions[i];
+    const span = spans[phrasePosition];
+    if (!span) continue;
+    
+    const isHintLetter = span.classList.contains('hint-letter');
+    
+    if (isHintLetter) {
+      // This is a hint letter - check if it's matched by a user selection
+      const pathIndex = parseInt(span.getAttribute('data-path-index'), 10);
+      const isMatched = this.isHintLetterMatched(pathIndex);
+      
+      if (!isMatched) {
+        hasUnmatchedHintLetters = true;
+        console.log(`Word "${wordBoundary.word}" has unmatched hint letter at position ${i} (path index ${pathIndex})`);
+        break; // Found an unmatched hint, no need to check further
+      }
+    }
+  }
+  
+  // If there are unmatched hint letters, word cannot be complete yet
+  if (hasUnmatchedHintLetters) {
+    console.log(`Word "${wordBoundary.word}" cannot complete - has unmatched hint letters`);
+    return false;
+  }
+  
+  // Now check each letter position for completion (original logic)
   for (let i = 0; i < expectedLetters.length; i++) {
     const phrasePosition = letterPositions[i];
     const expectedLetter = expectedLetters[i];
     
     // Get the span for this position
     const span = spans[phrasePosition];
-    if (!span) continue;
+    if (!span) return false;
     
     const actualChar = span.textContent;
-    const isHintLetter = span.classList.contains('hint-letter');
     const isUnderscore = actualChar === '_';
     
-    if (isHintLetter) {
-      // This position is filled by a hint
-      hintFilledCount++;
-      if (actualChar.toUpperCase() === expectedLetter) {
-        // Hint letter is correct (should always be)
-        console.log(`Position ${i}: Hint letter "${actualChar}" is correct`);
-      }
-    } else if (!isUnderscore) {
-      // This position is filled by user selection
-      userFilledCount++;
-      if (actualChar.toUpperCase() === expectedLetter) {
-        userCorrectCount++;
-        console.log(`Position ${i}: User letter "${actualChar}" is correct`);
-      } else {
-        console.log(`Position ${i}: User letter "${actualChar}" is incorrect (expected "${expectedLetter}")`);
-        return false; // If any user letter is wrong, word is not complete
-      }
-    } else {
-      // This position is still empty (underscore)
+    // If any position is empty or incorrect, word is not complete
+    if (isUnderscore) {
       console.log(`Position ${i}: Still empty (underscore)`);
-      return false; // If any position is empty, word is not complete
+      return false;
+    }
+    
+    if (actualChar.toUpperCase() !== expectedLetter) {
+      console.log(`Position ${i}: Incorrect letter "${actualChar}" (expected "${expectedLetter}")`);
+      return false;
+    }
+    
+    console.log(`Position ${i}: Correct letter "${actualChar}"`);
+  }
+  
+  // All positions are filled correctly AND all hint letters are matched
+  console.log(`Word "${wordBoundary.word}" is completed!`);
+  return true;
+}
+
+/**
+ * NEW: Check if a hint letter at a specific path index has been matched by user selection
+ * @param {number} pathIndex - The path index of the hint letter to check
+ * @return {boolean} True if the hint letter is matched by a user selection
+ * 
+ * ADD this new method to your GameController class (it doesn't exist yet)
+ */
+isHintLetterMatched(pathIndex) {
+  // Check if there's a selected cell that corresponds to this path index
+  const selectedCells = this.gridRenderer.selectedCells;
+  
+  // Check start cell (path index 0)
+  if (pathIndex === 0) {
+    const centerX = 35;
+    const centerY = 35;
+    const startCell = this.gridRenderer.grid[centerY][centerX];
+    return startCell.isSelected;
+  }
+  
+  // Check other selected cells
+  for (const cell of selectedCells) {
+    const pathCell = this.gridRenderer.grid[cell.y][cell.x];
+    if (pathCell && pathCell.pathIndex === pathIndex) {
+      return true;
     }
   }
   
-  // Word is complete only if:
-  // 1. All positions are filled (either by user or hints)
-  // 2. All user-filled positions are correct
-  // 3. We have at least one user-filled position (can't complete with only hints)
-  const totalPositions = expectedLetters.length;
-  const totalFilled = userFilledCount + hintFilledCount;
-  const isFullyFilled = totalFilled === totalPositions;
-  const allUserLettersCorrect = userCorrectCount === userFilledCount;
-  const hasUserInput = userFilledCount > 0;
-  
-  const isComplete = isFullyFilled && allUserLettersCorrect && hasUserInput;
-  
-  console.log(`Word "${wordBoundary.word}" completion analysis:`, {
-    totalPositions,
-    userFilledCount,
-    userCorrectCount,
-    hintFilledCount,
-    isFullyFilled,
-    allUserLettersCorrect,
-    hasUserInput,
-    isComplete
-  });
-  
-  return isComplete;
+  return false;
 }
   
 /**
