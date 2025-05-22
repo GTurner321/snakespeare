@@ -514,6 +514,10 @@ createPhraseTemplate(phrase) {
   return phrase.replace(/[a-zA-Z0-9]/g, '_');
 }
 
+/**
+ * FIXED: createBlankTemplate to handle apostrophes correctly
+ * Only replace alphanumeric characters with underscores, leave apostrophes as-is
+ */
 createBlankTemplate(phrase) {
   // FIXED: Only replace alphanumeric characters with underscores
   // Keep apostrophes, spaces, and other punctuation as they are
@@ -587,8 +591,8 @@ fillPhraseTemplate(template, phrase, selectedLetters) {
 }
 
 /**
- * FIXED: updatePhraseWithHints to handle apostrophes consistently
- * Apostrophes should NOT be treated as letters that need to be filled in
+ * FIXED: updatePhraseWithHints with simplified, correct logic
+ * Only delays word completion when hint letters are actually matched by current selection
  */
 updatePhraseWithHints() {
   if (!this.gridRenderer || !this.currentPhrase || !this.phraseTemplate) {
@@ -612,7 +616,7 @@ updatePhraseWithHints() {
   const alphaPositions = [];
   let alphaIndex = 0;
   
-  // CRITICAL FIX: Find positions of ONLY alphanumeric characters (NOT apostrophes)
+  // Find positions of ONLY alphanumeric characters (NOT apostrophes)
   for (let i = 0; i < letterlistArray.length; i++) {
     // Only alphanumeric characters count as letters that need to be filled
     if (/[a-zA-Z0-9]/.test(letterlistArray[i])) {
@@ -692,7 +696,7 @@ updatePhraseWithHints() {
       // Add data attributes for hint letters and the revealed-char class
       phraseHtml += `<span class="phrase-char hint-letter revealed-char" data-index="${i}" data-path-index="${hintLetter.pathIndex}" data-char="${currentChar}">${currentChar}</span>`;
     } 
-    // FIXED: Check if this is a punctuation character (including apostrophes)
+    // Check if this is a punctuation character (including apostrophes)
     else if (!/[a-zA-Z0-9_]/.test(currentChar) && currentChar !== '_') {
       phraseHtml += `<span class="phrase-char punctuation-char" data-index="${i}" data-char="${currentChar}">${currentChar}</span>`;
     } 
@@ -743,8 +747,17 @@ updatePhraseWithHints() {
     });
   }
   
-  // Check for newly completed words
-  this.checkForCompletedWords();
+  // SIMPLIFIED: Use simple logic - delay only if hint letters were matched
+  if (matchingHints.length > 0) {
+    // Delay word completion check to allow hint animation to start
+    setTimeout(() => {
+      console.log('Checking for completed words after hint letter match');
+      this.checkForCompletedWords();
+    }, 100);
+  } else {
+    // No hint matches, check immediately
+    this.checkForCompletedWords();
+  }
   
   // Adjust phrase display height if needed
   if (this.scrollHandler && this.scrollHandler.adjustPhraseDisplayHeight) {
@@ -1039,7 +1052,6 @@ isWordCompleted(wordIndex) {
   
   return isComplete;
 }
-
   
 /**
  * FIXED: checkPhraseCompleted to handle apostrophes correctly
@@ -2065,7 +2077,6 @@ parseWordBoundaries() {
   // Reset completed words tracker
   this.completedWords = new Set();
 }
-
   
 /**
  * Load a random phrase from the loaded phrases
