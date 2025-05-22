@@ -933,8 +933,8 @@ updateWordTextColor(wordIndex) {
 }
   
 /**
- * FIXED: isWordCompleted to check for EXACT positional matches, not just letter presence
- * This prevents false positives where letters exist but are in wrong positions
+ * FIXED: isWordCompleted to properly handle hint letters
+ * Only mark word as complete when ALL user-selectable positions are filled correctly
  */
 isWordCompleted(wordIndex) {
   if (!this.enableWordCompletionFeedback || wordIndex < 0 || wordIndex >= this.wordBoundaries.length) {
@@ -948,47 +948,96 @@ isWordCompleted(wordIndex) {
   
   const wordBoundary = this.wordBoundaries[wordIndex];
   
-  // Get the expected word from the phrase (convert to uppercase for comparison)
-  const expectedWord = this.currentPhrase.letterlist
-    .substring(wordBoundary.start, wordBoundary.end + 1)
-    .replace(/[^a-zA-Z0-9]/g, '') // Remove all non-alphanumeric characters (including apostrophes)
-    .toUpperCase();
+  // Get all alphanumeric characters in this word (including apostrophes for boundary but not for letter counting)
+  const wordText = this.currentPhrase.letterlist.substring(wordBoundary.start, wordBoundary.end + 1);
+  const expectedLetters = [];
+  const letterPositions = []; // Track positions of each letter in the original phrase
   
-  console.log(`Checking word completion for "${wordBoundary.word}" -> expected: "${expectedWord}"`);
+  // Build array of expected letters and their positions
+  for (let i = wordBoundary.start; i <= wordBoundary.end; i++) {
+    const char = this.currentPhrase.letterlist[i];
+    if (/[a-zA-Z0-9]/.test(char)) { // Only alphanumeric characters count as letters
+      expectedLetters.push(char.toUpperCase());
+      letterPositions.push(i);
+    }
+  }
   
-  // Get the phrase display span elements
+  console.log(`Checking word completion for "${wordBoundary.word}":`, {
+    expectedLetters,
+    letterPositions
+  });
+  
+  // Get the phrase display spans
   const displayElement = document.getElementById('phrase-text');
   if (!displayElement) return false;
   
-  // Get character spans for this word
   const spans = Array.from(displayElement.querySelectorAll('.phrase-char'));
-  const wordSpans = spans.filter((span, i) => 
-    i >= wordBoundary.start && i <= wordBoundary.end && /[a-zA-Z0-9]/.test(span.getAttribute('data-char'))
-  );
   
-  // Extract the actual letters from the spans (ignoring underscores and punctuation)
-  const actualLetters = wordSpans
-    .map(span => span.textContent)
-    .filter(char => char !== '_' && /[a-zA-Z0-9]/.test(char))
-    .join('')
-    .toUpperCase();
+  // Check each letter position in the word
+  let userFilledCount = 0;
+  let userCorrectCount = 0;
+  let hintFilledCount = 0;
   
-  console.log(`Word "${wordBoundary.word}" - Expected: "${expectedWord}", Actual: "${actualLetters}"`);
+  for (let i = 0; i < expectedLetters.length; i++) {
+    const phrasePosition = letterPositions[i];
+    const expectedLetter = expectedLetters[i];
+    
+    // Get the span for this position
+    const span = spans[phrasePosition];
+    if (!span) continue;
+    
+    const actualChar = span.textContent;
+    const isHintLetter = span.classList.contains('hint-letter');
+    const isUnderscore = actualChar === '_';
+    
+    if (isHintLetter) {
+      // This position is filled by a hint
+      hintFilledCount++;
+      if (actualChar.toUpperCase() === expectedLetter) {
+        // Hint letter is correct (should always be)
+        console.log(`Position ${i}: Hint letter "${actualChar}" is correct`);
+      }
+    } else if (!isUnderscore) {
+      // This position is filled by user selection
+      userFilledCount++;
+      if (actualChar.toUpperCase() === expectedLetter) {
+        userCorrectCount++;
+        console.log(`Position ${i}: User letter "${actualChar}" is correct`);
+      } else {
+        console.log(`Position ${i}: User letter "${actualChar}" is incorrect (expected "${expectedLetter}")`);
+        return false; // If any user letter is wrong, word is not complete
+      }
+    } else {
+      // This position is still empty (underscore)
+      console.log(`Position ${i}: Still empty (underscore)`);
+      return false; // If any position is empty, word is not complete
+    }
+  }
   
-  // CRITICAL FIX: Check for EXACT match, not just letter presence
-  const isExactMatch = actualLetters === expectedWord;
-  const isFullyFilled = actualLetters.length === expectedWord.length;
+  // Word is complete only if:
+  // 1. All positions are filled (either by user or hints)
+  // 2. All user-filled positions are correct
+  // 3. We have at least one user-filled position (can't complete with only hints)
+  const totalPositions = expectedLetters.length;
+  const totalFilled = userFilledCount + hintFilledCount;
+  const isFullyFilled = totalFilled === totalPositions;
+  const allUserLettersCorrect = userCorrectCount === userFilledCount;
+  const hasUserInput = userFilledCount > 0;
   
-  console.log(`Word completion check:`, {
-    word: wordBoundary.word,
-    expected: expectedWord,
-    actual: actualLetters,
-    isExactMatch,
+  const isComplete = isFullyFilled && allUserLettersCorrect && hasUserInput;
+  
+  console.log(`Word "${wordBoundary.word}" completion analysis:`, {
+    totalPositions,
+    userFilledCount,
+    userCorrectCount,
+    hintFilledCount,
     isFullyFilled,
-    isComplete: isExactMatch && isFullyFilled
+    allUserLettersCorrect,
+    hasUserInput,
+    isComplete
   });
   
-  return isExactMatch && isFullyFilled;
+  return isComplete;
 }
 
   
@@ -1960,8 +2009,8 @@ parseCSV(csvData) {
 }
 
 /**
- * FIXED: parseWordBoundaries to properly handle apostrophes as non-letters
- * Apostrophes should be treated as punctuation, not letters
+ * FIXED: parseWordBoundaries to properly handle apostrophes as part of words
+ * Apostrophes should be treated as punctuation WITHIN words, not word separators
  */
 parseWordBoundaries() {
   console.log('Parsing word boundaries (FIXED VERSION)');
@@ -1981,9 +2030,9 @@ parseWordBoundaries() {
   for (let i = 0; i < letterList.length; i++) {
     const char = letterList[i];
     
-    // CRITICAL FIX: Only alphanumeric characters are considered word characters
-    // Apostrophes are treated as punctuation and ignored for word boundaries
-    const isWordChar = /[a-zA-Z0-9]/.test(char);
+    // CRITICAL FIX: Alphanumeric characters AND apostrophes are considered part of words
+    // Only spaces and other punctuation (except apostrophes) end words
+    const isWordChar = /[a-zA-Z0-9']/.test(char);
     
     if (isWordChar && !inWord) {
       // Start of a new word
