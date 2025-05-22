@@ -515,6 +515,8 @@ createPhraseTemplate(phrase) {
 }
 
 createBlankTemplate(phrase) {
+  // FIXED: Only replace alphanumeric characters with underscores
+  // Keep apostrophes, spaces, and other punctuation as they are
   return phrase.replace(/[a-zA-Z0-9]/g, '_');
 }
   
@@ -585,7 +587,8 @@ fillPhraseTemplate(template, phrase, selectedLetters) {
 }
 
 /**
- * Modified updatePhraseWithHints to properly handle punctuation, apostrophes, and hint letters
+ * FIXED: updatePhraseWithHints to handle apostrophes consistently
+ * Apostrophes should NOT be treated as letters that need to be filled in
  */
 updatePhraseWithHints() {
   if (!this.gridRenderer || !this.currentPhrase || !this.phraseTemplate) {
@@ -596,15 +599,7 @@ updatePhraseWithHints() {
   const displayElement = document.getElementById('phrase-text');
   if (!displayElement) return;
   
-  console.log('Updating phrase with hints');
-  
-  // Track which hint letters were previously showing
-  const previousHintLetters = Array.from(document.querySelectorAll('.hint-letter')).map(el => {
-    return {
-      position: parseInt(el.dataset.index, 10),
-      wasMatched: el.classList.contains('hint-letter-match')
-    };
-  });
+  console.log('Updating phrase with hints (FIXED VERSION)');
   
   // Start with the original template
   const templateArray = this.phraseTemplate.split('');
@@ -617,10 +612,10 @@ updatePhraseWithHints() {
   const alphaPositions = [];
   let alphaIndex = 0;
   
-  // Find positions of all alphanumeric characters and apostrophes (CRITICAL FIX)
+  // CRITICAL FIX: Find positions of ONLY alphanumeric characters (NOT apostrophes)
   for (let i = 0; i < letterlistArray.length; i++) {
-    // Include apostrophes as alphanumeric characters
-    if (/[a-zA-Z0-9']/.test(letterlistArray[i])) {
+    // Only alphanumeric characters count as letters that need to be filled
+    if (/[a-zA-Z0-9]/.test(letterlistArray[i])) {
       alphaPositions[alphaIndex] = i;
       alphaIndex++;
     }
@@ -667,11 +662,7 @@ updatePhraseWithHints() {
   }
   
   // Now apply regular selected letters, skipping positions that already have hint letters
-  // and excluding the start cell since we already handled it
   const selectedLetters = this.gridRenderer.getSelectedLetters();
-  
-  // DEBUG: Log the selected letters
-  console.log('Selected letters for phrase update:', selectedLetters.map(l => l.letter).join(''));
   
   if (selectedLetters.length > 0) {
     console.log('Applying selected letters:', selectedLetters.map(l => `${l.letter}`).join(', '));
@@ -701,8 +692,8 @@ updatePhraseWithHints() {
       // Add data attributes for hint letters and the revealed-char class
       phraseHtml += `<span class="phrase-char hint-letter revealed-char" data-index="${i}" data-path-index="${hintLetter.pathIndex}" data-char="${currentChar}">${currentChar}</span>`;
     } 
-    // Check if this is a punctuation character (not alphanumeric, apostrophe, or underscore)
-    else if (!/[a-zA-Z0-9'_]/.test(currentChar) && currentChar !== '_') {
+    // FIXED: Check if this is a punctuation character (including apostrophes)
+    else if (!/[a-zA-Z0-9_]/.test(currentChar) && currentChar !== '_') {
       phraseHtml += `<span class="phrase-char punctuation-char" data-index="${i}" data-char="${currentChar}">${currentChar}</span>`;
     } 
     // Check if this is an underscore - special styling
@@ -942,9 +933,8 @@ updateWordTextColor(wordIndex) {
 }
   
 /**
- * Enhanced isWordCompleted to handle hint letters properly
- * @param {number} wordIndex - Index of the word to check
- * @return {boolean} True if the word is completed correctly
+ * FIXED: isWordCompleted to check for EXACT positional matches, not just letter presence
+ * This prevents false positives where letters exist but are in wrong positions
  */
 isWordCompleted(wordIndex) {
   if (!this.enableWordCompletionFeedback || wordIndex < 0 || wordIndex >= this.wordBoundaries.length) {
@@ -958,14 +948,13 @@ isWordCompleted(wordIndex) {
   
   const wordBoundary = this.wordBoundaries[wordIndex];
   
-  // First extract all valid characters for this word (alphanumeric + apostrophes)
-  const wordChars = this.currentPhrase.letterlist
+  // Get the expected word from the phrase (convert to uppercase for comparison)
+  const expectedWord = this.currentPhrase.letterlist
     .substring(wordBoundary.start, wordBoundary.end + 1)
-    .split('')
-    .filter(char => /[a-zA-Z0-9']/.test(char));
+    .replace(/[^a-zA-Z0-9]/g, '') // Remove all non-alphanumeric characters (including apostrophes)
+    .toUpperCase();
   
-  // Count total valid characters
-  const totalChars = wordChars.length;
+  console.log(`Checking word completion for "${wordBoundary.word}" -> expected: "${expectedWord}"`);
   
   // Get the phrase display span elements
   const displayElement = document.getElementById('phrase-text');
@@ -974,55 +963,38 @@ isWordCompleted(wordIndex) {
   // Get character spans for this word
   const spans = Array.from(displayElement.querySelectorAll('.phrase-char'));
   const wordSpans = spans.filter((span, i) => 
-    i >= wordBoundary.start && i <= wordBoundary.end && /[a-zA-Z0-9']/.test(span.getAttribute('data-char'))
+    i >= wordBoundary.start && i <= wordBoundary.end && /[a-zA-Z0-9]/.test(span.getAttribute('data-char'))
   );
   
-  // Count filled spans (non-underscore) and hint letters
-  let filledCount = 0;
-  let hintCount = 0;
-  let hintsMatch = true;  // Track if selected letters match hint letters
+  // Extract the actual letters from the spans (ignoring underscores and punctuation)
+  const actualLetters = wordSpans
+    .map(span => span.textContent)
+    .filter(char => char !== '_' && /[a-zA-Z0-9]/.test(char))
+    .join('')
+    .toUpperCase();
   
-  wordSpans.forEach(span => {
-    const isUnderscore = span.textContent === '_';
-    const isHint = span.classList.contains('hint-letter');
-    
-    // Count hints
-    if (isHint) {
-      hintCount++;
-      
-      // For hint letters, check if there's a corresponding selection
-      // by looking at the hint-letter-match class
-      if (span.classList.contains('hint-letter-match')) {
-        filledCount++;  // Count matched hint letters as filled
-      } else {
-        hintsMatch = false;  // Some hint letter doesn't match
-      }
-    } 
-    // Count filled non-hint positions
-    else if (!isUnderscore) {
-      filledCount++;
-    }
+  console.log(`Word "${wordBoundary.word}" - Expected: "${expectedWord}", Actual: "${actualLetters}"`);
+  
+  // CRITICAL FIX: Check for EXACT match, not just letter presence
+  const isExactMatch = actualLetters === expectedWord;
+  const isFullyFilled = actualLetters.length === expectedWord.length;
+  
+  console.log(`Word completion check:`, {
+    word: wordBoundary.word,
+    expected: expectedWord,
+    actual: actualLetters,
+    isExactMatch,
+    isFullyFilled,
+    isComplete: isExactMatch && isFullyFilled
   });
   
-  // To be complete:
-  // 1. All positions must be filled (filledCount == totalChars)
-  // 2. All hint letters must match their corresponding selections
-  const isComplete = filledCount === totalChars && hintsMatch;
-  
-  console.log(`Word "${wordBoundary.word}" completion check:`, {
-    total: totalChars,
-    filled: filledCount,
-    hints: hintCount,
-    hintsMatch,
-    isComplete
-  });
-  
-  return isComplete;
+  return isExactMatch && isFullyFilled;
 }
+
   
 /**
- * Updated checkPhraseCompleted method to work with any selection
- * Checks if we've selected enough letters to fill all positions
+ * FIXED: checkPhraseCompleted to handle apostrophes correctly
+ * Only count alphanumeric characters, not apostrophes
  */
 checkPhraseCompleted() {
   if (!this.currentPhrase) return false;
@@ -1031,16 +1003,16 @@ checkPhraseCompleted() {
   const selectedLetters = this.gridRenderer.getSelectedLetters();
   const validSelectedLetters = selectedLetters.filter(cell => cell.letter.trim() !== '');
   
-  // Count non-space/non-punctuation characters in the letterlist that need to be filled
+  // FIXED: Count ONLY alphanumeric characters in the letterlist (NOT apostrophes)
   const letterListArray = this.currentPhrase.letterlist.split('');
   const letterPositions = letterListArray.filter(char => /[a-zA-Z0-9]/.test(char)).length;
   
   // Subtract 1 from the total count to account for the start cell which is excluded
   const targetLetterCount = letterPositions - 1;
   
-  console.log('Letter count check:', {
+  console.log('Letter count check (FIXED):', {
     validSelectedCount: validSelectedLetters.length,
-    totalLetterPositions: letterPositions,
+    totalAlphanumericPositions: letterPositions,
     targetLetterCount
   });
   
@@ -1100,55 +1072,73 @@ showSuccessMessage() {
 }
 
 /**
- * Completely revamped flashCompletedWord to ensure consistent flashing
- * @param {number} wordIndex - Index of the completed word
+ * FIXED: flashCompletedWord to only flash letters that are in the CORRECT positions
+ * This prevents flashing incorrect letters that happen to be in the word
  */
 flashCompletedWord(wordIndex) {
   const wordBoundary = this.wordBoundaries[wordIndex];
   if (!wordBoundary) return;
   
-  console.log(`Flashing snake pieces for word "${wordBoundary.word}"`);
+  console.log(`Flashing snake pieces for CORRECTLY completed word "${wordBoundary.word}"`);
   
-  // Calculate all valid character positions in the word
-  const wordChars = this.currentPhrase.letterlist
+  // Get the expected word (without apostrophes or punctuation)
+  const expectedWord = this.currentPhrase.letterlist
     .substring(wordBoundary.start, wordBoundary.end + 1)
-    .split('')
-    .map((char, index) => {
-      return {
-        char,
-        index: wordBoundary.start + index
-      };
-    })
-    .filter(item => /[a-zA-Z0-9']/.test(item.char));
+    .replace(/[^a-zA-Z0-9]/g, '') // Remove all non-alphanumeric characters
+    .toUpperCase();
   
-  // Map path indices to positions in the phrase
+  // Get the phrase display element to verify which positions are correctly filled
+  const displayElement = document.getElementById('phrase-text');
+  if (!displayElement) return;
+  
+  const spans = Array.from(displayElement.querySelectorAll('.phrase-char'));
+  const wordSpans = spans.filter((span, i) => 
+    i >= wordBoundary.start && i <= wordBoundary.end && /[a-zA-Z0-9]/.test(span.getAttribute('data-char'))
+  );
+  
+  // Create a mapping of correct letter positions to path indices
+  const correctPathIndices = [];
+  
+  // Map each alphanumeric character in the entire phrase to its path index
   const letterlistArray = this.currentPhrase.letterlist.split('');
-  const pathIndices = [];
+  let pathIndex = 0;
   
-  // Create a mapping of letter positions to path indices
-  wordChars.forEach(charInfo => {
-    // Find the overall position in letterlist
-    const posInLetterlist = charInfo.index;
+  for (let i = 0; i < letterlistArray.length; i++) {
+    const char = letterlistArray[i];
     
-    // Count how many valid chars (a-z, 0-9, ') are before this position
-    let validCharCount = 0;
-    for (let i = 0; i < posInLetterlist; i++) {
-      if (/[a-zA-Z0-9']/.test(letterlistArray[i])) {
-        validCharCount++;
+    // If this is an alphanumeric character
+    if (/[a-zA-Z0-9]/.test(char)) {
+      // Check if this position is within our word boundary
+      if (i >= wordBoundary.start && i <= wordBoundary.end) {
+        // Get the corresponding span
+        const spanIndex = wordSpans.findIndex(span => {
+          const spanIndex = parseInt(span.getAttribute('data-index'), 10);
+          return spanIndex === i;
+        });
+        
+        if (spanIndex >= 0) {
+          const span = wordSpans[spanIndex];
+          const actualChar = span.textContent.toUpperCase();
+          const expectedChar = char.toUpperCase();
+          
+          // Only include this path index if the character is CORRECT
+          if (actualChar === expectedChar && actualChar !== '_') {
+            correctPathIndices.push(pathIndex);
+          }
+        }
       }
+      
+      pathIndex++; // Increment path index for each alphanumeric character
     }
-    
-    // The path index corresponds to the valid char count
-    pathIndices.push(validCharCount);
-  });
+  }
   
-  console.log(`Word "${wordBoundary.word}" path indices:`, pathIndices);
+  console.log(`Word "${wordBoundary.word}" correct path indices:`, correctPathIndices);
   
-  // Find all cells corresponding to these path indices
+  // Find all cells corresponding to these CORRECT path indices
   const cellsToFlash = [];
   
   // Check for start cell (index 0)
-  if (pathIndices.includes(0)) {
+  if (correctPathIndices.includes(0)) {
     const centerX = 35;
     const centerY = 35;
     cellsToFlash.push({ x: centerX, y: centerY });
@@ -1158,7 +1148,7 @@ flashCompletedWord(wordIndex) {
   const selectedCells = this.gridRenderer.selectedCells;
   selectedCells.forEach(cell => {
     const pathCell = this.gridRenderer.grid[cell.y][cell.x];
-    if (pathCell && pathIndices.includes(pathCell.pathIndex)) {
+    if (pathCell && correctPathIndices.includes(pathCell.pathIndex)) {
       cellsToFlash.push({ x: cell.x, y: cell.y });
     }
   });
@@ -1166,7 +1156,7 @@ flashCompletedWord(wordIndex) {
   // Check revealed hint cells
   const revealedHints = this.gridRenderer.getRevealedLetters();
   revealedHints.forEach(hint => {
-    if (pathIndices.includes(hint.pathIndex)) {
+    if (correctPathIndices.includes(hint.pathIndex)) {
       cellsToFlash.push({ x: hint.x, y: hint.y });
     }
   });
@@ -1180,7 +1170,7 @@ flashCompletedWord(wordIndex) {
   
   const uniqueCells = Array.from(uniqueCellsMap.values());
   
-  console.log(`Flashing ${uniqueCells.length} cells for word "${wordBoundary.word}"`);
+  console.log(`Flashing ${uniqueCells.length} cells for CORRECTLY completed word "${wordBoundary.word}"`);
   
   // Flash the cells with improved timing for consistency
   if (window.snakePath && uniqueCells.length > 0) {
@@ -1190,6 +1180,7 @@ flashCompletedWord(wordIndex) {
     }, 200);
   }
 }
+
   
 /**
  * Delayed flash method that allows time for snake pieces to update
@@ -1969,10 +1960,11 @@ parseCSV(csvData) {
 }
 
 /**
- * Modified parseWordBoundaries to properly handle words with apostrophes
+ * FIXED: parseWordBoundaries to properly handle apostrophes as non-letters
+ * Apostrophes should be treated as punctuation, not letters
  */
 parseWordBoundaries() {
-  console.log('Parsing word boundaries');
+  console.log('Parsing word boundaries (FIXED VERSION)');
   
   if (!this.currentPhrase || !this.currentPhrase.letterlist) {
     console.log('No current phrase to parse');
@@ -1989,8 +1981,9 @@ parseWordBoundaries() {
   for (let i = 0; i < letterList.length; i++) {
     const char = letterList[i];
     
-    // CRITICAL FIX: Include apostrophes as part of the word
-    const isWordChar = /[a-zA-Z0-9']/.test(char);
+    // CRITICAL FIX: Only alphanumeric characters are considered word characters
+    // Apostrophes are treated as punctuation and ignored for word boundaries
+    const isWordChar = /[a-zA-Z0-9]/.test(char);
     
     if (isWordChar && !inWord) {
       // Start of a new word
@@ -2018,11 +2011,12 @@ parseWordBoundaries() {
     });
   }
   
-  console.log('Word boundaries parsed:', this.wordBoundaries);
+  console.log('Word boundaries parsed (FIXED):', this.wordBoundaries);
   
   // Reset completed words tracker
   this.completedWords = new Set();
 }
+
   
 /**
  * Load a random phrase from the loaded phrases
