@@ -166,8 +166,58 @@ class Trackpad {
     this.trackpad = trackpad;
     this.phraseDisplay = phraseDisplay;
     
+    // Define arrow groups (primary and adjacent cells)
+    this._defineArrowGroups();
+    
     // Adjust phrase display width to match grid width
     this.adjustPhraseDisplayWidth();
+  }
+  
+  /**
+   * Define arrow cell groups with adjacent cells
+   * @private
+   */
+  _defineArrowGroups() {
+    const size = this.options.trackpadSize;
+    const middleIdx = Math.floor(size / 2);
+    
+    // Define the groups of cells that correspond to each arrow direction
+    this.arrowGroups = {
+      up: [
+        { x: middleIdx, y: 0 },     // Primary arrow cell
+        { x: middleIdx - 1, y: 0 },  // Left adjacent
+        { x: middleIdx + 1, y: 0 },  // Right adjacent
+        { x: middleIdx, y: 1 }       // Bottom adjacent
+      ],
+      right: [
+        { x: size - 1, y: middleIdx },  // Primary arrow cell
+        { x: size - 1, y: middleIdx - 1 }, // Top adjacent
+        { x: size - 1, y: middleIdx + 1 }, // Bottom adjacent
+        { x: size - 2, y: middleIdx }      // Left adjacent
+      ],
+      down: [
+        { x: middleIdx, y: size - 1 },  // Primary arrow cell
+        { x: middleIdx - 1, y: size - 1 }, // Left adjacent
+        { x: middleIdx + 1, y: size - 1 }, // Right adjacent
+        { x: middleIdx, y: size - 2 }      // Top adjacent
+      ],
+      left: [
+        { x: 0, y: middleIdx },  // Primary arrow cell
+        { x: 0, y: middleIdx - 1 }, // Top adjacent
+        { x: 0, y: middleIdx + 1 }, // Bottom adjacent
+        { x: 1, y: middleIdx }      // Right adjacent
+      ]
+    };
+    
+    // Store the mapping from cell coordinates to direction
+    this.cellToDirectionMap = new Map();
+    
+    // Map each cell in each group to its direction
+    Object.entries(this.arrowGroups).forEach(([direction, cells]) => {
+      cells.forEach(cell => {
+        this.cellToDirectionMap.set(`${cell.x},${cell.y}`, direction);
+      });
+    });
   }
   
   /**
@@ -178,25 +228,31 @@ class Trackpad {
     this._isScrolling = false;
     this._scrollAnimationTimeout = null;
     
-    // Add trackpad touch and mouse events
+    // Set up different types of listeners
     this._setupTrackpadEvents();
-    
-    // Add keyboard listeners
     this._setupKeyboardListeners();
-    
-    // Add grid event listeners
     this._setupGridEventListeners();
     
-    // Add window resize listener
-    window.addEventListener('resize', () => {
-      this.adjustPhraseDisplayWidth();
-    });
-    
-    // Initial update with delay to ensure DOM is ready
+    // Initial updates with delay to ensure DOM is ready
+    this._scheduleInitialUpdates();
+  }
+  
+  /**
+   * Schedule initial updates with delay
+   * @private
+   */
+  _scheduleInitialUpdates() {
+    // Initial updates with delay to ensure DOM is ready
     setTimeout(() => {
       this.adjustPhraseDisplayWidth();
       this.updateScrollAreaStates();
     }, 100);
+    
+    // Additional update after longer delay to catch any late-loading elements
+    setTimeout(() => {
+      this.adjustPhraseDisplayWidth();
+      this.updateScrollAreaStates();
+    }, 500);
   }
   
   /**
@@ -216,13 +272,24 @@ class Trackpad {
     document.addEventListener('touchmove', (e) => this._handleTrackpadMove(e));
     document.addEventListener('touchend', (e) => this._handleTrackpadEnd(e));
     
-    // Add click events for arrow cells
-    const arrowCells = this.trackpad.querySelectorAll('.trackpad-arrow');
-    arrowCells.forEach(cell => {
+    // Add click events for all trackpad cells
+    const cells = this.trackpad.querySelectorAll('.trackpad-cell');
+    cells.forEach(cell => {
       cell.addEventListener('click', (e) => {
         // Only handle if not currently swiping
         if (!this.swipeState.active) {
-          this._handleArrowCellClick(cell);
+          // Get cell coordinates
+          const x = parseInt(cell.dataset.x, 10);
+          const y = parseInt(cell.dataset.y, 10);
+          
+          // Check if this cell is part of an arrow group
+          const key = `${x},${y}`;
+          const direction = this.cellToDirectionMap.get(key);
+          
+          if (direction) {
+            // Handle as arrow cell click
+            this._handleArrowGroupClick(direction);
+          }
         }
       });
     });
@@ -271,7 +338,7 @@ class Trackpad {
         this.updateScrollAreaStates();
         
         // Visual feedback for keyboard navigation
-        this._highlightArrowCell(direction);
+        this._flashArrowGroup(direction);
         
         // Clear any existing timeout
         if (keyboardScrollTimeout) {
@@ -308,7 +375,7 @@ class Trackpad {
       this._isScrolling = true;
       
       // Highlight the appropriate arrow
-      this._highlightArrowCell(e.detail.direction);
+      this._flashArrowGroup(e.detail.direction);
     });
     
     // Listen for grid scroll complete events
@@ -323,6 +390,11 @@ class Trackpad {
       
       // Adjust phrase display height if needed
       this.adjustPhraseDisplayHeight();
+    });
+    
+    // Add window resize listener
+    window.addEventListener('resize', () => {
+      this.adjustPhraseDisplayWidth();
     });
   }
   
@@ -357,9 +429,6 @@ class Trackpad {
     
     // Add active class to trackpad for visual feedback
     this.trackpad.classList.add('active');
-    
-    // Highlight cell
-    this._highlightTrackpadCell(x, y);
   }
   
   /**
@@ -408,8 +477,8 @@ class Trackpad {
       // Update current cell
       this.swipeState.currentCell = { x, y };
       
-      // Highlight current cell
-      this._highlightTrackpadCell(x, y);
+      // NO MORE HIGHLIGHT EFFECT FOR SWIPES
+      // this._highlightTrackpadCell(x, y);
     }
   }
   
@@ -433,16 +502,18 @@ class Trackpad {
     const endY = this.swipeState.currentCell.y;
     const wasShortMovement = Math.abs(startX - endX) <= 1 && Math.abs(startY - endY) <= 1;
     
-    // If this was a quick tap on an arrow cell, trigger a single scroll
+    // If this was a quick tap on an arrow group cell, trigger a single scroll
     if (wasQuickTap && wasShortMovement) {
-      const cell = this._getTrackpadCellElement(startX, startY);
-      if (cell && cell.classList.contains('trackpad-arrow')) {
-        // Handle as arrow cell click
-        this._handleArrowCellClick(cell);
+      const key = `${startX},${startY}`;
+      const direction = this.cellToDirectionMap.get(key);
+      
+      if (direction) {
+        // Handle as arrow group click
+        this._handleArrowGroupClick(direction);
       }
     }
     
-    // Reset highlight effects
+    // Reset highlight effects - no more visual feedback for swipes
     this._resetTrackpadHighlights();
     
     // Remove active class from trackpad
@@ -453,48 +524,71 @@ class Trackpad {
   }
   
   /**
-   * Handle arrow cell clicks
-   * @param {HTMLElement} cell - The arrow cell element
+   * Handle arrow group clicks (including adjacent cells)
+   * @param {string} direction - The direction ('up', 'down', 'left', 'right')
    * @private
    */
-  _handleArrowCellClick(cell) {
+  _handleArrowGroupClick(direction) {
     // Skip if scrolling in progress
     if (this._isScrolling) {
       return;
     }
     
-    // Determine direction from cell classes
-    let direction = null;
-    if (cell.classList.contains('arrow-up')) {
-      direction = 'up';
-    } else if (cell.classList.contains('arrow-right')) {
-      direction = 'right';
-    } else if (cell.classList.contains('arrow-down')) {
-      direction = 'down';
-    } else if (cell.classList.contains('arrow-left')) {
-      direction = 'left';
-    }
+    // Find the primary arrow cell
+    const arrowClass = `arrow-${direction}`;
+    const arrowCell = this.trackpad.querySelector(`.${arrowClass}`);
     
-    // If valid direction, trigger scroll
-    if (direction) {
-      // Highlight the arrow cell
-      cell.classList.add('active');
-      
-      // Set scrolling flag
-      this._isScrolling = true;
-      
-      // Scroll the grid
-      this.gridRenderer.scroll(direction);
-      
-      // Update scroll area states
-      this.updateScrollAreaStates();
-      
-      // Remove active class after animation
-      setTimeout(() => {
-        cell.classList.remove('active');
-        this._isScrolling = false;
-      }, 300);
-    }
+    if (!arrowCell) return;
+    
+    // Skip if direction is disabled
+    if (arrowCell.classList.contains('disabled')) return;
+    
+    // Set scrolling flag
+    this._isScrolling = true;
+    
+    // Flash all cells in the arrow group
+    this._flashArrowGroup(direction);
+    
+    // Scroll the grid
+    this.gridRenderer.scroll(direction);
+    
+    // Update scroll area states
+    this.updateScrollAreaStates();
+    
+    // Remove active class after animation
+    setTimeout(() => {
+      this._isScrolling = false;
+    }, 300);
+  }
+  
+  /**
+   * Flash all cells in an arrow group
+   * @param {string} direction - The direction ('up', 'down', 'left', 'right')
+   * @private
+   */
+  _flashArrowGroup(direction) {
+    // Get the arrow group cells
+    const arrowGroup = this.arrowGroups[direction];
+    if (!arrowGroup) return;
+    
+    // Find the primary arrow cell (the one with the arrow symbol)
+    const arrowClass = `arrow-${direction}`;
+    const primaryArrowCell = this.trackpad.querySelector(`.${arrowClass}`);
+    
+    if (!primaryArrowCell) return;
+    
+    // Get the arrow indicator element
+    const arrowIndicator = primaryArrowCell.querySelector('.arrow-indicator');
+    
+    if (!arrowIndicator) return;
+    
+    // Pulse only the arrow indicator
+    arrowIndicator.classList.add('active-pulse');
+    
+    // Remove pulse class after animation
+    setTimeout(() => {
+      arrowIndicator.classList.remove('active-pulse');
+    }, 300);
   }
   
   /**
@@ -511,59 +605,43 @@ class Trackpad {
     // Set scrolling flag
     this._isScrolling = true;
     
-    // Scroll the grid
+    // Get the arrow group cells
+    const arrowGroup = this.arrowGroups[direction];
+    if (!arrowGroup) return;
+    
+    // Find the primary arrow cell
+    const arrowClass = `arrow-${direction}`;
+    const arrowCell = this.trackpad.querySelector(`.${arrowClass}`);
+    
+    if (!arrowCell) return;
+    
+    // Skip if direction is disabled
+    if (arrowCell.classList.contains('disabled')) {
+      this._isScrolling = false;
+      return;
+    }
+    
+    // Scroll the grid with enhanced smooth transitions
     this.gridRenderer.scroll(direction);
     
     // Update scroll area states
     this.updateScrollAreaStates();
     
-    // Highlight the arrow cell for visual feedback
-    this._highlightArrowCell(direction);
+    // Flash the arrow indicator for visual feedback
+    const arrowIndicator = arrowCell.querySelector('.arrow-indicator');
+    if (arrowIndicator) {
+      arrowIndicator.classList.add('active-pulse');
+      
+      // Remove after animation
+      setTimeout(() => {
+        arrowIndicator.classList.remove('active-pulse');
+      }, 300);
+    }
     
     // Reset scrolling flag after a short delay
     setTimeout(() => {
       this._isScrolling = false;
-    }, 150); // Match transform duration
-  }
-  
-  /**
-   * Highlight an arrow cell based on direction
-   * @param {string} direction - The direction ('up', 'down', 'left', 'right')
-   * @private
-   */
-  _highlightArrowCell(direction) {
-    // Find the arrow cell
-    const arrowClass = `arrow-${direction}`;
-    const arrowCell = this.trackpad.querySelector(`.${arrowClass}`);
-    
-    if (arrowCell) {
-      // Add active class
-      arrowCell.classList.add('active');
-      
-      // Remove after animation
-      setTimeout(() => {
-        arrowCell.classList.remove('active');
-      }, 300);
-    }
-  }
-  
-  /**
-   * Highlight a trackpad cell
-   * @param {number} x - X coordinate in trackpad grid
-   * @param {number} y - Y coordinate in trackpad grid
-   * @private
-   */
-  _highlightTrackpadCell(x, y) {
-    // Remove highlight from all cells
-    this.trackpad.querySelectorAll('.trackpad-cell').forEach(cell => {
-      cell.classList.remove('highlight');
-    });
-    
-    // Add highlight to the specified cell
-    const cell = this._getTrackpadCellElement(x, y);
-    if (cell) {
-      cell.classList.add('highlight');
-    }
+    }, 300); // Match transform duration
   }
   
   /**
