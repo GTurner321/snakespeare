@@ -2284,8 +2284,9 @@ cellHasContent(x, y) {
 }
 
 /**
- * Modified GridRenderer scroll method to fix beach cell flashing
- * Replace the existing scroll method in GridRenderer.js with this improved version
+ * Enhanced scroll method with smoother transitions
+ * @param {string} direction - Scroll direction ('up', 'right', 'down', 'left')
+ * @param {boolean} slowMotion - Whether to use slow scroll animation
  */
 scroll(direction, slowMotion = false) {
   // Signal to components that scrolling is starting
@@ -2338,8 +2339,8 @@ scroll(direction, slowMotion = false) {
     window.islandRenderer._preserveBeachCellStyles();
   }
   
-  // Use CSS transform for smooth scrolling rather than full rebuild
-  const transitionDuration = slowMotion ? 350 : 180; // Slightly faster default
+  // Enhanced smooth transitions - longer durations
+  const transitionDuration = slowMotion ? 400 : 300; // Slightly slower for smoother effect
   
   // Determine if this is a small scroll (1 unit in any direction)
   const isSmallScroll = 
@@ -2355,7 +2356,7 @@ scroll(direction, slowMotion = false) {
     }
   }));
   
-  // OPTIMIZATION: For small scrolls, use transform instead of rebuilding DOM
+  // Use CSS transform for smooth scrolling
   if (isSmallScroll) {
     // Add CSS transition class based on speed
     if (this.gridElement) {
@@ -2377,8 +2378,9 @@ scroll(direction, slowMotion = false) {
     const translateX = (this.viewOffset.x - newOffsetX) * (cellSize + gapSize);
     const translateY = (this.viewOffset.y - newOffsetY) * (cellSize + gapSize);
     
-    // Apply translation
-    this.gridElement.style.transform = `translate(${translateX}px, ${translateY}px)`;
+    // Apply translation with hardware acceleration
+    this.gridElement.style.transform = `translate3d(${translateX}px, ${translateY}px, 0)`;
+    this.gridElement.style.willChange = 'transform';
     
     // Update internal view offset (but DOM updates after animation)
     const oldOffsetX = this.viewOffset.x;
@@ -2389,7 +2391,8 @@ scroll(direction, slowMotion = false) {
     // After transition completes, reset transform and rebuild grid
     setTimeout(() => {
       // Reset transform
-      this.gridElement.style.transform = 'translate(0, 0)';
+      this.gridElement.style.transform = 'translate3d(0, 0, 0)';
+      this.gridElement.style.willChange = 'auto';
       
       // Remove transition classes
       this.gridElement.classList.remove('fast-scroll', 'slow-scroll');
@@ -2409,7 +2412,7 @@ scroll(direction, slowMotion = false) {
           to: { x: newOffsetX, y: newOffsetY }
         }
       }));
-    }, transitionDuration + 30); // Slightly reduced buffer
+    }, transitionDuration + 30); // Small buffer
   } else {
     // For larger scrolls, use the standard approach
     this.viewOffset.x = newOffsetX;
