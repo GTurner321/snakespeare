@@ -60,6 +60,7 @@
         import GameController from './js/core/gamecontroller.js';
         import IslandRenderer from './js/core/islandrenderer.js';
         import SnakePath from './js/core/snakepath.js';
+        import Trackpad from './js/core/trackpad.js'; // Added import for Trackpad
         
         // Initialize game when DOM is loaded
         document.addEventListener('DOMContentLoaded', () => {
@@ -74,7 +75,8 @@
                     desktop: { width: 15, height: 11 }
                 },
                 cellSize: 45,
-                randomFillPercentage: 0.8
+                randomFillPercentage: 0.8,
+                useTrackpad: true // Add this flag to enable trackpad navigation
             });
             
             // Make game controller globally accessible
