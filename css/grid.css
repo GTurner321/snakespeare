@@ -13,6 +13,7 @@
    6. Menu Animations
    7. Animation and Touch Handling
    8. Erosion and Animation Effects
+   9. Trackpad Control Styles
    ========================================================================== */
 
 /* ==========================================================================
@@ -1242,4 +1243,170 @@ body {
 /* Ensure eroding cells flashing takes priority over other states */
 .grid-cell.eroding-cell.path-cell {
     z-index: 9;
+}
+
+
+/* ==========================================================================
+   9. Trackpad Control Styles
+   Provides styling for the 5x5 trackpad navigation control
+   ========================================================================== */
+
+/* Container for the trackpad */
+.trackpad-container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 15px 0;
+  position: relative;
+  z-index: 20; /* Ensure trackpad appears above other elements */
+  user-select: none;
+}
+
+/* Trackpad grid */
+.trackpad {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(5, 1fr);
+  width: 150px; /* Size of approximately 3 grid cells */
+  height: 150px;
+  background-color: var(--defaultblue-darker); /* Dark blue background */
+  border: 2px solid var(--defaultblue-dark);
+  border-radius: 12px;
+  padding: 2px;
+  gap: 2px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), 
+              inset 0 1px 3px rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+  position: relative;
+  
+  /* Improved touch handling */
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Active state for trackpad during swipes */
+.trackpad.active {
+  border-color: var(--defaultblue-light);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4),
+              inset 0 1px 5px rgba(255, 255, 255, 0.3);
+}
+
+/* Individual trackpad cells */
+.trackpad-cell {
+  width: 100%;
+  height: 100%;
+  background-color: transparent; /* Invisible cells by default */
+  border-radius: 3px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease;
+  cursor: pointer;
+}
+
+/* Arrow cells on edges */
+.trackpad-cell.trackpad-arrow {
+  background-color: var(--defaultblue-dark); /* Slightly lighter than background */
+  color: var(--lightblue);
+  border-radius: 4px;
+  opacity: 0.9;
+}
+
+/* Center cell */
+.trackpad-cell.trackpad-center {
+  background-color: var(--defaultblue);
+  opacity: 0.3;
+  border-radius: 50%;
+  transform: scale(0.4);
+}
+
+/* Arrow indicators */
+.arrow-indicator {
+  font-size: 16px;
+  color: var(--lightblue);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+/* Hover effects for arrow cells */
+@media (hover: hover) {
+  .trackpad-cell.trackpad-arrow:hover:not(.disabled) {
+    background-color: var(--defaultblue);
+    transform: scale(1.05);
+  }
+}
+
+/* Cell highlight during swipe */
+.trackpad-cell.highlight {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Active (clicked) state for arrow cells */
+.trackpad-cell.trackpad-arrow.active {
+  background-color: var(--lightblue);
+  color: var(--defaultblue-dark);
+  animation: pulse-arrow 0.3s ease;
+}
+
+.trackpad-cell.trackpad-arrow.active .arrow-indicator {
+  color: var(--defaultblue-dark);
+}
+
+/* Disabled state for arrow cells */
+.trackpad-cell.trackpad-arrow.disabled {
+  opacity: 0.3;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* Animation for arrow pulses */
+@keyframes pulse-arrow {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+/* Responsive styling */
+@media (max-width: 768px) {
+  .trackpad {
+    width: 130px;
+    height: 130px;
+  }
+  
+  .arrow-indicator {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .trackpad {
+    width: 120px;
+    height: 120px;
+  }
+  
+  .arrow-indicator {
+    font-size: 12px;
+  }
+  
+  .trackpad-container {
+    padding: 10px 0;
+  }
+}
+
+/* Flipped layout for phrase display */
+.phrase-display {
+  /* Remove bottom border radius */
+  border-radius: 8px;
+  /* Add margin below */
+  margin-bottom: 10px;
 }
