@@ -1268,8 +1268,8 @@ body {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   grid-template-rows: repeat(5, 1fr);
-  width: 150px; /* Size of approximately 3 grid cells */
-  height: 150px;
+  width: 105px; /* 30% smaller (150px * 0.7) */
+  height: 105px; /* 30% smaller (150px * 0.7) */
   background-color: var(--defaultblue-darker); /* Dark blue background */
   border: 2px solid var(--defaultblue-dark);
   border-radius: 12px;
@@ -1310,17 +1310,16 @@ body {
   cursor: pointer;
 }
 
-/* Arrow cells on edges */
+/* Arrow cells on edges - NO BACKGROUND COLOR DIFFERENCE */
 .trackpad-cell.trackpad-arrow {
-  background-color: var(--defaultblue-dark); /* Slightly lighter than background */
   color: var(--lightblue);
   border-radius: 4px;
-  opacity: 0.9;
+  opacity: 1;
 }
 
 /* Center cell */
 .trackpad-cell.trackpad-center {
-  background-color: var(--defaultblue);
+  background-color: rgba(0, 0, 0, 0.15);
   opacity: 0.3;
   border-radius: 50%;
   transform: scale(0.4);
@@ -1328,7 +1327,7 @@ body {
 
 /* Arrow indicators */
 .arrow-indicator {
-  font-size: 16px;
+  font-size: 14px; /* Smaller due to 30% size reduction */
   color: var(--lightblue);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
   display: flex;
@@ -1336,19 +1335,26 @@ body {
   justify-content: center;
   width: 100%;
   height: 100%;
+  transition: transform 0.2s ease, color 0.2s ease;
 }
 
-/* Hover effects for arrow cells */
+/* Hover effects for arrow cells - ONLY AFFECT THE ARROW, NOT THE CELL */
 @media (hover: hover) {
-  .trackpad-cell.trackpad-arrow:hover:not(.disabled) {
-    background-color: var(--defaultblue);
-    transform: scale(1.05);
+  .trackpad-cell.trackpad-arrow:hover:not(.disabled) .arrow-indicator {
+    transform: scale(1.15);
   }
 }
 
-/* Cell highlight during swipe */
+/* Active (clicked) state for arrow cells - ONLY AFFECT THE ARROW */
+.trackpad-cell.trackpad-arrow.active .arrow-indicator {
+  color: #ffffff;
+  transform: scale(1.2);
+  animation: pulse-arrow 0.3s ease;
+}
+
+/* Remove cell highlight during swipe */
 .trackpad-cell.highlight {
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: transparent;
 }
 
 /* Active (clicked) state for arrow cells */
@@ -1379,23 +1385,23 @@ body {
 /* Responsive styling */
 @media (max-width: 768px) {
   .trackpad {
-    width: 130px;
-    height: 130px;
+    width: 91px; /* 30% smaller (130px * 0.7) */
+    height: 91px;
   }
   
   .arrow-indicator {
-    font-size: 14px;
+    font-size: 12px;
   }
 }
 
 @media (max-width: 480px) {
   .trackpad {
-    width: 120px;
-    height: 120px;
+    width: 84px; /* 30% smaller (120px * 0.7) */
+    height: 84px;
   }
   
   .arrow-indicator {
-    font-size: 12px;
+    font-size: 10px;
   }
   
   .trackpad-container {
@@ -1409,4 +1415,18 @@ body {
   border-radius: 8px;
   /* Add margin below */
   margin-bottom: 10px;
+}
+
+/* Improved grid scrolling animation for smoother transitions */
+.grid-container {
+  transition: transform 300ms cubic-bezier(0.25, 0.1, 0.25, 1);
+  will-change: transform;
+}
+
+.grid-container.fast-scroll {
+  transition-duration: 250ms;
+}
+
+.grid-container.slow-scroll {
+  transition-duration: 400ms;
 }
