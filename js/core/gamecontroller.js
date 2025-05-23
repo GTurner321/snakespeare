@@ -20,6 +20,10 @@ class GameController {
  * Modified constructor for GameController
  * Adds initialization of word completion functionality
  */
+/**
+ * Modified constructor for GameController
+ * Adds initialization of trackpad navigation control
+ */
 constructor(options = {}) {
   // Default options with proper structure for gridSize
   this.options = {
@@ -32,6 +36,7 @@ constructor(options = {}) {
     cellSize: options.cellSize || 50,
     randomFillPercentage: options.randomFillPercentage !== undefined ? options.randomFillPercentage : 0,
     initialErosionPercentage: options.initialErosionPercentage !== undefined ? options.initialErosionPercentage : 0.15, // Add initial erosion percentage with default 15%
+    useTrackpad: options.useTrackpad !== undefined ? options.useTrackpad : true, // Add trackpad option with default true
   };
   
   // Override default gridSize if provided with correct structure
@@ -105,10 +110,34 @@ constructor(options = {}) {
     }
   });
     
-  // Initialize scroll areas AFTER grid renderer is fully created
-  this.scrollHandler = new ArrowButtons(this.gridRenderer, {
-    gameContainerId: this.options.gameContainerId
-  });
+  // Initialize navigation control - use Trackpad instead of ArrowButtons if enabled
+  if (this.options.useTrackpad) {
+    // Use dynamic import to ensure Trackpad is available
+    import('./trackpad.js').then(module => {
+      const Trackpad = module.default;
+      this.scrollHandler = new Trackpad(this.gridRenderer, {
+        gameContainerId: this.options.gameContainerId
+      });
+      console.log('Trackpad navigation initialized');
+    }).catch(error => {
+      console.error('Failed to load Trackpad, falling back to ArrowButtons:', error);
+      // Fallback to ArrowButtons if Trackpad fails to load
+      import('./arrowbuttons.js').then(module => {
+        const ArrowButtons = module.default;
+        this.scrollHandler = new ArrowButtons(this.gridRenderer, {
+          gameContainerId: this.options.gameContainerId
+        });
+      });
+    });
+  } else {
+    // Use ArrowButtons (classic scroll areas)
+    import('./arrowbuttons.js').then(module => {
+      const ArrowButtons = module.default;
+      this.scrollHandler = new ArrowButtons(this.gridRenderer, {
+        gameContainerId: this.options.gameContainerId
+      });
+    });
+  }
   
   // Set up menu handlers
   this.setupMenuHandlers();
@@ -167,120 +196,6 @@ constructor(options = {}) {
   
   // Inject CSS for word completion effects
   this.injectWordCompletionCSS();
-}
-  
-/**
- * Modified setupMenuHandlers for GameController.js
- * Removes island reduction buttons from the menu
- */
-setupMenuHandlers() {
-  console.log('Setting up menu handlers');
-  
-  // Step 1: Find the menu elements
-  const menuToggle = document.getElementById('menu-toggle');
-  const menuDropdown = document.getElementById('menu-dropdown');
-  
-  if (!menuToggle || !menuDropdown) {
-    console.error('Menu elements not found. Make sure "menu-toggle" and "menu-dropdown" elements exist in the HTML.');
-    return;
-  }
-  
-  // Step 2: Clear existing menu content
-  menuDropdown.innerHTML = '';
-  
-  // Step 3: Create menu items - UPDATED to remove island reduction levels
-  const menuItems = [
-    { id: 'new-phrase-button', text: 'New Phrase', action: () => this.loadRandomPhrase() },
-    { id: 'reset-selections-button', text: 'Reset Selections', action: () => this.resetSelections() },
-    { id: 'separator-1', text: 'divider', type: 'separator' },
-    { id: 'hint-level-1-button', text: 'Hint Level 1 (15%)', action: () => this.setHintLevel(1), hintLevel: 1 },
-    { id: 'hint-level-2-button', text: 'Hint Level 2 (25%)', action: () => this.setHintLevel(2), hintLevel: 2 },
-    { id: 'hint-level-3-button', text: 'Hint Level 3 (35%)', action: () => this.setHintLevel(3), hintLevel: 3 }
-    // Island reduction buttons removed
-  ];
-  
-  // Step 4: Add to menu and set up click handlers
-  menuItems.forEach(item => {
-    // For separators, create a divider
-    if (item.type === 'separator') {
-      const divider = document.createElement('div');
-      divider.className = 'menu-separator';
-      menuDropdown.appendChild(divider);
-      return;
-    }
-    
-    // Create button for normal menu items
-    const button = document.createElement('button');
-    button.id = item.id;
-    button.className = 'menu-item';
-    
-    // Add special classes for hint buttons
-    if (item.hintLevel) {
-      button.classList.add('hint-button');
-    }
-    
-    button.textContent = item.text;
-    
-    button.addEventListener('click', () => {
-      console.log(`${item.id} clicked`);
-      
-      // For hint buttons, check if they're disabled
-      if (item.hintLevel && item.hintLevel <= this.highestHintLevelUsed && 
-          item.hintLevel !== this.gridRenderer.hintLevel) {
-        console.log(`Hint level ${item.hintLevel} is disabled`);
-        return; // Don't execute the action
-      }
-      
-      // Execute the action
-      item.action();
-      
-      // Update button styles
-      if (item.hintLevel) {
-        this.updateHintButtonStyles();
-      } else {
-        // Close the menu for non-hint buttons
-        menuDropdown.classList.remove('active');
-        menuToggle.classList.remove('active');
-      }
-    });
-    
-    menuDropdown.appendChild(button);
-  });
-  
-  // Step 5: Set up menu toggle
-  menuToggle.addEventListener('click', (e) => {
-    e.stopPropagation();
-    menuToggle.classList.toggle('active');
-    menuDropdown.classList.toggle('active');
-  });
-  
-  // Step 6: Close menu when clicking outside
-  document.addEventListener('click', (e) => {
-    if (!menuToggle.contains(e.target) && !menuDropdown.contains(e.target)) {
-      menuToggle.classList.remove('active');
-      menuDropdown.classList.remove('active');
-    }
-  });
-  
-  // Step 7: Initialize hint level
-  this.resetHintLevel = () => {
-    if (this.gridRenderer) {
-      console.log('Resetting hint level to 0');
-      this.gridRenderer.setHintLevel(0);
-      
-      // Update hint button styles
-      document.querySelectorAll('.hint-button').forEach(btn => {
-        btn.classList.remove('active-hint');
-      });
-    }
-  };
-  
-  // Initialize with no hints
-  if (this.gridRenderer) {
-    this.gridRenderer.setHintLevel(0);
-  }
-  
-  console.log('Menu handlers setup complete');
 }
   
 /**
