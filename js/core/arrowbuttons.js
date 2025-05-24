@@ -225,14 +225,14 @@ class ArrowButtons {
         background: transparent;
       }
       
-      /* Simple triangular sections using borders to divide */
+      /* FIXED: Proper triangular sections pointing to center with thick borders */
       .quarter-up {
         top: 0;
         left: 0;
         right: 0;
         height: 50%;
         clip-path: polygon(50% 50%, 0% 0%, 100% 0%);
-        border-bottom: 1px solid var(--btn-metal-border, #b8b8b8);
+        border-bottom: 3px solid var(--btn-metal-darker, #888);
       }
       
       .quarter-right {
@@ -241,7 +241,7 @@ class ArrowButtons {
         bottom: 0;
         width: 50%;
         clip-path: polygon(50% 50%, 100% 0%, 100% 100%);
-        border-left: 1px solid var(--btn-metal-border, #b8b8b8);
+        border-left: 3px solid var(--btn-metal-darker, #888);
       }
       
       .quarter-down {
@@ -250,7 +250,7 @@ class ArrowButtons {
         right: 0;
         height: 50%;
         clip-path: polygon(50% 50%, 0% 100%, 100% 100%);
-        border-top: 1px solid var(--btn-metal-border, #b8b8b8);
+        border-top: 3px solid var(--btn-metal-darker, #888);
       }
       
       .quarter-left {
@@ -259,7 +259,7 @@ class ArrowButtons {
         bottom: 0;
         width: 50%;
         clip-path: polygon(50% 50%, 0% 0%, 0% 100%);
-        border-right: 1px solid var(--btn-metal-border, #b8b8b8);
+        border-right: 3px solid var(--btn-metal-darker, #888);
       }
       
       .arrow-indicator {
@@ -274,7 +274,7 @@ class ArrowButtons {
         position: relative;
       }
       
-      /* Hover effects */
+      /* Hover effects with metallic gradient changes */
       @media (hover: hover) {
         .quarter:hover:not(.disabled) {
           background: repeating-linear-gradient(
@@ -291,74 +291,73 @@ class ArrowButtons {
         }
         
         .quarter:hover:not(.disabled) .arrow-indicator {
-          transform: scale(1.1);
+          transform: scale(1.15);
           color: var(--btn-text-hover, #222);
         }
       }
       
-      /* FIXED: Active/pressed state with proper button depression */
+      /* FIXED: Active/pressed state with STRONG button depression effect */
       .quarter.active {
         background: repeating-linear-gradient(
           120deg,
-          var(--btn-metal-medium, #d5d5d5) 0px,
-          var(--btn-metal-dark, #b8b8b8) 10px,
-          var(--btn-metal-medium, #d5d5d5) 30px,
+          var(--btn-metal-dark, #b8b8b8) 0px,
+          var(--btn-metal-darker, #a0a0a0) 10px,
+          var(--btn-metal-dark, #b8b8b8) 30px,
           var(--btn-metal-mediumdark, #c8c8c8) 55px,
-          var(--btn-metal-dark, #b8b8b8) 80px,
+          var(--btn-metal-darker, #a0a0a0) 80px,
           var(--btn-metal-mediumdark, #c8c8c8) 95px,
-          var(--btn-metal-medium, #d5d5d5) 120px,
-          var(--btn-metal-dark, #b8b8b8) 135px
+          var(--btn-metal-dark, #b8b8b8) 120px,
+          var(--btn-metal-darker, #a0a0a0) 135px
         ) !important;
-        /* Inset shadow for pressed effect */
+        /* STRONG inset shadow for deep pressed effect */
         box-shadow: 
-          inset 0 2px 4px rgba(0, 0, 0, 0.3),
-          inset 0 1px 2px rgba(0, 0, 0, 0.4) !important;
-        animation: button-pulse 0.2s ease;
+          inset 0 4px 8px rgba(0, 0, 0, 0.5),
+          inset 0 2px 4px rgba(0, 0, 0, 0.6) !important;
+        transform: scale(0.95);
+        animation: button-press-pulse 0.2s ease;
       }
       
       .quarter.active .arrow-indicator {
-        transform: scale(1.1) translateY(1px);
+        transform: scale(1.1) translateY(2px); /* Move arrow down when pressed */
         color: var(--btn-text-active, #000);
         text-shadow: 
-          0px 1px 0px var(--btn-text-shadow-pressed-light, rgba(255, 255, 255, 0.5)),
-          0px -1px 0px var(--btn-text-shadow-pressed-dark, rgba(0, 0, 0, 0.3));
+          0px 1px 0px var(--btn-text-shadow-pressed-light, rgba(255, 255, 255, 0.3)),
+          0px -1px 0px var(--btn-text-shadow-pressed-dark, rgba(0, 0, 0, 0.5));
       }
       
-      /* Long press continuous movement with pulsing */
+      /* Long press continuous movement with strong pulsing */
       .quarter.long-pressing {
         background: repeating-linear-gradient(
           120deg,
-          var(--btn-metal-medium, #d5d5d5) 0px,
-          var(--btn-metal-dark, #b8b8b8) 10px,
-          var(--btn-metal-medium, #d5d5d5) 30px,
+          var(--btn-metal-dark, #b8b8b8) 0px,
+          var(--btn-metal-darker, #a0a0a0) 10px,
+          var(--btn-metal-dark, #b8b8b8) 30px,
           var(--btn-metal-mediumdark, #c8c8c8) 55px,
-          var(--btn-metal-dark, #b8b8b8) 80px,
+          var(--btn-metal-darker, #a0a0a0) 80px,
           var(--btn-metal-mediumdark, #c8c8c8) 95px,
-          var(--btn-metal-medium, #d5d5d5) 120px,
-          var(--btn-metal-dark, #b8b8b8) 135px
+          var(--btn-metal-dark, #b8b8b8) 120px,
+          var(--btn-metal-darker, #a0a0a0) 135px
         ) !important;
-        animation: long-press-pulse 0.8s infinite;
-        box-shadow: 
-          inset 0 2px 4px rgba(0, 0, 0, 0.3),
-          inset 0 1px 2px rgba(0, 0, 0, 0.4);
+        animation: strong-long-press-pulse 0.6s infinite;
+        transform: scale(0.95);
       }
       
-      @keyframes button-pulse {
+      @keyframes button-press-pulse {
         0% { transform: scale(1); }
-        50% { transform: scale(0.98); }
-        100% { transform: scale(0.98); }
+        50% { transform: scale(0.95); }
+        100% { transform: scale(0.95); }
       }
       
-      @keyframes long-press-pulse {
+      @keyframes strong-long-press-pulse {
         0%, 100% { 
           box-shadow: 
-            inset 0 2px 4px rgba(0, 0, 0, 0.3),
-            inset 0 1px 2px rgba(0, 0, 0, 0.4);
+            inset 0 4px 8px rgba(0, 0, 0, 0.5),
+            inset 0 2px 4px rgba(0, 0, 0, 0.6);
         }
         50% { 
           box-shadow: 
-            inset 0 3px 6px rgba(0, 0, 0, 0.4),
-            inset 0 2px 3px rgba(0, 0, 0, 0.5);
+            inset 0 6px 12px rgba(0, 0, 0, 0.7),
+            inset 0 3px 6px rgba(0, 0, 0, 0.8);
         }
       }
       
@@ -593,7 +592,7 @@ class ArrowButtons {
   }
   
   /**
-   * Stop long press movement with cleanup - FIXED
+   * Stop long press movement - SIMPLIFIED
    */
   stopLongPress() {
     const wasLongPressing = this.isLongPressing;
@@ -604,40 +603,21 @@ class ArrowButtons {
       this.animationFrameId = null;
     }
     
-    // Clean up any remaining transforms and reset grid position
-    if (wasLongPressing) {
-      const gridElement = this.gridRenderer.gridElement;
-      if (gridElement) {
-        // Remove transform and let grid renderer handle the final position
-        gridElement.style.transition = 'transform 200ms ease-out';
-        gridElement.style.transform = 'translate3d(0, 0, 0)';
-        
-        // Reset fractional offset
-        this.currentFractionalOffset = { x: 0, y: 0 };
-        
-        // Force grid rebuild after cleanup
-        setTimeout(() => {
-          gridElement.style.transition = '';
-          this.gridRenderer._lastRenderOffset = null;
-          this.gridRenderer.renderVisibleGrid();
-        }, 200);
-      }
-    }
-    
+    // Simple cleanup - no transform manipulation
     this._isScrolling = false;
     this._lastMovementTime = 0;
     this.momentum = 0;
   }
   
   /**
-   * Handle single grid square movement (tap)
+   * Handle single grid square movement (tap) - FIXED to prevent interference
    */
   handleSingleMove(direction) {
     if (this._isScrolling) return;
     
     this._isScrolling = true;
     
-    // Use existing grid renderer scroll method
+    // Use existing grid renderer scroll method - no transform manipulation
     this.gridRenderer.scroll(direction, false);
     
     // Add visual feedback
@@ -646,101 +626,18 @@ class ArrowButtons {
     // Reset scrolling flag after animation
     setTimeout(() => {
       this._isScrolling = false;
+      this.updateScrollStates(); // Update button states
     }, this.options.animationDuration);
   }
   
   /**
-   * Handle fractional movement (long press) - COMPLETELY FIXED
+   * Handle fractional movement (long press) - SIMPLIFIED to full cell movements
    */
   handleFractionalMove(direction, amount) {
-    // Get current grid state
-    const gridElement = this.gridRenderer.gridElement;
-    if (!gridElement) return;
+    // SIMPLIFIED: Just do regular single-cell movements during long press
+    // Remove all fractional transform logic that was causing issues
     
-    // Very small incremental movement - one cell over ~10 seconds
-    const incrementalAmount = amount * 0.02; // Much smaller movements
-    
-    // Get current transform values or initialize
-    if (!this.currentFractionalOffset) {
-      this.currentFractionalOffset = { x: 0, y: 0 };
-    }
-    
-    const cellSize = this.gridRenderer.options.cellSize + 2; // Include gap
-    let deltaX = 0;
-    let deltaY = 0;
-    
-    // Calculate small incremental transform
-    switch (direction) {
-      case 'up':
-        deltaY = incrementalAmount * cellSize;
-        break;
-      case 'down':
-        deltaY = -incrementalAmount * cellSize;
-        break;
-      case 'left':
-        deltaX = incrementalAmount * cellSize;
-        break;
-      case 'right':
-        deltaX = -incrementalAmount * cellSize;
-        break;
-    }
-    
-    // Update cumulative offset
-    this.currentFractionalOffset.x += deltaX;
-    this.currentFractionalOffset.y += deltaY;
-    
-    // Apply the incremental transform
-    gridElement.style.transition = 'none';
-    gridElement.style.transform = `translate3d(${this.currentFractionalOffset.x}px, ${this.currentFractionalOffset.y}px, 0)`;
-    
-    // Update logical offset when we've moved a full cell
-    const gridOffsetX = Math.floor(Math.abs(this.currentFractionalOffset.x) / cellSize);
-    const gridOffsetY = Math.floor(Math.abs(this.currentFractionalOffset.y) / cellSize);
-    
-    if (gridOffsetX >= 1 || gridOffsetY >= 1) {
-      // We've moved at least one full cell, update the grid renderer's offset
-      if (Math.abs(this.currentFractionalOffset.x) >= cellSize) {
-        const cellsMoved = Math.floor(Math.abs(this.currentFractionalOffset.x) / cellSize);
-        const moveDirection = this.currentFractionalOffset.x > 0 ? -1 : 1;
-        this.gridRenderer.viewOffset.x = Math.max(0, 
-          Math.min(this.gridRenderer.fullGridSize - this.getCurrentGridWidth(), 
-            this.gridRenderer.viewOffset.x + (cellsMoved * moveDirection)));
-        
-        // Reset fractional offset for X
-        this.currentFractionalOffset.x = this.currentFractionalOffset.x % cellSize;
-      }
-      
-      if (Math.abs(this.currentFractionalOffset.y) >= cellSize) {
-        const cellsMoved = Math.floor(Math.abs(this.currentFractionalOffset.y) / cellSize);
-        const moveDirection = this.currentFractionalOffset.y > 0 ? -1 : 1;
-        this.gridRenderer.viewOffset.y = Math.max(0, 
-          Math.min(this.gridRenderer.fullGridSize - this.getCurrentGridHeight(), 
-            this.gridRenderer.viewOffset.y + (cellsMoved * moveDirection)));
-        
-        // Reset fractional offset for Y
-        this.currentFractionalOffset.y = this.currentFractionalOffset.y % cellSize;
-      }
-      
-      // Trigger grid rebuild
-      this.gridRenderer._lastRenderOffset = null;
-      this.gridRenderer.renderVisibleGrid();
-    }
-  }
-  
-  /**
-   * Get current grid width based on screen size
-   */
-  getCurrentGridWidth() {
-    const isMobile = window.innerWidth < 768;
-    return isMobile ? this.gridRenderer.options.gridWidthSmall : this.gridRenderer.options.gridWidth;
-  }
-  
-  /**
-   * Get current grid height based on screen size
-   */
-  getCurrentGridHeight() {
-    const isMobile = window.innerWidth < 768;
-    return isMobile ? this.gridRenderer.options.gridHeightSmall : this.gridRenderer.options.gridHeight;
+    this.handleSingleMove(direction);
   }
   
   /**
