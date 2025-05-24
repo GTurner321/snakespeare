@@ -213,6 +213,35 @@ class ArrowButtons {
         -webkit-user-select: none;
       }
       
+      /* Add diagonal border lines using pseudo-elements */
+      .circular-controller::before,
+      .circular-controller::after {
+        content: '';
+        position: absolute;
+        background-color: var(--btn-metal-darker, #888);
+        z-index: 5;
+      }
+      
+      /* Diagonal line from top-left to bottom-right */
+      .circular-controller::before {
+        top: 0;
+        left: 50%;
+        width: 3px;
+        height: 141%; /* Longer to cover the diagonal */
+        transform: translateX(-50%) rotate(45deg);
+        transform-origin: center top;
+      }
+      
+      /* Diagonal line from top-right to bottom-left */
+      .circular-controller::after {
+        top: 0;
+        left: 50%;
+        width: 3px;
+        height: 141%; /* Longer to cover the diagonal */
+        transform: translateX(-50%) rotate(-45deg);
+        transform-origin: center top;
+      }
+      
       .quarter {
         position: absolute;
         display: flex;
@@ -223,16 +252,16 @@ class ArrowButtons {
         user-select: none;
         /* Clear background for individual triangles */
         background: transparent;
+        z-index: 3; /* Below diagonal lines but above background */
       }
       
-      /* FIXED: Proper triangular sections pointing to center with thick borders */
+      /* FIXED: Proper triangular sections pointing to center - REMOVED confusing borders */
       .quarter-up {
         top: 0;
         left: 0;
         right: 0;
         height: 50%;
         clip-path: polygon(50% 50%, 0% 0%, 100% 0%);
-        border-bottom: 3px solid var(--btn-metal-darker, #888);
       }
       
       .quarter-right {
@@ -241,7 +270,6 @@ class ArrowButtons {
         bottom: 0;
         width: 50%;
         clip-path: polygon(50% 50%, 100% 0%, 100% 100%);
-        border-left: 3px solid var(--btn-metal-darker, #888);
       }
       
       .quarter-down {
@@ -250,7 +278,6 @@ class ArrowButtons {
         right: 0;
         height: 50%;
         clip-path: polygon(50% 50%, 0% 100%, 100% 100%);
-        border-top: 3px solid var(--btn-metal-darker, #888);
       }
       
       .quarter-left {
@@ -259,7 +286,6 @@ class ArrowButtons {
         bottom: 0;
         width: 50%;
         clip-path: polygon(50% 50%, 0% 0%, 0% 100%);
-        border-right: 3px solid var(--btn-metal-darker, #888);
       }
       
       .arrow-indicator {
@@ -270,8 +296,25 @@ class ArrowButtons {
           0px -1px 1px var(--btn-text-shadow-dark, rgba(0, 0, 0, 0.2));
         transition: transform 0.15s ease, color 0.15s ease;
         pointer-events: none;
-        z-index: 10;
+        z-index: 10; /* Above diagonal lines and quarters */
         position: relative;
+      }
+      
+      /* Center nipple - higher z-index to appear above diagonal lines */
+      .center-nipple {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--btn-metal-dark, #aaa);
+        border: 1px solid var(--btn-metal-darker, #888);
+        transform: translate(-50%, -50%);
+        box-shadow: 
+          inset 0 1px 2px rgba(0, 0, 0, 0.3),
+          0 1px 1px rgba(255, 255, 255, 0.5);
+        z-index: 15; /* Highest z-index to appear above everything */
       }
       
       /* Hover effects with metallic gradient changes */
@@ -535,13 +578,16 @@ class ArrowButtons {
   }
   
   /**
-   * Start long press continuous movement
+   * Start long press continuous movement - FIXED initialization
    */
   startLongPress() {
     if (!this.isPressed || this.isLongPressing) return;
     
+    console.log(`Starting long press for direction: ${this.currentDirection}`); // Debug
+    
     this.isLongPressing = true;
     this._isScrolling = true;
+    this._lastMovementTime = Date.now(); // Initialize timing
     
     // Add visual feedback
     const quarter = this.quarters.find(q => q.dataset.direction === this.currentDirection);
@@ -555,36 +601,26 @@ class ArrowButtons {
   }
   
   /**
-   * Continuous movement during long press with conservative acceleration
+   * Continuous movement during long press - FIXED to actually work
    */
   continuousMove() {
-    if (!this.isLongPressing || !this.isPressed) return;
-    
-    const now = Date.now();
-    const timeSinceStart = now - this.pressStartTime - this.options.tapThreshold;
-    const timeSinceLastMove = now - this._lastMovementTime;
-    
-    // Calculate acceleration - conservative approach for testing
-    let currentMovementRate = this.options.movementRate;
-    if (timeSinceStart > this.options.accelerationStartTime) {
-      const accelerationProgress = Math.min(
-        (timeSinceStart - this.options.accelerationStartTime) / 3000, // 3 seconds to reach max
-        1.0
-      );
-      const accelerationFactor = accelerationProgress * this.options.accelerationCap;
-      
-      currentMovementRate = this.options.movementRate * (1 - accelerationFactor) + 
-                           this.options.maxSpeed * accelerationFactor;
+    if (!this.isLongPressing || !this.isPressed) {
+      return;
     }
     
-    // Calculate movement amount - no artificial cap, let buffer handle it
-    if (timeSinceLastMove >= currentMovementRate) {
-      const movementAmount = timeSinceLastMove / currentMovementRate;
+    const now = Date.now();
+    const timeSinceLastMove = now - this._lastMovementTime;
+    
+    // Move every 400ms during long press
+    if (timeSinceLastMove >= this.options.movementRate) {
+      console.log(`Long press: moving ${this.currentDirection}`); // Debug
       
-      this.handleFractionalMove(this.currentDirection, movementAmount);
+      // Perform the movement
+      this.gridRenderer.scroll(this.currentDirection, false);
+      
+      // Update states
       this._lastMovementTime = now;
-      this.currentSpeed = currentMovementRate;
-      this.momentum = movementAmount; // Store momentum for easing
+      this.updateScrollStates();
     }
     
     // Continue the loop
