@@ -189,12 +189,24 @@ class ArrowButtons {
         width: 120px;
         height: 120px;
         border-radius: 50%;
-        background: var(--btn-metal-light, #e8e8e8);
-        border: 2px solid var(--btn-metal-border, #ccc);
+        /* Use metallic styling from buttonsboxes.css */
+        background: repeating-linear-gradient(
+          120deg,
+          var(--btn-metal-light, #e8e8e8) 0px,
+          var(--btn-metal-medium, #d5d5d5) 10px,
+          var(--btn-metal-light, #e8e8e8) 30px,
+          var(--btn-metal-mediumlight, #dfdfdf) 55px,
+          var(--btn-metal-medium, #d5d5d5) 80px,
+          var(--btn-metal-mediumlight, #dfdfdf) 95px,
+          var(--btn-metal-light, #e8e8e8) 120px,
+          var(--btn-metal-medium, #d5d5d5) 135px
+        );
+        border: 2px solid var(--btn-metal-border, #b8b8b8);
         box-shadow: 
-          0 4px 8px rgba(0, 0, 0, 0.2),
-          inset 0 1px 2px rgba(255, 255, 255, 0.5),
-          inset 0 -1px 2px rgba(0, 0, 0, 0.1);
+          0 6px 12px 2px var(--btn-metal-shadow, rgba(0, 0, 0, 0.25)),
+          0 2px 6px 1px rgba(0, 0, 0, 0.15),
+          inset 0 1px 2px var(--btn-metal-inner-highlight, rgba(255, 255, 255, 0.6)),
+          inset 0 -1px 2px var(--btn-metal-inner-shadow, rgba(0, 0, 0, 0.2));
         overflow: hidden;
         touch-action: none;
         -webkit-touch-callout: none;
@@ -207,53 +219,59 @@ class ArrowButtons {
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        transition: background-color 0.15s ease, transform 0.15s ease;
+        transition: all 0.15s ease;
         user-select: none;
+        /* Add borders to separate quarters */
+        border: 1px solid var(--btn-metal-border, #b8b8b8);
       }
       
-      /* X-shaped division - quarters as triangular sections */
+      /* FIXED: Proper X-shaped division with borders */
       .quarter-up {
         top: 0;
-        left: 0;
-        right: 0;
+        left: 25%;
+        right: 25%;
         height: 50%;
-        clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+        clip-path: polygon(25% 0%, 75% 0%, 100% 100%, 0% 100%);
         transform-origin: 50% 100%;
+        border-bottom: 2px solid var(--btn-metal-border, #b8b8b8);
       }
       
       .quarter-right {
-        top: 0;
+        top: 25%;
         right: 0;
-        bottom: 0;
+        bottom: 25%;
         width: 50%;
-        clip-path: polygon(0% 0%, 100% 50%, 0% 100%);
+        clip-path: polygon(0% 0%, 100% 25%, 100% 75%, 0% 100%);
         transform-origin: 0% 50%;
+        border-left: 2px solid var(--btn-metal-border, #b8b8b8);
       }
       
       .quarter-down {
         bottom: 0;
-        left: 0;
-        right: 0;
+        left: 25%;
+        right: 25%;
         height: 50%;
-        clip-path: polygon(0% 0%, 50% 100%, 100% 0%);
+        clip-path: polygon(0% 0%, 100% 0%, 75% 100%, 25% 100%);
         transform-origin: 50% 0%;
+        border-top: 2px solid var(--btn-metal-border, #b8b8b8);
       }
       
       .quarter-left {
-        top: 0;
+        top: 25%;
         left: 0;
-        bottom: 0;
+        bottom: 25%;
         width: 50%;
-        clip-path: polygon(100% 0%, 0% 50%, 100% 100%);
+        clip-path: polygon(100% 0%, 0% 25%, 0% 75%, 100% 100%);
         transform-origin: 100% 50%;
+        border-right: 2px solid var(--btn-metal-border, #b8b8b8);
       }
       
       .arrow-indicator {
         font-size: 18px;
         color: var(--btn-text-color, #444);
         text-shadow: 
-          0px 1px 1px rgba(255, 255, 255, 0.8),
-          0px -1px 1px rgba(0, 0, 0, 0.2);
+          0px 1px 1px var(--btn-text-shadow-light, rgba(255, 255, 255, 0.8)),
+          0px -1px 1px var(--btn-text-shadow-dark, rgba(0, 0, 0, 0.2));
         transition: transform 0.15s ease, color 0.15s ease;
         pointer-events: none;
         z-index: 10;
@@ -263,7 +281,17 @@ class ArrowButtons {
       /* Hover effects */
       @media (hover: hover) {
         .quarter:hover:not(.disabled) {
-          background-color: rgba(255, 255, 255, 0.2);
+          background: repeating-linear-gradient(
+            120deg,
+            var(--btn-metal-lighter, #f0f0f0) 0px,
+            var(--btn-metal-light, #e8e8e8) 15px,
+            var(--btn-metal-lighter, #f0f0f0) 35px,
+            var(--btn-metal-mediumlight, #dfdfdf) 60px,
+            var(--btn-metal-light, #e8e8e8) 85px,
+            var(--btn-metal-mediumlight, #dfdfdf) 100px,
+            var(--btn-metal-lighter, #f0f0f0) 125px,
+            var(--btn-metal-light, #e8e8e8) 140px
+          );
         }
         
         .quarter:hover:not(.disabled) .arrow-indicator {
@@ -272,26 +300,71 @@ class ArrowButtons {
         }
       }
       
-      /* Active/pressed state */
+      /* FIXED: Active/pressed state with proper button depression */
       .quarter.active {
-        background-color: rgba(255, 255, 255, 0.4);
-        transform: scale(0.95);
+        background: repeating-linear-gradient(
+          120deg,
+          var(--btn-metal-medium, #d5d5d5) 0px,
+          var(--btn-metal-dark, #b8b8b8) 10px,
+          var(--btn-metal-medium, #d5d5d5) 30px,
+          var(--btn-metal-mediumdark, #c8c8c8) 55px,
+          var(--btn-metal-dark, #b8b8b8) 80px,
+          var(--btn-metal-mediumdark, #c8c8c8) 95px,
+          var(--btn-metal-medium, #d5d5d5) 120px,
+          var(--btn-metal-dark, #b8b8b8) 135px
+        ) !important;
+        /* Inset shadow for pressed effect */
+        box-shadow: 
+          inset 0 2px 4px rgba(0, 0, 0, 0.3),
+          inset 0 1px 2px rgba(0, 0, 0, 0.4) !important;
+        transform: scale(0.98);
+        animation: button-pulse 0.2s ease;
       }
       
       .quarter.active .arrow-indicator {
-        transform: scale(1.2);
+        transform: scale(1.1) translateY(1px);
         color: var(--btn-text-active, #000);
+        text-shadow: 
+          0px 1px 0px var(--btn-text-shadow-pressed-light, rgba(255, 255, 255, 0.5)),
+          0px -1px 0px var(--btn-text-shadow-pressed-dark, rgba(0, 0, 0, 0.3));
       }
       
-      /* Long press continuous movement */
+      /* Long press continuous movement with pulsing */
       .quarter.long-pressing {
-        background-color: rgba(100, 200, 255, 0.3);
-        animation: pulse-movement 0.8s infinite;
+        background: repeating-linear-gradient(
+          120deg,
+          var(--btn-metal-medium, #d5d5d5) 0px,
+          var(--btn-metal-dark, #b8b8b8) 10px,
+          var(--btn-metal-medium, #d5d5d5) 30px,
+          var(--btn-metal-mediumdark, #c8c8c8) 55px,
+          var(--btn-metal-dark, #b8b8b8) 80px,
+          var(--btn-metal-mediumdark, #c8c8c8) 95px,
+          var(--btn-metal-medium, #d5d5d5) 120px,
+          var(--btn-metal-dark, #b8b8b8) 135px
+        ) !important;
+        animation: long-press-pulse 0.8s infinite;
+        box-shadow: 
+          inset 0 2px 4px rgba(0, 0, 0, 0.3),
+          inset 0 1px 2px rgba(0, 0, 0, 0.4);
       }
       
-      @keyframes pulse-movement {
-        0%, 100% { background-color: rgba(100, 200, 255, 0.3); }
-        50% { background-color: rgba(100, 200, 255, 0.5); }
+      @keyframes button-pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(0.98); }
+        100% { transform: scale(0.98); }
+      }
+      
+      @keyframes long-press-pulse {
+        0%, 100% { 
+          box-shadow: 
+            inset 0 2px 4px rgba(0, 0, 0, 0.3),
+            inset 0 1px 2px rgba(0, 0, 0, 0.4);
+        }
+        50% { 
+          box-shadow: 
+            inset 0 3px 6px rgba(0, 0, 0, 0.4),
+            inset 0 2px 3px rgba(0, 0, 0, 0.5);
+        }
       }
       
       /* Disabled state */
@@ -303,6 +376,7 @@ class ArrowButtons {
       
       .quarter.disabled .arrow-indicator {
         color: #999;
+        text-shadow: none;
       }
       
       /* Center nipple */
@@ -592,7 +666,7 @@ class ArrowButtons {
   }
   
   /**
-   * Handle fractional movement (long press)
+   * Handle fractional movement (long press) - FIXED calculation
    */
   handleFractionalMove(direction, amount) {
     // Get current view offset
@@ -601,66 +675,59 @@ class ArrowButtons {
     const width = isMobile ? this.gridRenderer.options.gridWidthSmall : this.gridRenderer.options.gridWidth;
     const height = isMobile ? this.gridRenderer.options.gridHeightSmall : this.gridRenderer.options.gridHeight;
     
+    // FIXED: Much smaller fractional movements
+    const fractionalAmount = amount * 0.1; // Only move 10% of calculated amount
+    
     // Calculate new offset
     let newOffsetX = currentOffset.x;
     let newOffsetY = currentOffset.y;
     
     switch (direction) {
       case 'up':
-        newOffsetY = Math.max(0, currentOffset.y - amount);
+        newOffsetY = Math.max(0, currentOffset.y - fractionalAmount);
         break;
       case 'down':
-        newOffsetY = Math.min(this.gridRenderer.fullGridSize - height, currentOffset.y + amount);
+        newOffsetY = Math.min(this.gridRenderer.fullGridSize - height, currentOffset.y + fractionalAmount);
         break;
       case 'left':
-        newOffsetX = Math.max(0, currentOffset.x - amount);
+        newOffsetX = Math.max(0, currentOffset.x - fractionalAmount);
         break;
       case 'right':
-        newOffsetX = Math.min(this.gridRenderer.fullGridSize - width, currentOffset.x + amount);
+        newOffsetX = Math.min(this.gridRenderer.fullGridSize - width, currentOffset.x + fractionalAmount);
         break;
     }
     
-    // Apply fractional movement using CSS transform
-    this.applyFractionalTransform(newOffsetX, newOffsetY);
-    
-    // Update internal offset tracking
-    this.gridRenderer.viewOffset.x = newOffsetX;
-    this.gridRenderer.viewOffset.y = newOffsetY;
+    // Only apply if there's actually a change
+    if (Math.abs(newOffsetX - currentOffset.x) > 0.01 || Math.abs(newOffsetY - currentOffset.y) > 0.01) {
+      // Apply fractional movement using CSS transform
+      this.applyFractionalTransform(currentOffset.x, currentOffset.y, newOffsetX, newOffsetY);
+      
+      // Update internal offset tracking
+      this.gridRenderer.viewOffset.x = newOffsetX;
+      this.gridRenderer.viewOffset.y = newOffsetY;
+    }
   }
   
   /**
-   * Apply fractional transform to grid
+   * Apply fractional transform to grid - FIXED
    */
-  applyFractionalTransform(targetX, targetY) {
+  applyFractionalTransform(currentX, currentY, targetX, targetY) {
     const gridElement = this.gridRenderer.gridElement;
     if (!gridElement) return;
     
-    // Calculate transform values
-    const currentOffset = this.gridRenderer.viewOffset;
+    // Calculate transform values based on the difference
     const cellSize = this.gridRenderer.options.cellSize;
     const gap = 2; // Gap between cells
     
-    const fractionalOffsetX = (currentOffset.x - targetX) * (cellSize + gap);
-    const fractionalOffsetY = (currentOffset.y - targetY) * (cellSize + gap);
+    const fractionalOffsetX = (currentX - targetX) * (cellSize + gap);
+    const fractionalOffsetY = (currentY - targetY) * (cellSize + gap);
     
-    // Apply smooth transform
-    gridElement.style.transition = `transform ${this.options.smoothAnimationDuration}ms ease-out`;
+    // Apply smooth transform - no transition for continuous movement
+    gridElement.style.transition = 'none';
     gridElement.style.transform = `translate3d(${fractionalOffsetX}px, ${fractionalOffsetY}px, 0)`;
     
     // Store fractional offset
     this.currentFractionalOffset = { x: fractionalOffsetX, y: fractionalOffsetY };
-    
-    // Clean up transform after animation
-    setTimeout(() => {
-      gridElement.style.transition = '';
-      gridElement.style.transform = '';
-      
-      // Force grid rebuild to correct position
-      this.gridRenderer._lastRenderOffset = null;
-      this.gridRenderer.renderVisibleGrid();
-      
-      this.currentFractionalOffset = { x: 0, y: 0 };
-    }, this.options.smoothAnimationDuration);
   }
   
   /**
