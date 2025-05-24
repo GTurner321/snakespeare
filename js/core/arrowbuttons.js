@@ -90,12 +90,12 @@ class ArrowButtons {
     controllerContainer.id = 'circular-controller-container';
     controllerContainer.className = 'circular-controller-container';
     
-    // Create the circular controller
+    // Create the rounded square controller
     const controller = document.createElement('div');
     controller.id = 'circular-controller';
     controller.className = 'circular-controller metallic-button';
     
-    // Create the four quarter buttons
+    // Create the four triangle buttons using simpler approach
     const quarters = [
       { id: 'quarter-up', direction: 'up', className: 'quarter quarter-up' },
       { id: 'quarter-right', direction: 'right', className: 'quarter quarter-right' },
@@ -188,7 +188,7 @@ class ArrowButtons {
         position: relative;
         width: 120px;
         height: 120px;
-        border-radius: 50%;
+        border-radius: 15px; /* Rounded square instead of circle */
         /* Use metallic styling from buttonsboxes.css */
         background: repeating-linear-gradient(
           120deg,
@@ -221,49 +221,45 @@ class ArrowButtons {
         cursor: pointer;
         transition: all 0.15s ease;
         user-select: none;
-        /* Add borders to separate quarters */
-        border: 1px solid var(--btn-metal-border, #b8b8b8);
+        /* Clear background for individual triangles */
+        background: transparent;
       }
       
-      /* FIXED: Proper X-shaped division with borders */
+      /* Simple triangular sections using borders to divide */
       .quarter-up {
         top: 0;
-        left: 25%;
-        right: 25%;
+        left: 0;
+        right: 0;
         height: 50%;
-        clip-path: polygon(25% 0%, 75% 0%, 100% 100%, 0% 100%);
-        transform-origin: 50% 100%;
-        border-bottom: 2px solid var(--btn-metal-border, #b8b8b8);
+        clip-path: polygon(50% 50%, 0% 0%, 100% 0%);
+        border-bottom: 1px solid var(--btn-metal-border, #b8b8b8);
       }
       
       .quarter-right {
-        top: 25%;
+        top: 0;
         right: 0;
-        bottom: 25%;
+        bottom: 0;
         width: 50%;
-        clip-path: polygon(0% 0%, 100% 25%, 100% 75%, 0% 100%);
-        transform-origin: 0% 50%;
-        border-left: 2px solid var(--btn-metal-border, #b8b8b8);
+        clip-path: polygon(50% 50%, 100% 0%, 100% 100%);
+        border-left: 1px solid var(--btn-metal-border, #b8b8b8);
       }
       
       .quarter-down {
         bottom: 0;
-        left: 25%;
-        right: 25%;
+        left: 0;
+        right: 0;
         height: 50%;
-        clip-path: polygon(0% 0%, 100% 0%, 75% 100%, 25% 100%);
-        transform-origin: 50% 0%;
-        border-top: 2px solid var(--btn-metal-border, #b8b8b8);
+        clip-path: polygon(50% 50%, 0% 100%, 100% 100%);
+        border-top: 1px solid var(--btn-metal-border, #b8b8b8);
       }
       
       .quarter-left {
-        top: 25%;
+        top: 0;
         left: 0;
-        bottom: 25%;
+        bottom: 0;
         width: 50%;
-        clip-path: polygon(100% 0%, 0% 25%, 0% 75%, 100% 100%);
-        transform-origin: 100% 50%;
-        border-right: 2px solid var(--btn-metal-border, #b8b8b8);
+        clip-path: polygon(50% 50%, 0% 0%, 0% 100%);
+        border-right: 1px solid var(--btn-metal-border, #b8b8b8);
       }
       
       .arrow-indicator {
@@ -317,7 +313,6 @@ class ArrowButtons {
         box-shadow: 
           inset 0 2px 4px rgba(0, 0, 0, 0.3),
           inset 0 1px 2px rgba(0, 0, 0, 0.4) !important;
-        transform: scale(0.98);
         animation: button-pulse 0.2s ease;
       }
       
@@ -598,7 +593,7 @@ class ArrowButtons {
   }
   
   /**
-   * Stop long press movement with momentum easing
+   * Stop long press movement with cleanup - FIXED
    */
   stopLongPress() {
     const wasLongPressing = this.isLongPressing;
@@ -609,40 +604,29 @@ class ArrowButtons {
       this.animationFrameId = null;
     }
     
-    // Apply momentum easing if we had momentum
-    if (wasLongPressing && this.momentum > 0.1 && this.currentDirection) {
-      this.applyMomentumEasing();
-    } else {
-      this._isScrolling = false;
-      this._lastMovementTime = 0;
-      this.momentum = 0;
-    }
-  }
-  
-  /**
-   * Apply momentum easing after long press ends
-   */
-  applyMomentumEasing() {
-    const easeStep = () => {
-      if (this.momentum < 0.05) {
-        // Momentum has decayed enough, stop
-        this._isScrolling = false;
-        this._lastMovementTime = 0;
-        this.momentum = 0;
-        return;
+    // Clean up any remaining transforms and reset grid position
+    if (wasLongPressing) {
+      const gridElement = this.gridRenderer.gridElement;
+      if (gridElement) {
+        // Remove transform and let grid renderer handle the final position
+        gridElement.style.transition = 'transform 200ms ease-out';
+        gridElement.style.transform = 'translate3d(0, 0, 0)';
+        
+        // Reset fractional offset
+        this.currentFractionalOffset = { x: 0, y: 0 };
+        
+        // Force grid rebuild after cleanup
+        setTimeout(() => {
+          gridElement.style.transition = '';
+          this.gridRenderer._lastRenderOffset = null;
+          this.gridRenderer.renderVisibleGrid();
+        }, 200);
       }
-      
-      // Apply decaying movement
-      this.handleFractionalMove(this.currentDirection, this.momentum * 0.3);
-      
-      // Decay momentum
-      this.momentum *= this.options.momentumDecayRate;
-      
-      // Continue easing
-      requestAnimationFrame(easeStep);
-    };
+    }
     
-    requestAnimationFrame(easeStep);
+    this._isScrolling = false;
+    this._lastMovementTime = 0;
+    this.momentum = 0;
   }
   
   /**
@@ -666,46 +650,97 @@ class ArrowButtons {
   }
   
   /**
-   * Handle fractional movement (long press) - FIXED calculation
+   * Handle fractional movement (long press) - COMPLETELY FIXED
    */
   handleFractionalMove(direction, amount) {
-    // Get current view offset
-    const currentOffset = this.gridRenderer.viewOffset;
-    const isMobile = window.innerWidth < 768;
-    const width = isMobile ? this.gridRenderer.options.gridWidthSmall : this.gridRenderer.options.gridWidth;
-    const height = isMobile ? this.gridRenderer.options.gridHeightSmall : this.gridRenderer.options.gridHeight;
+    // Get current grid state
+    const gridElement = this.gridRenderer.gridElement;
+    if (!gridElement) return;
     
-    // FIXED: Much smaller fractional movements
-    const fractionalAmount = amount * 0.1; // Only move 10% of calculated amount
+    // Very small incremental movement - one cell over ~10 seconds
+    const incrementalAmount = amount * 0.02; // Much smaller movements
     
-    // Calculate new offset
-    let newOffsetX = currentOffset.x;
-    let newOffsetY = currentOffset.y;
+    // Get current transform values or initialize
+    if (!this.currentFractionalOffset) {
+      this.currentFractionalOffset = { x: 0, y: 0 };
+    }
     
+    const cellSize = this.gridRenderer.options.cellSize + 2; // Include gap
+    let deltaX = 0;
+    let deltaY = 0;
+    
+    // Calculate small incremental transform
     switch (direction) {
       case 'up':
-        newOffsetY = Math.max(0, currentOffset.y - fractionalAmount);
+        deltaY = incrementalAmount * cellSize;
         break;
       case 'down':
-        newOffsetY = Math.min(this.gridRenderer.fullGridSize - height, currentOffset.y + fractionalAmount);
+        deltaY = -incrementalAmount * cellSize;
         break;
       case 'left':
-        newOffsetX = Math.max(0, currentOffset.x - fractionalAmount);
+        deltaX = incrementalAmount * cellSize;
         break;
       case 'right':
-        newOffsetX = Math.min(this.gridRenderer.fullGridSize - width, currentOffset.x + fractionalAmount);
+        deltaX = -incrementalAmount * cellSize;
         break;
     }
     
-    // Only apply if there's actually a change
-    if (Math.abs(newOffsetX - currentOffset.x) > 0.01 || Math.abs(newOffsetY - currentOffset.y) > 0.01) {
-      // Apply fractional movement using CSS transform
-      this.applyFractionalTransform(currentOffset.x, currentOffset.y, newOffsetX, newOffsetY);
+    // Update cumulative offset
+    this.currentFractionalOffset.x += deltaX;
+    this.currentFractionalOffset.y += deltaY;
+    
+    // Apply the incremental transform
+    gridElement.style.transition = 'none';
+    gridElement.style.transform = `translate3d(${this.currentFractionalOffset.x}px, ${this.currentFractionalOffset.y}px, 0)`;
+    
+    // Update logical offset when we've moved a full cell
+    const gridOffsetX = Math.floor(Math.abs(this.currentFractionalOffset.x) / cellSize);
+    const gridOffsetY = Math.floor(Math.abs(this.currentFractionalOffset.y) / cellSize);
+    
+    if (gridOffsetX >= 1 || gridOffsetY >= 1) {
+      // We've moved at least one full cell, update the grid renderer's offset
+      if (Math.abs(this.currentFractionalOffset.x) >= cellSize) {
+        const cellsMoved = Math.floor(Math.abs(this.currentFractionalOffset.x) / cellSize);
+        const moveDirection = this.currentFractionalOffset.x > 0 ? -1 : 1;
+        this.gridRenderer.viewOffset.x = Math.max(0, 
+          Math.min(this.gridRenderer.fullGridSize - this.getCurrentGridWidth(), 
+            this.gridRenderer.viewOffset.x + (cellsMoved * moveDirection)));
+        
+        // Reset fractional offset for X
+        this.currentFractionalOffset.x = this.currentFractionalOffset.x % cellSize;
+      }
       
-      // Update internal offset tracking
-      this.gridRenderer.viewOffset.x = newOffsetX;
-      this.gridRenderer.viewOffset.y = newOffsetY;
+      if (Math.abs(this.currentFractionalOffset.y) >= cellSize) {
+        const cellsMoved = Math.floor(Math.abs(this.currentFractionalOffset.y) / cellSize);
+        const moveDirection = this.currentFractionalOffset.y > 0 ? -1 : 1;
+        this.gridRenderer.viewOffset.y = Math.max(0, 
+          Math.min(this.gridRenderer.fullGridSize - this.getCurrentGridHeight(), 
+            this.gridRenderer.viewOffset.y + (cellsMoved * moveDirection)));
+        
+        // Reset fractional offset for Y
+        this.currentFractionalOffset.y = this.currentFractionalOffset.y % cellSize;
+      }
+      
+      // Trigger grid rebuild
+      this.gridRenderer._lastRenderOffset = null;
+      this.gridRenderer.renderVisibleGrid();
     }
+  }
+  
+  /**
+   * Get current grid width based on screen size
+   */
+  getCurrentGridWidth() {
+    const isMobile = window.innerWidth < 768;
+    return isMobile ? this.gridRenderer.options.gridWidthSmall : this.gridRenderer.options.gridWidth;
+  }
+  
+  /**
+   * Get current grid height based on screen size
+   */
+  getCurrentGridHeight() {
+    const isMobile = window.innerWidth < 768;
+    return isMobile ? this.gridRenderer.options.gridHeightSmall : this.gridRenderer.options.gridHeight;
   }
   
   /**
