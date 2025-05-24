@@ -188,8 +188,8 @@ class ArrowButtons {
         position: relative;
         width: 120px;
         height: 120px;
-        border-radius: 15px; /* Rounded square instead of circle */
-        /* Use metallic styling from buttonsboxes.css */
+        border-radius: 15px;
+        /* Base metallic background */
         background: repeating-linear-gradient(
           120deg,
           var(--btn-metal-light, #e8e8e8) 0px,
@@ -207,39 +207,10 @@ class ArrowButtons {
           0 2px 6px 1px rgba(0, 0, 0, 0.15),
           inset 0 1px 2px var(--btn-metal-inner-highlight, rgba(255, 255, 255, 0.6)),
           inset 0 -1px 2px var(--btn-metal-inner-shadow, rgba(0, 0, 0, 0.2));
-        overflow: hidden;
+        overflow: visible; /* Allow borders to show */
         touch-action: none;
         -webkit-touch-callout: none;
         -webkit-user-select: none;
-      }
-      
-      /* Add diagonal border lines using pseudo-elements */
-      .circular-controller::before,
-      .circular-controller::after {
-        content: '';
-        position: absolute;
-        background-color: var(--btn-metal-darker, #888);
-        z-index: 5;
-      }
-      
-      /* Diagonal line from top-left to bottom-right */
-      .circular-controller::before {
-        top: 0;
-        left: 50%;
-        width: 3px;
-        height: 141%; /* Longer to cover the diagonal */
-        transform: translateX(-50%) rotate(45deg);
-        transform-origin: center top;
-      }
-      
-      /* Diagonal line from top-right to bottom-left */
-      .circular-controller::after {
-        top: 0;
-        left: 50%;
-        width: 3px;
-        height: 141%; /* Longer to cover the diagonal */
-        transform: translateX(-50%) rotate(-45deg);
-        transform-origin: center top;
       }
       
       .quarter {
@@ -250,18 +221,32 @@ class ArrowButtons {
         cursor: pointer;
         transition: all 0.15s ease;
         user-select: none;
-        /* Clear background for individual triangles */
-        background: transparent;
-        z-index: 3; /* Below diagonal lines but above background */
+        /* Each quarter gets its own metallic background */
+        background: repeating-linear-gradient(
+          120deg,
+          var(--btn-metal-light, #e8e8e8) 0px,
+          var(--btn-metal-medium, #d5d5d5) 10px,
+          var(--btn-metal-light, #e8e8e8) 30px,
+          var(--btn-metal-mediumlight, #dfdfdf) 55px,
+          var(--btn-metal-medium, #d5d5d5) 80px,
+          var(--btn-metal-mediumlight, #dfdfdf) 95px,
+          var(--btn-metal-light, #e8e8e8) 120px,
+          var(--btn-metal-medium, #d5d5d5) 135px
+        );
       }
       
-      /* FIXED: Proper triangular sections pointing to center - REMOVED confusing borders */
+      /* Create triangular sections with proper diagonal borders */
       .quarter-up {
         top: 0;
         left: 0;
         right: 0;
         height: 50%;
         clip-path: polygon(50% 50%, 0% 0%, 100% 0%);
+        border-bottom: 2px solid var(--btn-metal-darker, #888);
+        border-left: 2px solid var(--btn-metal-darker, #888);
+        border-right: 2px solid var(--btn-metal-darker, #888);
+        /* Create the diagonal effect */
+        transform-origin: 50% 50%;
       }
       
       .quarter-right {
@@ -270,6 +255,9 @@ class ArrowButtons {
         bottom: 0;
         width: 50%;
         clip-path: polygon(50% 50%, 100% 0%, 100% 100%);
+        border-left: 2px solid var(--btn-metal-darker, #888);
+        border-top: 2px solid var(--btn-metal-darker, #888);
+        border-bottom: 2px solid var(--btn-metal-darker, #888);
       }
       
       .quarter-down {
@@ -278,6 +266,9 @@ class ArrowButtons {
         right: 0;
         height: 50%;
         clip-path: polygon(50% 50%, 0% 100%, 100% 100%);
+        border-top: 2px solid var(--btn-metal-darker, #888);
+        border-left: 2px solid var(--btn-metal-darker, #888);
+        border-right: 2px solid var(--btn-metal-darker, #888);
       }
       
       .quarter-left {
@@ -286,6 +277,9 @@ class ArrowButtons {
         bottom: 0;
         width: 50%;
         clip-path: polygon(50% 50%, 0% 0%, 0% 100%);
+        border-right: 2px solid var(--btn-metal-darker, #888);
+        border-top: 2px solid var(--btn-metal-darker, #888);
+        border-bottom: 2px solid var(--btn-metal-darker, #888);
       }
       
       .arrow-indicator {
@@ -317,7 +311,7 @@ class ArrowButtons {
         z-index: 15; /* Highest z-index to appear above everything */
       }
       
-      /* Hover effects with metallic gradient changes */
+      /* Hover effects with metallic gradient changes per section */
       @media (hover: hover) {
         .quarter:hover:not(.disabled) {
           background: repeating-linear-gradient(
@@ -330,7 +324,7 @@ class ArrowButtons {
             var(--btn-metal-mediumlight, #dfdfdf) 100px,
             var(--btn-metal-lighter, #f0f0f0) 125px,
             var(--btn-metal-light, #e8e8e8) 140px
-          );
+          ) !important;
         }
         
         .quarter:hover:not(.disabled) .arrow-indicator {
@@ -339,7 +333,7 @@ class ArrowButtons {
         }
       }
       
-      /* FIXED: Active/pressed state with STRONG button depression effect */
+      /* FIXED: Individual section depression with metallic effect */
       .quarter.active {
         background: repeating-linear-gradient(
           120deg,
@@ -352,23 +346,23 @@ class ArrowButtons {
           var(--btn-metal-dark, #b8b8b8) 120px,
           var(--btn-metal-darker, #a0a0a0) 135px
         ) !important;
-        /* STRONG inset shadow for deep pressed effect */
+        /* Individual section inset shadow */
         box-shadow: 
           inset 0 4px 8px rgba(0, 0, 0, 0.5),
-          inset 0 2px 4px rgba(0, 0, 0, 0.6) !important;
+          inset 0 2px 4px rgba(0, 0, 0, 0.6);
         transform: scale(0.95);
-        animation: button-press-pulse 0.2s ease;
+        z-index: 2; /* Bring pressed section forward */
       }
       
       .quarter.active .arrow-indicator {
-        transform: scale(1.1) translateY(2px); /* Move arrow down when pressed */
+        transform: scale(1.1) translateY(2px);
         color: var(--btn-text-active, #000);
         text-shadow: 
           0px 1px 0px var(--btn-text-shadow-pressed-light, rgba(255, 255, 255, 0.3)),
           0px -1px 0px var(--btn-text-shadow-pressed-dark, rgba(0, 0, 0, 0.5));
       }
       
-      /* Long press continuous movement with strong pulsing */
+      /* Long press with section-specific pulsing */
       .quarter.long-pressing {
         background: repeating-linear-gradient(
           120deg,
@@ -381,17 +375,12 @@ class ArrowButtons {
           var(--btn-metal-dark, #b8b8b8) 120px,
           var(--btn-metal-darker, #a0a0a0) 135px
         ) !important;
-        animation: strong-long-press-pulse 0.6s infinite;
+        animation: section-long-press-pulse 0.6s infinite;
         transform: scale(0.95);
+        z-index: 2;
       }
       
-      @keyframes button-press-pulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(0.95); }
-        100% { transform: scale(0.95); }
-      }
-      
-      @keyframes strong-long-press-pulse {
+      @keyframes section-long-press-pulse {
         0%, 100% { 
           box-shadow: 
             inset 0 4px 8px rgba(0, 0, 0, 0.5),
