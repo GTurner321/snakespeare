@@ -1,7 +1,7 @@
 /**
- * Enhanced Circular Arrow Controller
- * Replaces the trackpad with a circular 4-quarter navigation system
- * Supports both tap (1 square) and long-press (fractional) movement
+ * Enhanced Triangular Arrow Controller
+ * Replaces the complex circular controller with 4 separate triangular buttons
+ * that fit together into a square formation
  */
 
 class ArrowButtons {
@@ -14,11 +14,6 @@ class ArrowButtons {
       tapThreshold: 350,        // ms - anything shorter is a tap
       movementRate: 400,        // ms per grid square for long press
       animationDuration: 300,   // ms for single square animations
-      smoothAnimationDuration: 200, // ms for fractional movements
-      accelerationStartTime: 1000,  // ms - when to start acceleration
-      maxSpeed: 150,           // ms per grid square (conservative to start)
-      accelerationCap: 0.6,    // Max acceleration factor (conservative)
-      momentumDecayRate: 0.85, // How quickly momentum fades (0-1)
       ...options
     };
     
@@ -28,9 +23,6 @@ class ArrowButtons {
     this.currentDirection = null;
     this.isLongPressing = false;
     this.animationFrameId = null;
-    this.currentFractionalOffset = { x: 0, y: 0 };
-    this.currentSpeed = this.options.movementRate; // Current movement speed
-    this.momentum = 0; // Current momentum for easing
     
     // Movement state
     this._isScrolling = false;
@@ -47,7 +39,7 @@ class ArrowButtons {
   }
   
   /**
-   * Create the circular controller interface
+   * Create the triangular controller interface
    */
   createController() {
     // Get reference to the game container
@@ -85,33 +77,28 @@ class ArrowButtons {
       margin: 0 auto;
     `;
     
-    // Create circular controller container
+    // Create triangular controller container
     const controllerContainer = document.createElement('div');
-    controllerContainer.id = 'circular-controller-container';
-    controllerContainer.className = 'circular-controller-container';
+    controllerContainer.id = 'triangular-controller-container';
+    controllerContainer.className = 'triangular-controller-container';
     
-    // Create the rounded square controller
-    const controller = document.createElement('div');
-    controller.id = 'circular-controller';
-    controller.className = 'circular-controller metallic-button';
-    
-    // Create the four triangle buttons using simpler approach
-    const quarters = [
-      { id: 'quarter-up', direction: 'up', className: 'quarter quarter-up' },
-      { id: 'quarter-right', direction: 'right', className: 'quarter quarter-right' },
-      { id: 'quarter-down', direction: 'down', className: 'quarter quarter-down' },
-      { id: 'quarter-left', direction: 'left', className: 'quarter quarter-left' }
+    // Create the four separate triangular buttons
+    const triangles = [
+      { id: 'triangle-up', direction: 'up', className: 'triangle-button triangle-up' },
+      { id: 'triangle-right', direction: 'right', className: 'triangle-button triangle-right' },
+      { id: 'triangle-down', direction: 'down', className: 'triangle-button triangle-down' },
+      { id: 'triangle-left', direction: 'left', className: 'triangle-button triangle-left' }
     ];
     
-    quarters.forEach(quarter => {
-      const quarterElement = document.createElement('div');
-      quarterElement.id = quarter.id;
-      quarterElement.className = quarter.className;
-      quarterElement.dataset.direction = quarter.direction;
+    triangles.forEach(triangle => {
+      const triangleElement = document.createElement('div');
+      triangleElement.id = triangle.id;
+      triangleElement.className = triangle.className;
+      triangleElement.dataset.direction = triangle.direction;
       
       // Add arrow indicator
       const arrow = document.createElement('div');
-      arrow.className = 'arrow-indicator';
+      arrow.className = 'triangle-arrow';
       
       // Set arrow character based on direction
       const arrowChars = {
@@ -120,19 +107,11 @@ class ArrowButtons {
         down: '▼',
         left: '◀'
       };
-      arrow.textContent = arrowChars[quarter.direction];
+      arrow.textContent = arrowChars[triangle.direction];
       
-      quarterElement.appendChild(arrow);
-      controller.appendChild(quarterElement);
+      triangleElement.appendChild(arrow);
+      controllerContainer.appendChild(triangleElement);
     });
-    
-    // Create center nipple
-    const centerNipple = document.createElement('div');
-    centerNipple.className = 'center-nipple';
-    controller.appendChild(centerNipple);
-    
-    // Add controller to container
-    controllerContainer.appendChild(controller);
     
     // Assemble the layout
     const gridContainerParent = gridContainer.parentNode;
@@ -149,9 +128,9 @@ class ArrowButtons {
     }
     
     // Store references
-    this.controller = controller;
+    this.controller = controllerContainer;
     this.phraseDisplay = phraseDisplay;
-    this.quarters = quarters.map(q => document.getElementById(q.id));
+    this.triangles = triangles.map(t => document.getElementById(t.id));
     
     // Inject CSS styles
     this.injectStyles();
@@ -164,32 +143,36 @@ class ArrowButtons {
   }
   
   /**
-   * Inject CSS styles for the circular controller
+   * Inject CSS styles for triangular buttons
    */
   injectStyles() {
-    if (document.getElementById('circular-controller-styles')) return;
+    if (document.getElementById('triangular-controller-styles')) return;
     
     const style = document.createElement('style');
-    style.id = 'circular-controller-styles';
+    style.id = 'triangular-controller-styles';
     style.textContent = `
-      /* Circular Controller Styles */
-      .circular-controller-container {
-        width: 100%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        padding: 20px 0;
+      /* Triangular Controller Styles */
+      .triangular-controller-container {
+        width: 120px;
+        height: 120px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: 1fr 1fr;
+        gap: 0;
         position: relative;
-        z-index: 20;
+        margin: 20px auto;
         user-select: none;
       }
       
-      .circular-controller {
+      .triangle-button {
         position: relative;
-        width: 120px;
-        height: 120px;
-        border-radius: 15px;
-        /* Base metallic background */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        user-select: none;
+        /* Base metallic styling from buttonsboxes.css */
         background: repeating-linear-gradient(
           120deg,
           var(--btn-metal-light, #e8e8e8) 0px,
@@ -203,86 +186,49 @@ class ArrowButtons {
         );
         border: 2px solid var(--btn-metal-border, #b8b8b8);
         box-shadow: 
-          0 6px 12px 2px var(--btn-metal-shadow, rgba(0, 0, 0, 0.25)),
-          0 2px 6px 1px rgba(0, 0, 0, 0.15),
+          0 4px 8px 1px var(--btn-metal-shadow, rgba(0, 0, 0, 0.25)),
+          0 1px 3px 1px rgba(0, 0, 0, 0.15),
           inset 0 1px 2px var(--btn-metal-inner-highlight, rgba(255, 255, 255, 0.6)),
           inset 0 -1px 2px var(--btn-metal-inner-shadow, rgba(0, 0, 0, 0.2));
-        overflow: visible; /* Allow borders to show */
-        touch-action: none;
-        -webkit-touch-callout: none;
-        -webkit-user-select: none;
       }
       
-      .quarter {
-        position: absolute;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: all 0.15s ease;
-        user-select: none;
-        /* Each quarter gets its own metallic background */
-        background: repeating-linear-gradient(
-          120deg,
-          var(--btn-metal-light, #e8e8e8) 0px,
-          var(--btn-metal-medium, #d5d5d5) 10px,
-          var(--btn-metal-light, #e8e8e8) 30px,
-          var(--btn-metal-mediumlight, #dfdfdf) 55px,
-          var(--btn-metal-medium, #d5d5d5) 80px,
-          var(--btn-metal-mediumlight, #dfdfdf) 95px,
-          var(--btn-metal-light, #e8e8e8) 120px,
-          var(--btn-metal-medium, #d5d5d5) 135px
-        );
+      /* Top triangle - 2:1 ratio (wide) */
+      .triangle-up {
+        grid-column: 1 / 3;
+        grid-row: 1;
+        height: 60px;
+        clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+        border-bottom: 3px solid var(--btn-metal-darker, #888);
       }
       
-      /* Create triangular sections with proper diagonal borders */
-      .quarter-up {
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 50%;
-        clip-path: polygon(50% 50%, 0% 0%, 100% 0%);
-        border-bottom: 2px solid var(--btn-metal-darker, #888);
-        border-left: 2px solid var(--btn-metal-darker, #888);
-        border-right: 2px solid var(--btn-metal-darker, #888);
-        /* Create the diagonal effect */
-        transform-origin: 50% 50%;
+      /* Right triangle - 1:2 ratio (tall) */
+      .triangle-right {
+        grid-column: 2;
+        grid-row: 1 / 3;
+        width: 60px;
+        clip-path: polygon(0% 0%, 100% 50%, 0% 100%);
+        border-left: 3px solid var(--btn-metal-darker, #888);
       }
       
-      .quarter-right {
-        top: 0;
-        right: 0;
-        bottom: 0;
-        width: 50%;
-        clip-path: polygon(50% 50%, 100% 0%, 100% 100%);
-        border-left: 2px solid var(--btn-metal-darker, #888);
-        border-top: 2px solid var(--btn-metal-darker, #888);
-        border-bottom: 2px solid var(--btn-metal-darker, #888);
+      /* Bottom triangle - 2:1 ratio (wide) */
+      .triangle-down {
+        grid-column: 1 / 3;
+        grid-row: 2;
+        height: 60px;
+        clip-path: polygon(0% 0%, 50% 100%, 100% 0%);
+        border-top: 3px solid var(--btn-metal-darker, #888);
       }
       
-      .quarter-down {
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 50%;
-        clip-path: polygon(50% 50%, 0% 100%, 100% 100%);
-        border-top: 2px solid var(--btn-metal-darker, #888);
-        border-left: 2px solid var(--btn-metal-darker, #888);
-        border-right: 2px solid var(--btn-metal-darker, #888);
+      /* Left triangle - 1:2 ratio (tall) */
+      .triangle-left {
+        grid-column: 1;
+        grid-row: 1 / 3;
+        width: 60px;
+        clip-path: polygon(100% 0%, 0% 50%, 100% 100%);
+        border-right: 3px solid var(--btn-metal-darker, #888);
       }
       
-      .quarter-left {
-        top: 0;
-        left: 0;
-        bottom: 0;
-        width: 50%;
-        clip-path: polygon(50% 50%, 0% 0%, 0% 100%);
-        border-right: 2px solid var(--btn-metal-darker, #888);
-        border-top: 2px solid var(--btn-metal-darker, #888);
-        border-bottom: 2px solid var(--btn-metal-darker, #888);
-      }
-      
-      .arrow-indicator {
+      .triangle-arrow {
         font-size: 18px;
         color: var(--btn-text-color, #444);
         text-shadow: 
@@ -290,30 +236,13 @@ class ArrowButtons {
           0px -1px 1px var(--btn-text-shadow-dark, rgba(0, 0, 0, 0.2));
         transition: transform 0.15s ease, color 0.15s ease;
         pointer-events: none;
-        z-index: 10; /* Above diagonal lines and quarters */
+        z-index: 10;
         position: relative;
       }
       
-      /* Center nipple - higher z-index to appear above diagonal lines */
-      .center-nipple {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 16px;
-        height: 16px;
-        border-radius: 50%;
-        background: var(--btn-metal-dark, #aaa);
-        border: 1px solid var(--btn-metal-darker, #888);
-        transform: translate(-50%, -50%);
-        box-shadow: 
-          inset 0 1px 2px rgba(0, 0, 0, 0.3),
-          0 1px 1px rgba(255, 255, 255, 0.5);
-        z-index: 15; /* Highest z-index to appear above everything */
-      }
-      
-      /* Hover effects with metallic gradient changes per section */
+      /* Hover effects */
       @media (hover: hover) {
-        .quarter:hover:not(.disabled) {
+        .triangle-button:hover:not(.disabled) {
           background: repeating-linear-gradient(
             120deg,
             var(--btn-metal-lighter, #f0f0f0) 0px,
@@ -324,17 +253,17 @@ class ArrowButtons {
             var(--btn-metal-mediumlight, #dfdfdf) 100px,
             var(--btn-metal-lighter, #f0f0f0) 125px,
             var(--btn-metal-light, #e8e8e8) 140px
-          ) !important;
+          );
         }
         
-        .quarter:hover:not(.disabled) .arrow-indicator {
+        .triangle-button:hover:not(.disabled) .triangle-arrow {
           transform: scale(1.15);
           color: var(--btn-text-hover, #222);
         }
       }
       
-      /* FIXED: Individual section depression with metallic effect */
-      .quarter.active {
+      /* Active/pressed state matching buttonsboxes.css */
+      .triangle-button.active {
         background: repeating-linear-gradient(
           120deg,
           var(--btn-metal-dark, #b8b8b8) 0px,
@@ -346,15 +275,14 @@ class ArrowButtons {
           var(--btn-metal-dark, #b8b8b8) 120px,
           var(--btn-metal-darker, #a0a0a0) 135px
         ) !important;
-        /* Individual section inset shadow */
         box-shadow: 
           inset 0 4px 8px rgba(0, 0, 0, 0.5),
           inset 0 2px 4px rgba(0, 0, 0, 0.6);
         transform: scale(0.95);
-        z-index: 2; /* Bring pressed section forward */
+        animation: triangle-button-pulse 0.2s ease;
       }
       
-      .quarter.active .arrow-indicator {
+      .triangle-button.active .triangle-arrow {
         transform: scale(1.1) translateY(2px);
         color: var(--btn-text-active, #000);
         text-shadow: 
@@ -362,8 +290,8 @@ class ArrowButtons {
           0px -1px 0px var(--btn-text-shadow-pressed-dark, rgba(0, 0, 0, 0.5));
       }
       
-      /* Long press with section-specific pulsing */
-      .quarter.long-pressing {
+      /* Long press pulsing animation */
+      .triangle-button.long-pressing {
         background: repeating-linear-gradient(
           120deg,
           var(--btn-metal-dark, #b8b8b8) 0px,
@@ -375,12 +303,17 @@ class ArrowButtons {
           var(--btn-metal-dark, #b8b8b8) 120px,
           var(--btn-metal-darker, #a0a0a0) 135px
         ) !important;
-        animation: section-long-press-pulse 0.6s infinite;
+        animation: triangle-long-press-pulse 0.6s infinite;
         transform: scale(0.95);
-        z-index: 2;
       }
       
-      @keyframes section-long-press-pulse {
+      @keyframes triangle-button-pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(0.95); }
+        100% { transform: scale(0.95); }
+      }
+      
+      @keyframes triangle-long-press-pulse {
         0%, 100% { 
           box-shadow: 
             inset 0 4px 8px rgba(0, 0, 0, 0.5),
@@ -394,68 +327,54 @@ class ArrowButtons {
       }
       
       /* Disabled state */
-      .quarter.disabled {
+      .triangle-button.disabled {
         opacity: 0.3;
         cursor: default;
         pointer-events: none;
       }
       
-      .quarter.disabled .arrow-indicator {
+      .triangle-button.disabled .triangle-arrow {
         color: #999;
         text-shadow: none;
       }
       
-      /* Center nipple */
-      .center-nipple {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 16px;
-        height: 16px;
-        border-radius: 50%;
-        background: var(--btn-metal-dark, #aaa);
-        border: 1px solid var(--btn-metal-darker, #888);
-        transform: translate(-50%, -50%);
-        box-shadow: 
-          inset 0 1px 2px rgba(0, 0, 0, 0.3),
-          0 1px 1px rgba(255, 255, 255, 0.5);
-        z-index: 15;
-      }
-      
       /* Responsive adjustments */
       @media (max-width: 768px) {
-        .circular-controller {
+        .triangular-controller-container {
           width: 100px;
           height: 100px;
         }
         
-        .arrow-indicator {
-          font-size: 16px;
+        .triangle-up, .triangle-down {
+          height: 50px;
         }
         
-        .center-nipple {
-          width: 14px;
-          height: 14px;
+        .triangle-left, .triangle-right {
+          width: 50px;
+        }
+        
+        .triangle-arrow {
+          font-size: 16px;
         }
       }
       
       @media (max-width: 480px) {
-        .circular-controller {
+        .triangular-controller-container {
           width: 85px;
           height: 85px;
+          margin: 15px auto;
         }
         
-        .arrow-indicator {
+        .triangle-up, .triangle-down {
+          height: 42px;
+        }
+        
+        .triangle-left, .triangle-right {
+          width: 42px;
+        }
+        
+        .triangle-arrow {
           font-size: 14px;
-        }
-        
-        .center-nipple {
-          width: 12px;
-          height: 12px;
-        }
-        
-        .circular-controller-container {
-          padding: 15px 0;
         }
       }
     `;
@@ -467,17 +386,17 @@ class ArrowButtons {
    * Set up event listeners for touch and mouse interactions
    */
   setupEventListeners() {
-    // Add event listeners to each quarter
-    this.quarters.forEach(quarter => {
+    // Add event listeners to each triangle
+    this.triangles.forEach(triangle => {
       // Mouse events
-      quarter.addEventListener('mousedown', (e) => this.handlePressStart(e));
-      quarter.addEventListener('mouseup', (e) => this.handlePressEnd(e));
-      quarter.addEventListener('mouseleave', (e) => this.handlePressEnd(e));
+      triangle.addEventListener('mousedown', (e) => this.handlePressStart(e));
+      triangle.addEventListener('mouseup', (e) => this.handlePressEnd(e));
+      triangle.addEventListener('mouseleave', (e) => this.handlePressEnd(e));
       
       // Touch events
-      quarter.addEventListener('touchstart', (e) => this.handlePressStart(e));
-      quarter.addEventListener('touchend', (e) => this.handlePressEnd(e));
-      quarter.addEventListener('touchcancel', (e) => this.handlePressEnd(e));
+      triangle.addEventListener('touchstart', (e) => this.handlePressStart(e));
+      triangle.addEventListener('touchend', (e) => this.handlePressEnd(e));
+      triangle.addEventListener('touchcancel', (e) => this.handlePressEnd(e));
     });
     
     // Global mouse up to catch releases outside the element
@@ -516,10 +435,10 @@ class ArrowButtons {
     
     if (this._isScrolling || this.isPressed) return;
     
-    const quarter = e.currentTarget;
-    const direction = quarter.dataset.direction;
+    const triangle = e.currentTarget;
+    const direction = triangle.dataset.direction;
     
-    if (quarter.classList.contains('disabled')) return;
+    if (triangle.classList.contains('disabled')) return;
     
     // Set press state
     this.isPressed = true;
@@ -528,7 +447,7 @@ class ArrowButtons {
     this.isLongPressing = false;
     
     // Visual feedback
-    quarter.classList.add('active');
+    triangle.classList.add('active');
     
     // Set up long press detection
     setTimeout(() => {
@@ -548,8 +467,8 @@ class ArrowButtons {
     const direction = this.currentDirection;
     
     // Clear visual states
-    this.quarters.forEach(q => {
-      q.classList.remove('active', 'long-pressing');
+    this.triangles.forEach(t => {
+      t.classList.remove('active', 'long-pressing');
     });
     
     // Stop long press if active
@@ -567,22 +486,22 @@ class ArrowButtons {
   }
   
   /**
-   * Start long press continuous movement - FIXED initialization
+   * Start long press continuous movement
    */
   startLongPress() {
     if (!this.isPressed || this.isLongPressing) return;
     
-    console.log(`Starting long press for direction: ${this.currentDirection}`); // Debug
+    console.log(`Starting long press for direction: ${this.currentDirection}`);
     
     this.isLongPressing = true;
     this._isScrolling = true;
-    this._lastMovementTime = Date.now(); // Initialize timing
+    this._lastMovementTime = Date.now();
     
     // Add visual feedback
-    const quarter = this.quarters.find(q => q.dataset.direction === this.currentDirection);
-    if (quarter) {
-      quarter.classList.remove('active');
-      quarter.classList.add('long-pressing');
+    const triangle = this.triangles.find(t => t.dataset.direction === this.currentDirection);
+    if (triangle) {
+      triangle.classList.remove('active');
+      triangle.classList.add('long-pressing');
     }
     
     // Start continuous movement
@@ -590,7 +509,7 @@ class ArrowButtons {
   }
   
   /**
-   * Continuous movement during long press - FIXED to actually work
+   * Continuous movement during long press
    */
   continuousMove() {
     if (!this.isLongPressing || !this.isPressed) {
@@ -602,7 +521,7 @@ class ArrowButtons {
     
     // Move every 400ms during long press
     if (timeSinceLastMove >= this.options.movementRate) {
-      console.log(`Long press: moving ${this.currentDirection}`); // Debug
+      console.log(`Long press: moving ${this.currentDirection}`);
       
       // Perform the movement
       this.gridRenderer.scroll(this.currentDirection, false);
@@ -617,10 +536,9 @@ class ArrowButtons {
   }
   
   /**
-   * Stop long press movement - SIMPLIFIED
+   * Stop long press movement
    */
   stopLongPress() {
-    const wasLongPressing = this.isLongPressing;
     this.isLongPressing = false;
     
     if (this.animationFrameId) {
@@ -628,21 +546,19 @@ class ArrowButtons {
       this.animationFrameId = null;
     }
     
-    // Simple cleanup - no transform manipulation
     this._isScrolling = false;
     this._lastMovementTime = 0;
-    this.momentum = 0;
   }
   
   /**
-   * Handle single grid square movement (tap) - FIXED to prevent interference
+   * Handle single grid square movement (tap)
    */
   handleSingleMove(direction) {
     if (this._isScrolling) return;
     
     this._isScrolling = true;
     
-    // Use existing grid renderer scroll method - no transform manipulation
+    // Use existing grid renderer scroll method
     this.gridRenderer.scroll(direction, false);
     
     // Add visual feedback
@@ -651,53 +567,21 @@ class ArrowButtons {
     // Reset scrolling flag after animation
     setTimeout(() => {
       this._isScrolling = false;
-      this.updateScrollStates(); // Update button states
+      this.updateScrollStates();
     }, this.options.animationDuration);
-  }
-  
-  /**
-   * Handle fractional movement (long press) - SIMPLIFIED to full cell movements
-   */
-  handleFractionalMove(direction, amount) {
-    // SIMPLIFIED: Just do regular single-cell movements during long press
-    // Remove all fractional transform logic that was causing issues
-    
-    this.handleSingleMove(direction);
-  }
-  
-  /**
-   * Apply fractional transform to grid - FIXED
-   */
-  applyFractionalTransform(currentX, currentY, targetX, targetY) {
-    const gridElement = this.gridRenderer.gridElement;
-    if (!gridElement) return;
-    
-    // Calculate transform values based on the difference
-    const cellSize = this.gridRenderer.options.cellSize;
-    const gap = 2; // Gap between cells
-    
-    const fractionalOffsetX = (currentX - targetX) * (cellSize + gap);
-    const fractionalOffsetY = (currentY - targetY) * (cellSize + gap);
-    
-    // Apply smooth transform - no transition for continuous movement
-    gridElement.style.transition = 'none';
-    gridElement.style.transform = `translate3d(${fractionalOffsetX}px, ${fractionalOffsetY}px, 0)`;
-    
-    // Store fractional offset
-    this.currentFractionalOffset = { x: fractionalOffsetX, y: fractionalOffsetY };
   }
   
   /**
    * Flash visual feedback for direction
    */
   flashDirection(direction) {
-    const quarter = this.quarters.find(q => q.dataset.direction === direction);
-    if (!quarter) return;
+    const triangle = this.triangles.find(t => t.dataset.direction === direction);
+    if (!triangle) return;
     
-    quarter.classList.add('active');
+    triangle.classList.add('active');
     
     setTimeout(() => {
-      quarter.classList.remove('active');
+      triangle.classList.remove('active');
     }, 200);
   }
   
@@ -716,9 +600,9 @@ class ArrowButtons {
     const canScrollDown = offsetY + height < this.gridRenderer.fullGridSize;
     const canScrollLeft = offsetX > 0;
     
-    // Update quarter disabled states
-    this.quarters.forEach(quarter => {
-      const direction = quarter.dataset.direction;
+    // Update triangle disabled states
+    this.triangles.forEach(triangle => {
+      const direction = triangle.dataset.direction;
       let canScroll = true;
       
       switch (direction) {
@@ -728,7 +612,7 @@ class ArrowButtons {
         case 'left': canScroll = canScrollLeft; break;
       }
       
-      quarter.classList.toggle('disabled', !canScroll);
+      triangle.classList.toggle('disabled', !canScroll);
     });
   }
 
@@ -766,9 +650,9 @@ class ArrowButtons {
   }
   
   setVisibility(show) {
-    const container = document.getElementById('circular-controller-container');
+    const container = document.getElementById('triangular-controller-container');
     if (container) {
-      container.style.display = show ? 'flex' : 'none';
+      container.style.display = show ? 'grid' : 'none';
     }
   }
 }
