@@ -1336,17 +1336,19 @@ renderVisibleGrid() {
   }
 }
 
+/**
+ * Apply nautical icons to main sea cells (not beach/shore cells)
+ */
 applyNauticalIcons() {
   // Skip if we haven't initialized nautical icons
   if (!this.nauticalIcons) {
     this.initNauticalIcons();
   }
 
-  // Use a more specific selector that matches your CSS structure
-  // Look for cells that have sea-adjacent class but don't have path-cell or other specific classes
-  const seaCells = document.querySelectorAll('.grid-cell.sea-adjacent:not(.path-cell):not(.start-cell):not(.selected-cell)');
+  // Target default sea cells (cells that are NOT path-cell, NOT sea-adjacent, NOT out-of-bounds)
+  const seaCells = document.querySelectorAll('.grid-cell:not(.path-cell):not(.sea-adjacent):not(.out-of-bounds):not(.start-cell):not(.selected-cell)');
   
-  console.log(`Found ${seaCells.length} sea cells for nautical icons`);
+  console.log(`Found ${seaCells.length} main sea cells for nautical icons`);
   
   // Process each sea cell
   seaCells.forEach(cellElement => {
@@ -1387,17 +1389,17 @@ applyNauticalIcons() {
         iconElement.className = 'nautical-icon';
         iconElement.textContent = cellIconInfo.icon;
         
-        // Set explicit styles to ensure visibility
+        // Set explicit styles to ensure visibility - now larger and navy blue only
         iconElement.style.position = 'absolute';
         iconElement.style.top = '50%';
         iconElement.style.left = '50%';
         iconElement.style.transform = 'translate(-50%, -50%)';
-        iconElement.style.color = '#00008B'; // Dark navy blue
-        iconElement.style.fontSize = '18px';
-        iconElement.style.opacity = '0.8';
-        iconElement.style.zIndex = '5'; // Higher than sea cells (z-index 2) but lower than path cells
+        iconElement.style.color = '#00008B'; // Dark navy blue only
+        iconElement.style.fontSize = '22px'; // Larger icons
+        iconElement.style.opacity = '0.7'; // Slightly more subtle
+        iconElement.style.zIndex = '3'; // Appropriate z-index for sea cells
         iconElement.style.pointerEvents = 'none';
-        iconElement.style.textShadow = '0 0 2px rgba(255, 255, 255, 0.5)';
+        iconElement.style.textShadow = '0 0 2px rgba(255, 255, 255, 0.3)';
         
         // Append after any text content to ensure it's not overwritten
         cellElement.appendChild(iconElement);
