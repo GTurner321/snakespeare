@@ -595,8 +595,8 @@ fillPhraseTemplate(template, phrase, selectedLetters) {
 }
 
 /**
- * FIXED: updatePhraseWithHints with simplified, correct logic
- * Only delays word completion when hint letters are actually matched by current selection
+ * FIXED: updatePhraseWithHints method to flash only newly matched hint letters
+ * This method should replace the existing updatePhraseWithHints in GameController class
  */
 updatePhraseWithHints() {
   if (!this.gridRenderer || !this.currentPhrase || !this.phraseTemplate) {
@@ -717,10 +717,10 @@ updatePhraseWithHints() {
   // Update the display with the HTML spans
   displayElement.innerHTML = phraseHtml;
   
-  // Find which selected cells match hint letters
+  // FIXED: Find only the newly matched hint letters
   const matchingHints = this.findNewlyMatchedHintLetters(hintLetters);
   
-  // Apply animation to newly matched hint letters
+  // FIXED: Apply animation ONLY to newly matched hint letters
   if (matchingHints.length > 0) {
     console.log('Newly matched hint letters:', matchingHints);
     
@@ -772,9 +772,8 @@ updatePhraseWithHints() {
 }
   
 /**
- * Enhanced findNewlyMatchedHintLetters to check for matching hint letters
- * @param {Array} hintLetters - Array of hint letter information
- * @return {Array} Array of newly matched hint letter positions
+ * FIXED: findNewlyMatchedHintLetters method to accurately identify only newly matched hint letters
+ * This method should replace the existing findNewlyMatchedHintLetters in GameController class
  */
 findNewlyMatchedHintLetters(hintLetters) {
   // This array will store positions of newly matched hint letters
@@ -791,27 +790,49 @@ findNewlyMatchedHintLetters(hintLetters) {
     return newlyMatchedPositions;
   }
   
-  // Check all hint letters, not just those that correspond to the last selected cell
+  // FIXED: Only check the LAST selected cell to find newly matched hint letters
+  // This ensures we only flash hint letters that were just matched by the latest selection
+  const lastSelectedCell = selectedCells[selectedCells.length - 1];
+  if (!lastSelectedCell) {
+    return newlyMatchedPositions;
+  }
+  
+  // Get the grid cell at the last selected position
+  const lastGridCell = this.gridRenderer.grid[lastSelectedCell.y][lastSelectedCell.x];
+  if (!lastGridCell) {
+    return newlyMatchedPositions;
+  }
+  
+  // Get the path index of the last selected cell
+  const lastSelectedPathIndex = lastGridCell.pathIndex;
+  
+  // Find hint letters that match this path index
   hintLetters.forEach(hint => {
-    // Get the hint's path index
-    const hintPathIndex = hint.pathIndex;
-    
-    // Check if we have a selected cell that corresponds to this hint letter
-    const matchingCell = selectedCells.find(cell => {
-      const gridCell = this.gridRenderer.grid[cell.y][cell.x];
-      return gridCell && gridCell.pathIndex === hintPathIndex;
-    });
-    
-    // If we found a matching cell, this hint letter is matched
-    if (matchingCell) {
+    if (hint.pathIndex === lastSelectedPathIndex) {
       newlyMatchedPositions.push(hint.position);
     }
   });
   
+  // Also check if the start cell was just selected (path index 0)
+  if (selectedCells.length === 1) {
+    const startCell = selectedCells[0];
+    const centerX = 35;
+    const centerY = 35;
+    
+    // If this is the start cell and it was just selected
+    if (startCell.x === centerX && startCell.y === centerY) {
+      // Find hint letters with path index 0 (start cell)
+      hintLetters.forEach(hint => {
+        if (hint.pathIndex === 0) {
+          newlyMatchedPositions.push(hint.position);
+        }
+      });
+    }
+  }
+  
   console.log('Newly matched hint letters:', newlyMatchedPositions);
   return newlyMatchedPositions;
 }
-
 
 /**
  * Enhanced fillPhraseTemplateWithHints method to properly handle apostrophes
