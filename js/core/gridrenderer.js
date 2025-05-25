@@ -2285,6 +2285,8 @@ cellHasContent(x, y) {
 
 /**
  * Enhanced scroll method with smoother transitions
+ * This method should replace the existing scroll method in GridRenderer class
+ * 
  * @param {string} direction - Scroll direction ('up', 'right', 'down', 'left')
  * @param {boolean} slowMotion - Whether to use slow scroll animation
  */
@@ -2333,19 +2335,18 @@ scroll(direction, slowMotion = false) {
     return;
   }
   
-  // NEW: Before transformation, preserve all beach cells
-  if (window.islandRenderer) {
-    // Let islandRenderer know we're about to transform
+  // Let islandRenderer know we're about to transform (if available)
+  if (window.islandRenderer && window.islandRenderer._preserveBeachCellStyles) {
     window.islandRenderer._preserveBeachCellStyles();
   }
   
-  // Enhanced smooth transitions - longer durations
-  const transitionDuration = slowMotion ? 400 : 300; // Slightly slower for smoother effect
+  // IMPROVED: Better timing values and easing function for smoother animations
+  // Using cubic-bezier with slight ease-out effect for more natural movement
+  const transitionDuration = slowMotion ? 350 : 220; // Adjusted timing for smoother effect
   
   // Determine if this is a small scroll (1 unit in any direction)
-  const isSmallScroll = 
-    (Math.abs(newOffsetX - this.viewOffset.x) <= 1 && 
-     Math.abs(newOffsetY - this.viewOffset.y) <= 1);
+  const isSmallScroll = (Math.abs(newOffsetX - this.viewOffset.x) <= 1 && 
+                         Math.abs(newOffsetY - this.viewOffset.y) <= 1);
   
   // Notify components that need to prepare for scrolling
   document.dispatchEvent(new CustomEvent('gridScrolling', { 
@@ -2363,12 +2364,16 @@ scroll(direction, slowMotion = false) {
       // Remove any existing transition classes
       this.gridElement.classList.remove('fast-scroll', 'slow-scroll');
       
-      // Add the appropriate transition class
-      this.gridElement.classList.add(slowMotion ? 'slow-scroll' : 'fast-scroll');
+      // IMPROVED: Add custom inline transition for maximum smoothness
+      this.gridElement.style.transition = `transform ${transitionDuration}ms cubic-bezier(0.2, 0.0, 0.1, 1.0)`;
+      
+      // Add hardware acceleration properties
+      this.gridElement.style.willChange = 'transform';
+      this.gridElement.style.backfaceVisibility = 'hidden';
+      
+      // Pre-populate cells that will come into view (optimization)
+      this._prepareNewCellsForScroll(direction, newOffsetX, newOffsetY);
     }
-    
-    // Pre-populate cells that will come into view (optimization)
-    this._prepareNewCellsForScroll(direction, newOffsetX, newOffsetY);
     
     // Apply transform to move the grid - SMOOTH ANIMATION
     const cellSize = this.options.cellSize;
@@ -2378,9 +2383,8 @@ scroll(direction, slowMotion = false) {
     const translateX = (this.viewOffset.x - newOffsetX) * (cellSize + gapSize);
     const translateY = (this.viewOffset.y - newOffsetY) * (cellSize + gapSize);
     
-    // Apply translation with hardware acceleration
+    // IMPROVED: Apply translation with hardware acceleration
     this.gridElement.style.transform = `translate3d(${translateX}px, ${translateY}px, 0)`;
-    this.gridElement.style.willChange = 'transform';
     
     // Update internal view offset (but DOM updates after animation)
     const oldOffsetX = this.viewOffset.x;
@@ -2392,6 +2396,9 @@ scroll(direction, slowMotion = false) {
     setTimeout(() => {
       // Reset transform
       this.gridElement.style.transform = 'translate3d(0, 0, 0)';
+      
+      // Reset transition property to default
+      this.gridElement.style.transition = '';
       this.gridElement.style.willChange = 'auto';
       
       // Remove transition classes
