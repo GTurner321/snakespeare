@@ -1527,7 +1527,8 @@ shuffleArray(array) {
 }
 
 /**
- * New method to pre-generate hint indices for all levels
+ * Enhanced method to pre-generate hint indices for all levels
+ * Uses filtered eligible positions and mathematical spacing for better hint distribution
  */
 preGenerateHintIndices() {
   // Reset all hint indices
@@ -1535,94 +1536,212 @@ preGenerateHintIndices() {
   this.level2HintIndices = [];
   this.level3HintIndices = [];
   
-  // Create array of available path indices, starting at index 1 (EXCLUDING start cell)
-  const availableIndices = [];
-  for (let i = 1; i < this.path.length; i++) {
-    availableIndices.push(i);
+  if (!this.path || this.path.length === 0) {
+    console.warn('No path available for hint generation');
+    return;
   }
   
-  // Calculate number of cells to reveal for each level
-  const totalAvailablePathCells = availableIndices.length;
-  const level1Count = Math.round(totalAvailablePathCells * this.hintLevelPercentages[1]);
-  const level2Count = Math.round(totalAvailablePathCells * this.hintLevelPercentages[2]);
-  const level3Count = Math.round(totalAvailablePathCells * this.hintLevelPercentages[3]);
+  // Step 1: Create list of eligible indices (excluding start cell, vowels, and short words)
+  const eligibleIndices = this.getEligibleHintIndices();
   
-  console.log(`Pre-generating hint indices: Level 1: ${level1Count}, Level 2: ${level2Count}, Level 3: ${level3Count}`);
+  if (eligibleIndices.length === 0) {
+    console.warn('No eligible indices found for hints');
+    return;
+  }
   
-  // Shuffle available indices
-  const shuffledIndices = this.shuffleArray([...availableIndices]);
+  console.log(`Found ${eligibleIndices.length} eligible hint positions out of ${this.path.length} total path positions`);
+  console.log('Eligible indices:', eligibleIndices);
   
-  // Level 1: Select non-adjacent indices
-  const usedIndices = new Set();
-  
-  // Add indices that don't have adjacent neighbors already selected
-  for (let i = 0; i < shuffledIndices.length && this.level1HintIndices.length < level1Count; i++) {
-    const index = shuffledIndices[i];
-    
-    // Skip if this index is adjacent to an already selected index
-    if (usedIndices.has(index - 1) || usedIndices.has(index + 1)) {
-      continue;
+  // Step 2: Generate Level 1 hints (6n: positions 6, 12, 18, 24...)
+  for (let i = 6; i <= eligibleIndices.length; i += 6) {
+    if (i - 1 < eligibleIndices.length) { // Convert to 0-based index
+      this.level1HintIndices.push(eligibleIndices[i - 1]);
     }
-    
-    this.level1HintIndices.push(index);
-    usedIndices.add(index);
-    
-    // Also mark adjacent indices as "used" to prevent them from being selected
-    usedIndices.add(index - 1);
-    usedIndices.add(index + 1);
   }
   
-  // Sort level 1 indices
-  this.level1HintIndices.sort((a, b) => a - b);
-  
-  // Level 2: Include all level 1 indices + additional non-adjacent ones
+  // Step 3: Generate Level 2 hints (Level 1 + 6n-2: positions 4, 10, 16, 22...)
   this.level2HintIndices = [...this.level1HintIndices];
-  
-  // Calculate how many additional indices we need
-  const level2Additional = level2Count - this.level1HintIndices.length;
-  
-  // Find remaining indices not yet used and not adjacent to level 1
-  const remainingForLevel2 = shuffledIndices.filter(index => !this.level1HintIndices.includes(index));
-  
-  // First try to find non-adjacent ones to add
-  for (let i = 0; i < remainingForLevel2.length && this.level2HintIndices.length < level2Count; i++) {
-    const index = remainingForLevel2[i];
-    
-    // Skip if already in level 2
-    if (this.level2HintIndices.includes(index)) {
-      continue;
+  for (let i = 4; i <= eligibleIndices.length; i += 6) {
+    if (i - 1 < eligibleIndices.length) { // Convert to 0-based index
+      const index = eligibleIndices[i - 1];
+      if (!this.level2HintIndices.includes(index)) {
+        this.level2HintIndices.push(index);
+      }
     }
-    
-    // Add this index
-    this.level2HintIndices.push(index);
   }
   
-  // Sort level 2 indices
-  this.level2HintIndices.sort((a, b) => a - b);
-  
-  // Level 3: Include all level 2 indices + additional ones
+  // Step 4: Generate Level 3 hints (Level 1 + Level 2 + 6n-4: positions 2, 8, 14, 20...)
   this.level3HintIndices = [...this.level2HintIndices];
-  
-  // Calculate how many additional indices we need
-  const level3Additional = level3Count - this.level2HintIndices.length;
-  
-  // Find remaining indices not yet used
-  const remainingForLevel3 = shuffledIndices.filter(index => !this.level2HintIndices.includes(index));
-  
-  // Add additional indices for level 3
-  for (let i = 0; i < remainingForLevel3.length && this.level3HintIndices.length < level3Count; i++) {
-    this.level3HintIndices.push(remainingForLevel3[i]);
+  for (let i = 2; i <= eligibleIndices.length; i += 6) {
+    if (i - 1 < eligibleIndices.length) { // Convert to 0-based index
+      const index = eligibleIndices[i - 1];
+      if (!this.level3HintIndices.includes(index)) {
+        this.level3HintIndices.push(index);
+      }
+    }
   }
   
-  // Sort level 3 indices
+  // Sort all arrays to maintain path order
+  this.level1HintIndices.sort((a, b) => a - b);
+  this.level2HintIndices.sort((a, b) => a - b);
   this.level3HintIndices.sort((a, b) => a - b);
   
-  console.log('Pre-generated hint indices:');
-  console.log('Level 1:', this.level1HintIndices);
-  console.log('Level 2:', this.level2HintIndices);
-  console.log('Level 3:', this.level3HintIndices);
+  console.log('Generated hint indices with mathematical spacing:');
+  console.log('Level 1 (6n):', this.level1HintIndices);
+  console.log('Level 2 (6n + 6n-2):', this.level2HintIndices);
+  console.log('Level 3 (6n + 6n-2 + 6n-4):', this.level3HintIndices);
 }
 
+/**
+ * New method to get eligible hint indices
+ * Excludes: start cell (index 0), vowels, and letters from 1-2 letter words
+ * @return {Array} Array of eligible path indices for hints
+ */
+getEligibleHintIndices() {
+  const eligibleIndices = [];
+  const vowels = new Set(['A', 'E', 'I', 'O', 'U']);
+  
+  // Get word boundaries from GameController if available
+  const wordBoundaries = this.getWordBoundaries();
+  
+  // Create a set of indices to exclude (from short words)
+  const excludedIndices = new Set();
+  
+  if (wordBoundaries && wordBoundaries.length > 0) {
+    // Mark indices from 1-2 letter words for exclusion
+    wordBoundaries.forEach(boundary => {
+      // Count only alphanumeric characters in the word
+      const alphanumericCount = boundary.word.replace(/[^a-zA-Z0-9]/g, '').length;
+      
+      if (alphanumericCount <= 2) {
+        // This is a short word - exclude its indices
+        console.log(`Excluding short word "${boundary.word}" (${alphanumericCount} letters)`);
+        
+        // Find the path indices for this word's letters
+        const wordIndices = this.getPathIndicesForWordBoundary(boundary);
+        wordIndices.forEach(index => excludedIndices.add(index));
+      }
+    });
+  }
+  
+  // Go through each path position (starting from index 1, excluding start cell)
+  for (let i = 1; i < this.path.length; i++) {
+    const pathCell = this.path[i];
+    const letter = pathCell.letter.toUpperCase();
+    
+    // Skip if this index is from a short word
+    if (excludedIndices.has(i)) {
+      console.log(`Skipping index ${i} (letter '${letter}') - from short word`);
+      continue;
+    }
+    
+    // Skip vowels
+    if (vowels.has(letter)) {
+      console.log(`Skipping index ${i} (letter '${letter}') - vowel`);
+      continue;
+    }
+    
+    // This index is eligible
+    eligibleIndices.push(i);
+    console.log(`Including index ${i} (letter '${letter}') - eligible consonant`);
+  }
+  
+  return eligibleIndices;
+}
+
+/**
+ * Get word boundaries from GameController
+ * @return {Array|null} Word boundaries array or null if not available
+ */
+getWordBoundaries() {
+  // Try to get word boundaries from the global game controller
+  if (window.gameController && window.gameController.wordBoundaries) {
+    return window.gameController.wordBoundaries;
+  }
+  
+  // Alternative: check if there's a phrase and try to parse words
+  if (window.gameController && window.gameController.currentPhrase) {
+    console.log('Word boundaries not found, attempting to parse from current phrase');
+    return this.parseWordBoundariesFromPhrase(window.gameController.currentPhrase.letterlist);
+  }
+  
+  console.warn('Could not access word boundaries for hint filtering');
+  return null;
+}
+
+/**
+ * Get path indices for letters within a word boundary
+ * @param {Object} boundary - Word boundary object with start/end positions
+ * @return {Array} Array of path indices corresponding to this word's letters
+ */
+getPathIndicesForWordBoundary(boundary) {
+  const indices = [];
+  
+  if (!window.gameController || !window.gameController.currentPhrase) {
+    return indices;
+  }
+  
+  const letterList = window.gameController.currentPhrase.letterlist;
+  let pathIndex = 0; // This will track our position in the path
+  
+  // Go through each character in the phrase
+  for (let phrasePos = 0; phrasePos < letterList.length; phrasePos++) {
+    const char = letterList[phrasePos];
+    
+    // If this is an alphanumeric character, it corresponds to a path position
+    if (/[a-zA-Z0-9]/.test(char)) {
+      // Check if this phrase position is within the word boundary
+      if (phrasePos >= boundary.start && phrasePos <= boundary.end) {
+        indices.push(pathIndex);
+      }
+      pathIndex++; // Increment path index for each alphanumeric character
+    }
+  }
+  
+  return indices;
+}
+
+/**
+ * Fallback method to parse word boundaries if not available from GameController
+ * @param {string} letterList - The phrase string
+ * @return {Array} Array of word boundary objects
+ */
+parseWordBoundariesFromPhrase(letterList) {
+  const boundaries = [];
+  let currentWordStart = null;
+  let inWord = false;
+  
+  for (let i = 0; i < letterList.length; i++) {
+    const char = letterList[i];
+    const isWordChar = /[a-zA-Z0-9']/.test(char);
+    
+    if (isWordChar && !inWord) {
+      currentWordStart = i;
+      inWord = true;
+    } else if (!isWordChar && inWord) {
+      if (i > currentWordStart) {
+        boundaries.push({
+          start: currentWordStart,
+          end: i - 1,
+          word: letterList.substring(currentWordStart, i)
+        });
+      }
+      inWord = false;
+    }
+  }
+  
+  // Handle case where phrase ends with a word
+  if (inWord) {
+    boundaries.push({
+      start: currentWordStart,
+      end: letterList.length - 1,
+      word: letterList.substring(currentWordStart)
+    });
+  }
+  
+  return boundaries;
+}
+  
 /**
  * New method to apply stored hint letters based on current hint level
  */
