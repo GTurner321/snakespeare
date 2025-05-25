@@ -2284,11 +2284,9 @@ cellHasContent(x, y) {
 }
 
 /**
- * Enhanced scroll method with smoother transitions
- * This method should replace the existing scroll method in GridRenderer class
- * 
- * @param {string} direction - Scroll direction ('up', 'right', 'down', 'left')
- * @param {boolean} slowMotion - Whether to use slow scroll animation
+ * Enhanced Scroll Method for GridRenderer
+ * Makes individual scrolls smoother
+ * Replace this in your GridRenderer class
  */
 scroll(direction, slowMotion = false) {
   // Signal to components that scrolling is starting
@@ -2335,14 +2333,13 @@ scroll(direction, slowMotion = false) {
     return;
   }
   
-  // Let islandRenderer know we're about to transform (if available)
+  // Preserve beach cell styles if possible
   if (window.islandRenderer && window.islandRenderer._preserveBeachCellStyles) {
     window.islandRenderer._preserveBeachCellStyles();
   }
   
-  // IMPROVED: Better timing values and easing function for smoother animations
-  // Using cubic-bezier with slight ease-out effect for more natural movement
-  const transitionDuration = slowMotion ? 350 : 220; // Adjusted timing for smoother effect
+  // Improved timing values for smoother transitions
+  const transitionDuration = 180; // Faster for more responsive feel
   
   // Determine if this is a small scroll (1 unit in any direction)
   const isSmallScroll = (Math.abs(newOffsetX - this.viewOffset.x) <= 1 && 
@@ -2358,22 +2355,16 @@ scroll(direction, slowMotion = false) {
   }));
   
   // Use CSS transform for smooth scrolling
-  if (isSmallScroll) {
-    // Add CSS transition class based on speed
-    if (this.gridElement) {
-      // Remove any existing transition classes
-      this.gridElement.classList.remove('fast-scroll', 'slow-scroll');
-      
-      // IMPROVED: Add custom inline transition for maximum smoothness
-      this.gridElement.style.transition = `transform ${transitionDuration}ms cubic-bezier(0.2, 0.0, 0.1, 1.0)`;
-      
-      // Add hardware acceleration properties
-      this.gridElement.style.willChange = 'transform';
-      this.gridElement.style.backfaceVisibility = 'hidden';
-      
-      // Pre-populate cells that will come into view (optimization)
-      this._prepareNewCellsForScroll(direction, newOffsetX, newOffsetY);
-    }
+  if (isSmallScroll && this.gridElement) {
+    // Remove any existing transition classes
+    this.gridElement.classList.remove('fast-scroll', 'slow-scroll');
+    
+    // Add custom inline transition for maximum smoothness
+    this.gridElement.style.transition = `transform ${transitionDuration}ms cubic-bezier(0.2, 0.0, 0.1, 1.0)`;
+    
+    // Add hardware acceleration properties
+    this.gridElement.style.willChange = 'transform';
+    this.gridElement.style.backfaceVisibility = 'hidden';
     
     // Apply transform to move the grid - SMOOTH ANIMATION
     const cellSize = this.options.cellSize;
@@ -2383,7 +2374,7 @@ scroll(direction, slowMotion = false) {
     const translateX = (this.viewOffset.x - newOffsetX) * (cellSize + gapSize);
     const translateY = (this.viewOffset.y - newOffsetY) * (cellSize + gapSize);
     
-    // IMPROVED: Apply translation with hardware acceleration
+    // Apply translation with hardware acceleration
     this.gridElement.style.transform = `translate3d(${translateX}px, ${translateY}px, 0)`;
     
     // Update internal view offset (but DOM updates after animation)
@@ -2419,7 +2410,7 @@ scroll(direction, slowMotion = false) {
           to: { x: newOffsetX, y: newOffsetY }
         }
       }));
-    }, transitionDuration + 30); // Small buffer
+    }, transitionDuration + 20); // Smaller buffer for faster consecutive scrolls
   } else {
     // For larger scrolls, use the standard approach
     this.viewOffset.x = newOffsetX;
@@ -2445,7 +2436,7 @@ scroll(direction, slowMotion = false) {
     detail: { direction, offset: this.viewOffset, gridRenderer: this, slowMotion }
   }));
 }
-
+  
 /**
  * Add this method to your GridRenderer class to support continuous scrolling
  * It enables scrolling multiple grid cells in a single smooth animation
