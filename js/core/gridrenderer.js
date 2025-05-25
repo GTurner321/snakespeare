@@ -235,12 +235,12 @@ addNauticalIconsCSS() {
       top: 50% !important;
       left: 50% !important;
       transform: translate(-50%, -50%) !important;
-      color: #00008B !important; /* Dark navy blue */
-      font-size: 18px !important;
-      opacity: 0.8 !important;
-      z-index: 5 !important; /* Between sea cells and path cells */
+      color: #00008B !important; /* Dark navy blue only */
+      font-size: 22px !important; /* Larger icons */
+      opacity: 0.7 !important;
+      z-index: 3 !important;
       pointer-events: none !important;
-      text-shadow: 0 0 2px rgba(255, 255, 255, 0.5) !important;
+      text-shadow: 0 0 2px rgba(255, 255, 255, 0.3) !important;
       user-select: none !important;
     }
     
