@@ -539,8 +539,9 @@ class ArrowButtons {
     this.isLongPressing = false;
   }
   
-  /**
- * Start long press continuous movement with improved animation
+/**
+ * Start long press continuous movement
+ * Simplified for reliable timing and response
  */
 startLongPress() {
   if (!this.isPressed || this.isLongPressing) return;
@@ -549,6 +550,7 @@ startLongPress() {
   
   this.isLongPressing = true;
   this._isScrolling = true;
+  this._lastMovementTime = Date.now();
   
   // Add visual feedback
   const triangle = this.triangles.find(t => t.dataset.direction === this.currentDirection);
@@ -557,176 +559,59 @@ startLongPress() {
     triangle.classList.add('long-pressing');
   }
   
-  // Initialize continuous movement variables
-  this.continuousScrollData = {
-    direction: this.currentDirection,
-    startTime: Date.now(),
-    lastFrameTime: Date.now(),
-    cellsScrolled: 0,
-    isAccelerating: true,
-    currentSpeed: 0,
-    // Speed is in cells per second
-    minSpeed: 1,      // Start at 1 cell per second
-    maxSpeed: 5,      // Maximum 5 cells per second
-    acceleration: 2,  // Cells per second²
-    deceleration: 4   // Cells per second²
-  };
+  // Perform initial scroll immediately for more responsive feel
+  this.gridRenderer.scroll(this.currentDirection, false);
   
-  // Start the continuous movement loop
-  this.continuousMove();
+  // Start continuous movement with a reliable timer
+  this.longPressTimer = setInterval(() => {
+    this.performScrollMove();
+  }, this.options.movementRate); // Use existing rate (typically 400ms)
 }
 
 /**
- * Enhanced continuous movement with smooth acceleration and constant speed
+ * Perform a single scroll move
+ * Simple and reliable method for continuous scrolling
  */
-continuousMove() {
+performScrollMove() {
   if (!this.isLongPressing || !this.isPressed) {
     return;
   }
   
-  const now = Date.now();
-  const data = this.continuousScrollData;
-  const elapsed = (now - data.lastFrameTime) / 1000; // Time since last frame in seconds
-  
-  // Update speed based on acceleration/deceleration
-  if (data.isAccelerating) {
-    // Accelerate up to max speed
-    data.currentSpeed = Math.min(data.maxSpeed, data.currentSpeed + (data.acceleration * elapsed));
-    
-    // If we've reached max speed, stop accelerating
-    if (data.currentSpeed >= data.maxSpeed) {
-      data.isAccelerating = false;
-    }
+  if (this._isScrolling) {
+    // Skip if still scrolling
+    return;
   }
   
-  // Calculate distance to move this frame in "cells"
-  const distanceToMove = data.currentSpeed * elapsed;
+  this._isScrolling = true;
   
-  // Accumulate fractional movement until we have enough to move a full cell
-  data.fractionalMove = (data.fractionalMove || 0) + distanceToMove;
-  
-  // If we've accumulated enough movement for at least one full cell
-  if (data.fractionalMove >= 1) {
-    // Calculate how many full cells to move
-    const cellsToMove = Math.floor(data.fractionalMove);
-    
-    // Track remaining fractional movement
-    data.fractionalMove -= cellsToMove;
-    
-    // Perform the grid scroll
-    this.performContinuousScroll(cellsToMove);
-    
-    // Update tracking variables
-    data.cellsScrolled += cellsToMove;
-  }
-  
-  // Update last frame time
-  data.lastFrameTime = now;
-  
-  // Continue the loop
-  this.animationFrameId = requestAnimationFrame(() => this.continuousMove());
-}
-
-/**
- * Perform the actual scrolling with multiple cells at once if needed
- * @param {number} cellCount - Number of cells to scroll
- */
-performContinuousScroll(cellCount) {
-  if (cellCount <= 0 || !this.currentDirection) return;
-  
-  // Check if grid renderer is available
-  if (!this.gridRenderer) return;
-  
-  // For multi-cell scrolling, we need to extend the grid renderer
-  if (this.gridRenderer.scrollMultipleCells) {
-    // Use the multi-cell scrolling method if available
-    this.gridRenderer.scrollMultipleCells(this.currentDirection, cellCount, false);
-  } else {
-    // Fallback to single cell scrolling
-    this.gridRenderer.scroll(this.currentDirection, false);
-  }
+  // Perform the grid scroll
+  this.gridRenderer.scroll(this.currentDirection, false);
   
   // Update states
   this.updateScrollStates();
 }
 
 /**
- * Stop long press movement with smooth deceleration
+ * Stop long press movement
+ * Simple cleanup for reliable stopping
  */
 stopLongPress() {
-  // Mark as no longer long pressing but don't cancel animation yet
   this.isLongPressing = false;
   
-  if (this.continuousScrollData) {
-    // Set to deceleration phase
-    this.continuousScrollData.isAccelerating = false;
-    
-    // Start deceleration sequence
-    this.decelerateScroll();
-  } else {
-    // If we don't have scroll data, just stop immediately
-    this.cancelContinuousScroll();
-  }
-}
-
-/**
- * Decelerate scrolling to a smooth stop
- */
-decelerateScroll() {
-  if (!this.continuousScrollData) return;
-  
-  const now = Date.now();
-  const data = this.continuousScrollData;
-  const elapsed = (now - data.lastFrameTime) / 1000; // Time since last frame in seconds
-  
-  // Decelerate
-  data.currentSpeed = Math.max(0, data.currentSpeed - (data.deceleration * elapsed));
-  
-  // If we've stopped, cancel the animation
-  if (data.currentSpeed <= 0.1) {
-    this.cancelContinuousScroll();
-    return;
+  // Clear the interval timer
+  if (this.longPressTimer) {
+    clearInterval(this.longPressTimer);
+    this.longPressTimer = null;
   }
   
-  // Calculate distance to move this frame in "cells"
-  const distanceToMove = data.currentSpeed * elapsed;
-  
-  // Accumulate fractional movement
-  data.fractionalMove = (data.fractionalMove || 0) + distanceToMove;
-  
-  // If we've accumulated enough movement for at least one full cell
-  if (data.fractionalMove >= 1) {
-    // Calculate how many full cells to move
-    const cellsToMove = Math.floor(data.fractionalMove);
-    
-    // Track remaining fractional movement
-    data.fractionalMove -= cellsToMove;
-    
-    // Perform the grid scroll
-    this.performContinuousScroll(cellsToMove);
-    
-    // Update tracking variables
-    data.cellsScrolled += cellsToMove;
-  }
-  
-  // Update last frame time
-  data.lastFrameTime = now;
-  
-  // Continue deceleration
-  this.animationFrameId = requestAnimationFrame(() => this.decelerateScroll());
-}
-
-/**
- * Cancel continuous scrolling animation
- */
-cancelContinuousScroll() {
+  // Clear any animation frame
   if (this.animationFrameId) {
     cancelAnimationFrame(this.animationFrameId);
     this.animationFrameId = null;
   }
   
   this._isScrolling = false;
-  this.continuousScrollData = null;
+  this._lastMovementTime = 0;
 }
   
   /**
