@@ -1552,32 +1552,63 @@ preGenerateHintIndices() {
   console.log(`Found ${eligibleIndices.length} eligible hint positions out of ${this.path.length} total path positions`);
   console.log('Eligible indices:', eligibleIndices);
   
-  // Step 2: Generate Level 1 hints (6n: positions 6, 12, 18, 24...)
-  for (let i = 6; i <= eligibleIndices.length; i += 6) {
-    if (i - 1 < eligibleIndices.length) { // Convert to 0-based index
-      this.level1HintIndices.push(eligibleIndices[i - 1]);
+  // Step 2: Generate Level 1 hints (6n-2: positions 4, 10, 16, 22, 28, 34, 40, 46, 52, 58, 64...)
+  for (let n = 1; n * 6 - 2 <= eligibleIndices.length; n++) {
+    const position = n * 6 - 2; // 6n-2
+    if (position - 1 < eligibleIndices.length) { // Convert to 0-based index
+      this.level1HintIndices.push(eligibleIndices[position - 1]);
     }
   }
   
-  // Step 3: Generate Level 2 hints (Level 1 + 6n-2: positions 4, 10, 16, 22...)
+  // Fallback: ensure at least one hint for Level 1
+  if (this.level1HintIndices.length === 0 && eligibleIndices.length > 0) {
+    console.log('Level 1: No hints from 6n-2 sequence, using fallback position 1');
+    this.level1HintIndices.push(eligibleIndices[0]); // Position 1 (0-based index 0)
+  }
+  
+  // Step 3: Generate Level 2 hints (Level 1 + 6n: positions 6, 12, 18, 24, 30, 36, 42, 48, 54, 60...)
   this.level2HintIndices = [...this.level1HintIndices];
-  for (let i = 4; i <= eligibleIndices.length; i += 6) {
-    if (i - 1 < eligibleIndices.length) { // Convert to 0-based index
-      const index = eligibleIndices[i - 1];
+  const level2StartCount = this.level2HintIndices.length;
+  
+  for (let n = 1; n * 6 <= eligibleIndices.length; n++) {
+    const position = n * 6; // 6n
+    if (position - 1 < eligibleIndices.length) { // Convert to 0-based index
+      const index = eligibleIndices[position - 1];
       if (!this.level2HintIndices.includes(index)) {
         this.level2HintIndices.push(index);
       }
     }
   }
   
-  // Step 4: Generate Level 3 hints (Level 1 + Level 2 + 6n-4: positions 2, 8, 14, 20...)
+  // Fallback: ensure at least one extra hint for Level 2
+  if (this.level2HintIndices.length === level2StartCount && eligibleIndices.length > 1) {
+    console.log('Level 2: No additional hints from 6n sequence, using fallback position 2');
+    const fallbackIndex = eligibleIndices[1]; // Position 2 (0-based index 1)
+    if (!this.level2HintIndices.includes(fallbackIndex)) {
+      this.level2HintIndices.push(fallbackIndex);
+    }
+  }
+  
+  // Step 4: Generate Level 3 hints (Level 1 + Level 2 + 6n-4: positions 2, 8, 14, 20, 26, 32, 38, 44, 50, 56, 62...)
   this.level3HintIndices = [...this.level2HintIndices];
-  for (let i = 2; i <= eligibleIndices.length; i += 6) {
-    if (i - 1 < eligibleIndices.length) { // Convert to 0-based index
-      const index = eligibleIndices[i - 1];
+  const level3StartCount = this.level3HintIndices.length;
+  
+  for (let n = 1; n * 6 - 4 <= eligibleIndices.length; n++) {
+    const position = n * 6 - 4; // 6n-4
+    if (position >= 1 && position - 1 < eligibleIndices.length) { // Ensure position is at least 1, convert to 0-based index
+      const index = eligibleIndices[position - 1];
       if (!this.level3HintIndices.includes(index)) {
         this.level3HintIndices.push(index);
       }
+    }
+  }
+  
+  // Fallback: ensure at least one extra hint for Level 3
+  if (this.level3HintIndices.length === level3StartCount && eligibleIndices.length > 2) {
+    console.log('Level 3: No additional hints from 6n-4 sequence, using fallback position 3');
+    const fallbackIndex = eligibleIndices[2]; // Position 3 (0-based index 2)
+    if (!this.level3HintIndices.includes(fallbackIndex)) {
+      this.level3HintIndices.push(fallbackIndex);
     }
   }
   
@@ -1587,9 +1618,9 @@ preGenerateHintIndices() {
   this.level3HintIndices.sort((a, b) => a - b);
   
   console.log('Generated hint indices with mathematical spacing:');
-  console.log('Level 1 (6n):', this.level1HintIndices);
-  console.log('Level 2 (6n + 6n-2):', this.level2HintIndices);
-  console.log('Level 3 (6n + 6n-2 + 6n-4):', this.level3HintIndices);
+  console.log('Level 1 (6n-2):', this.level1HintIndices, `(${this.level1HintIndices.length} hints)`);
+  console.log('Level 2 (6n-2 + 6n):', this.level2HintIndices, `(${this.level2HintIndices.length} hints)`);
+  console.log('Level 3 (6n-2 + 6n + 6n-4):', this.level3HintIndices, `(${this.level3HintIndices.length} hints)`);
 }
 
 /**
