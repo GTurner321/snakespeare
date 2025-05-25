@@ -70,6 +70,12 @@ this.level3HintIndices = [];  // Store level 3 hint indices (35%)
 // NEW: Add island reduction level properties
 this.islandReductionLevel = 0;                 // Default island reduction level (0-2)
 this.highestIslandReductionLevelUsed = 0;      // Track highest level used
+
+  // Initialize nautical icons
+  this.initNauticalIcons();
+  
+  // Enhance renderVisibleGrid to include icons
+  this.enhanceRenderVisibleGridWithIcons();
   
   // Initialize the grid
   this.initializeGrid();
@@ -118,6 +124,36 @@ this.setupEventListeners();
     };
   }
 
+/**
+ * Function to add to GridRenderer class to initialize nautical icons
+ */
+initNauticalIcons() {
+  // Set of nautical icons to use
+  this.nauticalIcons = [
+    '⚓', // anchor
+    '⛵', // sailboat
+    '🐋', // whale
+    '🐙', // octopus
+    '🐟', // fish
+    '🦈', // shark
+    '☠️', // skull and crossbones
+    '🧭', // compass
+    '🔱', // trident
+    '🌊', // water wave
+    '🐚', // spiral shell
+    '⭐'  // star
+  ];
+
+  // Chance of a sea cell having an icon (1 in 20)
+  this.iconChance = 0.05;
+
+  // Map to track which cells have icons
+  this.cellsWithIcons = new Map();
+
+  // Add CSS for nautical icons
+  this.addNauticalIconsCSS();
+}
+  
 /**
  * Set up event listeners for grid interaction and scrolling coordination
  */
@@ -175,6 +211,51 @@ setupEventListeners() {
   });
   
   console.log('Grid event listeners set up with scroll optimization');
+}
+
+/**
+ * Add CSS styles for nautical icons
+ */
+addNauticalIconsCSS() {
+  if (document.getElementById('nautical-icons-css')) return;
+  
+  const style = document.createElement('style');
+  style.id = 'nautical-icons-css';
+  style.textContent = `
+    .nautical-icon {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #00008B; /* Dark navy blue */
+      font-size: 18px;
+      opacity: 0.8;
+      z-index: 3;
+      pointer-events: none; /* Make sure it doesn't interfere with clicks */
+      text-shadow: 0 0 2px rgba(255, 255, 255, 0.5);
+      user-select: none;
+    }
+    
+    /* Add subtle animation to make icons feel alive */
+    @keyframes float {
+      0% { transform: translate(-50%, -50%) rotate(0deg); }
+      50% { transform: translate(-50%, -50%) rotate(5deg); }
+      100% { transform: translate(-50%, -50%) rotate(0deg); }
+    }
+    
+    .nautical-icon {
+      animation: float 3s ease-in-out infinite;
+    }
+    
+    /* Different animation timing for variety */
+    .nautical-icon:nth-child(odd) {
+      animation-duration: 4s;
+      animation-delay: 1s;
+    }
+  `;
+  
+  document.head.appendChild(style);
+  console.log('Added nautical icons CSS');
 }
   
   /**
@@ -1246,6 +1327,92 @@ renderVisibleGrid() {
     });
   }
 }
+
+/**
+ * Apply nautical icons to sea cells
+ * Should be called after rendering the grid
+ */
+applyNauticalIcons() {
+  // Skip if we haven't initialized nautical icons
+  if (!this.nauticalIcons) {
+    this.initNauticalIcons();
+  }
+
+  // Find all sea cells (cells with sea-adjacent class but no path-cell class)
+  const seaCells = document.querySelectorAll('.grid-cell.sea-adjacent:not(.path-cell)');
+  
+  // Process each sea cell
+  seaCells.forEach(cellElement => {
+    const x = parseInt(cellElement.dataset.gridX, 10);
+    const y = parseInt(cellElement.dataset.gridY, 10);
+    const cellKey = `${x},${y}`;
+    
+    // Skip if invalid coordinates
+    if (isNaN(x) || isNaN(y)) return;
+    
+    // Check if this cell already has an icon decision
+    if (!this.cellsWithIcons.has(cellKey)) {
+      // Make a random decision: should this cell have an icon?
+      const shouldHaveIcon = Math.random() < this.iconChance;
+      
+      // Store the decision and icon
+      if (shouldHaveIcon) {
+        this.cellsWithIcons.set(cellKey, {
+          hasIcon: true,
+          icon: this.getRandomNauticalIcon()
+        });
+      } else {
+        this.cellsWithIcons.set(cellKey, { hasIcon: false });
+      }
+    }
+    
+    // Get the cell's icon status
+    const cellIconInfo = this.cellsWithIcons.get(cellKey);
+    
+    // Check if cell should have an icon
+    if (cellIconInfo && cellIconInfo.hasIcon) {
+      // See if icon already exists
+      let iconElement = cellElement.querySelector('.nautical-icon');
+      
+      // If no icon exists, create one
+      if (!iconElement) {
+        iconElement = document.createElement('div');
+        iconElement.className = 'nautical-icon';
+        iconElement.textContent = cellIconInfo.icon;
+        cellElement.appendChild(iconElement);
+      } else {
+        // Ensure the existing icon has the correct content
+        iconElement.textContent = cellIconInfo.icon;
+      }
+    } else {
+      // Remove any existing icon if cell shouldn't have one
+      const existingIcon = cellElement.querySelector('.nautical-icon');
+      if (existingIcon) {
+        cellElement.removeChild(existingIcon);
+      }
+    }
+  });
+}
+  
+/**
+ * Enhance the renderVisibleGrid method to include nautical icons
+ * This function should be added to call after rendering the grid
+ */
+enhanceRenderVisibleGridWithIcons() {
+  // Store the original renderVisibleGrid method
+  const originalRenderVisibleGrid = this.renderVisibleGrid;
+  
+  // Replace with enhanced version
+  this.renderVisibleGrid = (...args) => {
+    // Call the original method
+    originalRenderVisibleGrid.apply(this, args);
+    
+    // Apply nautical icons after rendering
+    this.applyNauticalIcons();
+  };
+  
+  console.log('Enhanced renderVisibleGrid with nautical icons');
+}
   
 /**
  * New helper method to update cell content without changing class state
@@ -1526,6 +1693,15 @@ shuffleArray(array) {
   return newArray;
 }
 
+/**
+ * Get a random nautical icon
+ * @return {string} Random nautical icon
+ */
+getRandomNauticalIcon() {
+  const index = Math.floor(Math.random() * this.nauticalIcons.length);
+  return this.nauticalIcons[index];
+}
+  
 /**
  * Enhanced method to pre-generate hint indices for all levels
  * Uses filtered eligible positions and mathematical spacing for better hint distribution
