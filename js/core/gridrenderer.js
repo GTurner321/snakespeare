@@ -2445,6 +2445,148 @@ scroll(direction, slowMotion = false) {
     detail: { direction, offset: this.viewOffset, gridRenderer: this, slowMotion }
   }));
 }
+
+/**
+ * Add this method to your GridRenderer class to support continuous scrolling
+ * It enables scrolling multiple grid cells in a single smooth animation
+ * 
+ * @param {string} direction - Scroll direction ('up', 'right', 'down', 'left')
+ * @param {number} cellCount - Number of cells to scroll
+ * @param {boolean} slowMotion - Whether to use slow scroll animation
+ */
+scrollMultipleCells(direction, cellCount, slowMotion = false) {
+  // Signal to components that scrolling is starting
+  this._isScrolling = true;
+  document.dispatchEvent(new CustomEvent('gridScrollStarted', { 
+    detail: { direction, slowMotion, cellCount }
+  }));
+  
+  // Calculate new offset based on direction and cell count
+  let newOffsetX = this.viewOffset.x;
+  let newOffsetY = this.viewOffset.y;
+  
+  const isMobile = window.innerWidth < 768;
+  const width = isMobile ? this.options.gridWidthSmall : this.options.gridWidth;
+  const height = isMobile ? this.options.gridHeightSmall : this.options.gridHeight;
+  
+  switch (direction) {
+    case 'up':
+      newOffsetY = Math.max(0, this.viewOffset.y - cellCount);
+      break;
+    case 'down':
+      newOffsetY = Math.min(
+        this.fullGridSize - height,
+        this.viewOffset.y + cellCount
+      );
+      break;
+    case 'left':
+      newOffsetX = Math.max(0, this.viewOffset.x - cellCount);
+      break;
+    case 'right':
+      newOffsetX = Math.min(
+        this.fullGridSize - width,
+        this.viewOffset.x + cellCount
+      );
+      break;
+  }
+  
+  // If no movement is possible in requested direction, exit early
+  if (newOffsetX === this.viewOffset.x && newOffsetY === this.viewOffset.y) {
+    this._isScrolling = false;
+    document.dispatchEvent(new CustomEvent('gridScrollComplete', { 
+      detail: { direction, noChange: true }
+    }));
+    return;
+  }
+  
+  // Let islandRenderer know we're about to transform (if available)
+  if (window.islandRenderer && window.islandRenderer._preserveBeachCellStyles) {
+    window.islandRenderer._preserveBeachCellStyles();
+  }
+  
+  // IMPORTANT: For continuous scrolling, we want a constant speed regardless of cell count
+  // So we use a fixed duration rather than scaling it with distance
+  const transitionDuration = slowMotion ? 350 : 220; // Same durations as single-cell scrolling
+  
+  // Notify components that need to prepare for scrolling
+  document.dispatchEvent(new CustomEvent('gridScrolling', { 
+    detail: { 
+      from: {...this.viewOffset}, 
+      to: {x: newOffsetX, y: newOffsetY},
+      cellCount
+    }
+  }));
+  
+  // Use CSS transform for smooth scrolling
+  if (this.gridElement) {
+    // Remove any existing transition classes
+    this.gridElement.classList.remove('fast-scroll', 'slow-scroll');
+    
+    // Add custom inline transition for maximum smoothness
+    this.gridElement.style.transition = `transform ${transitionDuration}ms cubic-bezier(0.2, 0.0, 0.1, 1.0)`;
+    
+    // Add hardware acceleration properties
+    this.gridElement.style.willChange = 'transform';
+    this.gridElement.style.backfaceVisibility = 'hidden';
+    
+    // Pre-populate cells that will come into view (if available)
+    if (this._prepareNewCellsForScroll) {
+      this._prepareNewCellsForScroll(direction, newOffsetX, newOffsetY);
+    }
+  }
+  
+  // Apply transform to move the grid - SMOOTH ANIMATION
+  const cellSize = this.options.cellSize;
+  const gapSize = 2; // Gap between cells
+  
+  // Calculate translation amounts based on scroll direction
+  const translateX = (this.viewOffset.x - newOffsetX) * (cellSize + gapSize);
+  const translateY = (this.viewOffset.y - newOffsetY) * (cellSize + gapSize);
+  
+  // Apply translation with hardware acceleration
+  this.gridElement.style.transform = `translate3d(${translateX}px, ${translateY}px, 0)`;
+  
+  // Update internal view offset (but DOM updates after animation)
+  const oldOffsetX = this.viewOffset.x;
+  const oldOffsetY = this.viewOffset.y;
+  this.viewOffset.x = newOffsetX;
+  this.viewOffset.y = newOffsetY;
+  
+  // After transition completes, reset transform and rebuild grid
+  setTimeout(() => {
+    // Reset transform
+    this.gridElement.style.transform = 'translate3d(0, 0, 0)';
+    
+    // Reset transition property to default
+    this.gridElement.style.transition = '';
+    this.gridElement.style.willChange = 'auto';
+    
+    // Remove transition classes
+    this.gridElement.classList.remove('fast-scroll', 'slow-scroll');
+    
+    // Force a rebuild to ensure correct grid state
+    this._lastRenderOffset = null;
+    this.renderVisibleGrid();
+    
+    // Signal that scrolling is complete
+    this._isScrolling = false;
+    
+    // Dispatch event for scroll completion
+    document.dispatchEvent(new CustomEvent('gridScrollComplete', { 
+      detail: { 
+        direction, 
+        from: { x: oldOffsetX, y: oldOffsetY },
+        to: { x: newOffsetX, y: newOffsetY },
+        cellCount
+      }
+    }));
+  }, transitionDuration + 30); // Small buffer
+  
+  // Dispatch event for scroll in progress
+  document.dispatchEvent(new CustomEvent('gridScrolled', { 
+    detail: { direction, offset: this.viewOffset, gridRenderer: this, slowMotion, cellCount }
+  }));
+}
   
 /**
  * Prepare new cells that will come into view during small scrolls
