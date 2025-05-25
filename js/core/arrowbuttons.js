@@ -1,7 +1,7 @@
 /**
- * Enhanced Triangular Arrow Controller
- * Replaces the complex circular controller with 4 separate triangular buttons
- * that fit together into a square formation
+ * Fixed Triangular Arrow Controller
+ * Creates 4 triangular buttons arranged in a square formation with an X pattern
+ * Properly handles touch, click, and long press events
  */
 
 class ArrowButtons {
@@ -77,12 +77,13 @@ class ArrowButtons {
       margin: 0 auto;
     `;
     
-    // Create triangular controller container
+    // Create square controller container
     const controllerContainer = document.createElement('div');
     controllerContainer.id = 'triangular-controller-container';
     controllerContainer.className = 'triangular-controller-container';
     
-    // Create the four separate triangular buttons
+    // Create the four triangular buttons
+    // Note: Changed to make buttons meet at the center to form an X pattern
     const triangles = [
       { id: 'triangle-up', direction: 'up', className: 'triangle-button triangle-up' },
       { id: 'triangle-right', direction: 'right', className: 'triangle-button triangle-right' },
@@ -155,13 +156,12 @@ class ArrowButtons {
       .triangular-controller-container {
         width: 120px;
         height: 120px;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        grid-template-rows: 1fr 1fr;
-        gap: 0;
         position: relative;
         margin: 20px auto;
         user-select: none;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: 1fr 1fr;
       }
       
       .triangle-button {
@@ -192,40 +192,44 @@ class ArrowButtons {
           inset 0 -1px 2px var(--btn-metal-inner-shadow, rgba(0, 0, 0, 0.2));
       }
       
-      /* Top triangle - 2:1 ratio (wide) */
+      /* Top triangle pointing down toward center */
       .triangle-up {
         grid-column: 1 / 3;
         grid-row: 1;
         height: 60px;
-        clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
-        border-bottom: 3px solid var(--btn-metal-darker, #888);
+        clip-path: polygon(0 0, 100% 0, 50% 100%);
+        z-index: 2;
+        border-bottom: none;
       }
       
-      /* Right triangle - 1:2 ratio (tall) */
+      /* Right triangle pointing left toward center */
       .triangle-right {
         grid-column: 2;
         grid-row: 1 / 3;
         width: 60px;
-        clip-path: polygon(0% 0%, 100% 50%, 0% 100%);
-        border-left: 3px solid var(--btn-metal-darker, #888);
+        clip-path: polygon(100% 0, 100% 100%, 0 50%);
+        z-index: 2;
+        border-left: none;
       }
       
-      /* Bottom triangle - 2:1 ratio (wide) */
+      /* Bottom triangle pointing up toward center */
       .triangle-down {
         grid-column: 1 / 3;
         grid-row: 2;
         height: 60px;
-        clip-path: polygon(0% 0%, 50% 100%, 100% 0%);
-        border-top: 3px solid var(--btn-metal-darker, #888);
+        clip-path: polygon(0 100%, 100% 100%, 50% 0);
+        z-index: 2;
+        border-top: none;
       }
       
-      /* Left triangle - 1:2 ratio (tall) */
+      /* Left triangle pointing right toward center */
       .triangle-left {
         grid-column: 1;
         grid-row: 1 / 3;
         width: 60px;
-        clip-path: polygon(100% 0%, 0% 50%, 100% 100%);
-        border-right: 3px solid var(--btn-metal-darker, #888);
+        clip-path: polygon(0 0, 0 100%, 100% 50%);
+        z-index: 2;
+        border-right: none;
       }
       
       .triangle-arrow {
@@ -238,6 +242,23 @@ class ArrowButtons {
         pointer-events: none;
         z-index: 10;
         position: relative;
+      }
+      
+      /* Position the arrows in the correct locations */
+      .triangle-up .triangle-arrow {
+        transform: translateY(-10px);
+      }
+      
+      .triangle-right .triangle-arrow {
+        transform: translateX(10px);
+      }
+      
+      .triangle-down .triangle-arrow {
+        transform: translateY(10px);
+      }
+      
+      .triangle-left .triangle-arrow {
+        transform: translateX(-10px);
       }
       
       /* Hover effects */
@@ -259,6 +280,23 @@ class ArrowButtons {
         .triangle-button:hover:not(.disabled) .triangle-arrow {
           transform: scale(1.15);
           color: var(--btn-text-hover, #222);
+        }
+        
+        /* Keep the positioning transforms */
+        .triangle-up:hover:not(.disabled) .triangle-arrow {
+          transform: translateY(-10px) scale(1.15);
+        }
+        
+        .triangle-right:hover:not(.disabled) .triangle-arrow {
+          transform: translateX(10px) scale(1.15);
+        }
+        
+        .triangle-down:hover:not(.disabled) .triangle-arrow {
+          transform: translateY(10px) scale(1.15);
+        }
+        
+        .triangle-left:hover:not(.disabled) .triangle-arrow {
+          transform: translateX(-10px) scale(1.15);
         }
       }
       
@@ -283,11 +321,27 @@ class ArrowButtons {
       }
       
       .triangle-button.active .triangle-arrow {
-        transform: scale(1.1) translateY(2px);
         color: var(--btn-text-active, #000);
         text-shadow: 
           0px 1px 0px var(--btn-text-shadow-pressed-light, rgba(255, 255, 255, 0.3)),
           0px -1px 0px var(--btn-text-shadow-pressed-dark, rgba(0, 0, 0, 0.5));
+      }
+      
+      /* Keep the positioning transforms for active state */
+      .triangle-up.active .triangle-arrow {
+        transform: translateY(-10px) scale(0.95);
+      }
+      
+      .triangle-right.active .triangle-arrow {
+        transform: translateX(10px) scale(0.95);
+      }
+      
+      .triangle-down.active .triangle-arrow {
+        transform: translateY(10px) scale(0.95);
+      }
+      
+      .triangle-left.active .triangle-arrow {
+        transform: translateX(-10px) scale(0.95);
       }
       
       /* Long press pulsing animation */
