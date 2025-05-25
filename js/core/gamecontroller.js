@@ -197,9 +197,9 @@ setupMenuHandlers() {
     { id: 'new-phrase-button', text: 'New Phrase', action: () => this.loadRandomPhrase() },
     { id: 'reset-selections-button', text: 'Reset Selections', action: () => this.resetSelections() },
     { id: 'separator-1', text: 'divider', type: 'separator' },
-    { id: 'hint-level-1-button', text: 'Hint Level 1 (15%)', action: () => this.setHintLevel(1), hintLevel: 1 },
-    { id: 'hint-level-2-button', text: 'Hint Level 2 (25%)', action: () => this.setHintLevel(2), hintLevel: 2 },
-    { id: 'hint-level-3-button', text: 'Hint Level 3 (35%)', action: () => this.setHintLevel(3), hintLevel: 3 }
+    { id: 'hint-level-1-button', text: 'Hint Level 1', action: () => this.setHintLevel(1), hintLevel: 1 },
+    { id: 'hint-level-2-button', text: 'Hint Level 2', action: () => this.setHintLevel(2), hintLevel: 2 },
+    { id: 'hint-level-3-button', text: 'Hint Level 3', action: () => this.setHintLevel(3), hintLevel: 3 }
     // Island reduction buttons removed
   ];
   
