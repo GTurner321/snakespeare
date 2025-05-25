@@ -124,10 +124,9 @@ this.setupEventListeners();
     };
   }
 
-/**
- * Function to add to GridRenderer class to initialize nautical icons
- */
 initNauticalIcons() {
+  console.log('Initializing nautical icons');
+  
   // Set of nautical icons to use
   this.nauticalIcons = [
     '⚓', // anchor
@@ -150,8 +149,20 @@ initNauticalIcons() {
   // Map to track which cells have icons
   this.cellsWithIcons = new Map();
 
-  // Add CSS for nautical icons
+  // Add CSS for nautical icons (now uses !important to override other styles)
   this.addNauticalIconsCSS();
+  
+  // Force an initial application after a delay to ensure DOM is ready
+  setTimeout(() => {
+    this.applyNauticalIcons();
+    console.log('Applied nautical icons after initial delay');
+    
+    // Apply again after a longer delay to catch any cells created during initial rendering
+    setTimeout(() => {
+      this.applyNauticalIcons();
+      console.log('Applied nautical icons after secondary delay');
+    }, 2000);
+  }, 500);
 }
   
 /**
@@ -213,9 +224,6 @@ setupEventListeners() {
   console.log('Grid event listeners set up with scroll optimization');
 }
 
-/**
- * Add CSS styles for nautical icons
- */
 addNauticalIconsCSS() {
   if (document.getElementById('nautical-icons-css')) return;
   
@@ -223,39 +231,39 @@ addNauticalIconsCSS() {
   style.id = 'nautical-icons-css';
   style.textContent = `
     .nautical-icon {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      color: #00008B; /* Dark navy blue */
-      font-size: 18px;
-      opacity: 0.8;
-      z-index: 3;
-      pointer-events: none; /* Make sure it doesn't interfere with clicks */
-      text-shadow: 0 0 2px rgba(255, 255, 255, 0.5);
-      user-select: none;
+      position: absolute !important;
+      top: 50% !important;
+      left: 50% !important;
+      transform: translate(-50%, -50%) !important;
+      color: #00008B !important; /* Dark navy blue */
+      font-size: 18px !important;
+      opacity: 0.8 !important;
+      z-index: 5 !important; /* Between sea cells and path cells */
+      pointer-events: none !important;
+      text-shadow: 0 0 2px rgba(255, 255, 255, 0.5) !important;
+      user-select: none !important;
     }
     
     /* Add subtle animation to make icons feel alive */
     @keyframes float {
-      0% { transform: translate(-50%, -50%) rotate(0deg); }
-      50% { transform: translate(-50%, -50%) rotate(5deg); }
-      100% { transform: translate(-50%, -50%) rotate(0deg); }
+      0% { transform: translate(-50%, -50%) rotate(0deg) !important; }
+      50% { transform: translate(-50%, -50%) rotate(5deg) !important; }
+      100% { transform: translate(-50%, -50%) rotate(0deg) !important; }
     }
     
     .nautical-icon {
-      animation: float 3s ease-in-out infinite;
+      animation: float 3s ease-in-out infinite !important;
     }
     
     /* Different animation timing for variety */
     .nautical-icon:nth-child(odd) {
-      animation-duration: 4s;
-      animation-delay: 1s;
+      animation-duration: 4s !important;
+      animation-delay: 1s !important;
     }
   `;
   
   document.head.appendChild(style);
-  console.log('Added nautical icons CSS');
+  console.log('Added nautical icons CSS with enhanced visibility');
 }
   
   /**
@@ -1328,18 +1336,17 @@ renderVisibleGrid() {
   }
 }
 
-/**
- * Apply nautical icons to sea cells
- * Should be called after rendering the grid
- */
 applyNauticalIcons() {
   // Skip if we haven't initialized nautical icons
   if (!this.nauticalIcons) {
     this.initNauticalIcons();
   }
 
-  // Find all sea cells (cells with sea-adjacent class but no path-cell class)
-  const seaCells = document.querySelectorAll('.grid-cell.sea-adjacent:not(.path-cell)');
+  // Use a more specific selector that matches your CSS structure
+  // Look for cells that have sea-adjacent class but don't have path-cell or other specific classes
+  const seaCells = document.querySelectorAll('.grid-cell.sea-adjacent:not(.path-cell):not(.start-cell):not(.selected-cell)');
+  
+  console.log(`Found ${seaCells.length} sea cells for nautical icons`);
   
   // Process each sea cell
   seaCells.forEach(cellElement => {
@@ -1379,6 +1386,20 @@ applyNauticalIcons() {
         iconElement = document.createElement('div');
         iconElement.className = 'nautical-icon';
         iconElement.textContent = cellIconInfo.icon;
+        
+        // Set explicit styles to ensure visibility
+        iconElement.style.position = 'absolute';
+        iconElement.style.top = '50%';
+        iconElement.style.left = '50%';
+        iconElement.style.transform = 'translate(-50%, -50%)';
+        iconElement.style.color = '#00008B'; // Dark navy blue
+        iconElement.style.fontSize = '18px';
+        iconElement.style.opacity = '0.8';
+        iconElement.style.zIndex = '5'; // Higher than sea cells (z-index 2) but lower than path cells
+        iconElement.style.pointerEvents = 'none';
+        iconElement.style.textShadow = '0 0 2px rgba(255, 255, 255, 0.5)';
+        
+        // Append after any text content to ensure it's not overwritten
         cellElement.appendChild(iconElement);
       } else {
         // Ensure the existing icon has the correct content
@@ -1414,14 +1435,18 @@ enhanceRenderVisibleGridWithIcons() {
   console.log('Enhanced renderVisibleGrid with nautical icons');
 }
   
-/**
- * New helper method to update cell content without changing class state
- * This helps preserve snake pieces while updating text content
- */
 updateCellElementContent(cellElement, x, y) {
   // Only update if within grid bounds
   if (y >= 0 && y < this.grid.length && x >= 0 && x < this.grid[0].length) {
     const cell = this.grid[y][x];
+    
+    // Check if there's an existing nautical icon
+    const existingIcon = cellElement.querySelector('.nautical-icon');
+    
+    // If there's an icon, temporarily remove it
+    if (existingIcon) {
+      cellElement.removeChild(existingIcon);
+    }
     
     // Update the cell content if it's different
     const currentText = cellElement.textContent;
@@ -1429,9 +1454,14 @@ updateCellElementContent(cellElement, x, y) {
     if (currentText !== modelText) {
       cellElement.textContent = modelText;
     }
+    
+    // If there was an icon, add it back
+    if (existingIcon) {
+      cellElement.appendChild(existingIcon);
+    }
   }
 }
-
+  
 /**
  * Updated version of updateCellElementClasses to preserve snake pieces
  */
