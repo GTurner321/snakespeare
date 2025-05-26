@@ -124,23 +124,33 @@ this.setupEventListeners();
     };
   }
 
+
+/**
+ * Replace nautical emojis with Font Awesome icons
+ * These changes should be integrated into your GridRenderer class
+ */
+
+// 1. First, replace the nauticalIcons array in the initNauticalIcons method:
 initNauticalIcons() {
-  console.log('Initializing nautical icons');
+  console.log('Initializing Font Awesome nautical icons');
   
-  // Set of nautical icons to use
+  // Set of Font Awesome nautical icons to use
   this.nauticalIcons = [
-    '⚓', // anchor
-    '⛵', // sailboat
-    '🐋', // whale
-    '🐙', // octopus
-    '🐟', // fish
-    '🦈', // shark
-    '☠️', // skull and crossbones
-    '🧭', // compass
-    '🔱', // trident
-    '🌊', // water wave
-    '🐚', // spiral shell
-    '⭐'  // star
+    'fa-solid fa-cloud-showers-water',
+    'fa-solid fa-map',
+    'fa-solid fa-cloud-bolt',
+    'fa-solid fa-person-drowning',
+    'fa-solid fa-person-swimming',
+    'fa-solid fa-dharmachakra',
+    'fa-solid fa-compass',
+    'fa-solid fa-water',
+    'fa-brands fa-octopus-deploy',
+    'fa-solid fa-skull-crossbones',
+    'fa-solid fa-fish-fins',
+    'fa-solid fa-anchor',
+    'fa-solid fa-sailboat',
+    'fa-solid fa-wine-bottle',
+    'fa-solid fa-wind'
   ];
 
   // Chance of a sea cell having an icon (1 in 20)
@@ -149,7 +159,7 @@ initNauticalIcons() {
   // Map to track which cells have icons
   this.cellsWithIcons = new Map();
 
-  // Add CSS for nautical icons (now uses !important to override other styles)
+  // Add CSS for nautical icons
   this.addNauticalIconsCSS();
   
   // Force an initial application after a delay to ensure DOM is ready
@@ -235,13 +245,14 @@ addNauticalIconsCSS() {
       top: 50% !important;
       left: 50% !important;
       transform: translate(-50%, -50%) !important;
-      color: #00008B !important; /* Dark navy blue only */
+      color: rgba(255, 255, 255, 0.6) !important; /* Semi-transparent white */
       font-size: 22px !important; /* Larger icons */
       opacity: 0.7 !important;
       z-index: 3 !important;
       pointer-events: none !important;
-      text-shadow: 0 0 2px rgba(255, 255, 255, 0.3) !important;
+      text-shadow: 0 0 2px rgba(0, 0, 0, 0.3) !important;
       user-select: none !important;
+      background: transparent !important; /* Ensure transparent background */
     }
     
     /* Add subtle animation to make icons feel alive */
@@ -260,10 +271,22 @@ addNauticalIconsCSS() {
       animation-duration: 4s !important;
       animation-delay: 1s !important;
     }
+    
+    /* Styles to properly identify beach/shore cells */
+    .grid-cell.sea-adjacent,
+    .grid-cell.beach-cell,
+    .grid-cell.shore-cell {
+      background-color: var(--sandyellow) !important;
+    }
+    
+    /* Ensure only deep sea cells get the dark blue */
+    .grid-cell:not(.path-cell):not(.sea-adjacent):not(.beach-cell):not(.shore-cell):not(.out-of-bounds):not(.start-cell) {
+      background-color: var(--defaultblue-dark) !important;
+    }
   `;
   
   document.head.appendChild(style);
-  console.log('Added nautical icons CSS with enhanced visibility');
+  console.log('Added Font Awesome nautical icons CSS with enhanced visibility');
 }
   
   /**
@@ -1336,19 +1359,19 @@ renderVisibleGrid() {
   }
 }
 
-/**
- * Apply nautical icons to main sea cells (not beach/shore cells)
- */
+// 3. Update the applyNauticalIcons method to use Font Awesome icons
+// and ONLY target deep sea cells (not beach/shore cells):
 applyNauticalIcons() {
   // Skip if we haven't initialized nautical icons
   if (!this.nauticalIcons) {
     this.initNauticalIcons();
   }
 
-  // Target default sea cells (cells that are NOT path-cell, NOT sea-adjacent, NOT out-of-bounds)
-  const seaCells = document.querySelectorAll('.grid-cell:not(.path-cell):not(.sea-adjacent):not(.out-of-bounds):not(.start-cell):not(.selected-cell)');
+  // IMPORTANT CHANGE: Target ONLY deep sea cells
+  // Specifically exclude sea-adjacent (beach/shore) cells
+  const seaCells = document.querySelectorAll('.grid-cell:not(.path-cell):not(.sea-adjacent):not(.out-of-bounds):not(.start-cell):not(.selected-cell):not(.beach-cell):not(.shore-cell)');
   
-  console.log(`Found ${seaCells.length} main sea cells for nautical icons`);
+  console.log(`Found ${seaCells.length} deep sea cells for nautical icons`);
   
   // Process each sea cell
   seaCells.forEach(cellElement => {
@@ -1385,27 +1408,33 @@ applyNauticalIcons() {
       
       // If no icon exists, create one
       if (!iconElement) {
-        iconElement = document.createElement('div');
-        iconElement.className = 'nautical-icon';
-        iconElement.textContent = cellIconInfo.icon;
+        iconElement = document.createElement('i');
+        iconElement.className = `nautical-icon ${cellIconInfo.icon}`;
         
-        // Set explicit styles to ensure visibility - now larger and navy blue only
+        // Set explicit styles to ensure visibility
         iconElement.style.position = 'absolute';
         iconElement.style.top = '50%';
         iconElement.style.left = '50%';
         iconElement.style.transform = 'translate(-50%, -50%)';
-        iconElement.style.color = '#00008B'; // Dark navy blue only
-        iconElement.style.fontSize = '22px'; // Larger icons
-        iconElement.style.opacity = '0.7'; // Slightly more subtle
-        iconElement.style.zIndex = '3'; // Appropriate z-index for sea cells
+        iconElement.style.color = 'rgba(255, 255, 255, 0.6)'; // Semi-transparent white
+        iconElement.style.fontSize = '22px';
+        iconElement.style.opacity = '0.7';
+        iconElement.style.zIndex = '3';
         iconElement.style.pointerEvents = 'none';
-        iconElement.style.textShadow = '0 0 2px rgba(255, 255, 255, 0.3)';
+        iconElement.style.textShadow = '0 0 2px rgba(0, 0, 0, 0.3)';
+        iconElement.style.background = 'transparent'; // Ensure transparent background
         
         // Append after any text content to ensure it's not overwritten
         cellElement.appendChild(iconElement);
       } else {
-        // Ensure the existing icon has the correct content
-        iconElement.textContent = cellIconInfo.icon;
+        // Ensure the existing icon has the correct class
+        // First, remove any existing FA classes
+        const classes = iconElement.className.split(' ').filter(cls => 
+          !cls.startsWith('fa-') && cls !== 'nautical-icon'
+        );
+        
+        // Then set the new classes
+        iconElement.className = `nautical-icon ${cellIconInfo.icon}`;
       }
     } else {
       // Remove any existing icon if cell shouldn't have one
@@ -1437,6 +1466,7 @@ enhanceRenderVisibleGridWithIcons() {
   console.log('Enhanced renderVisibleGrid with nautical icons');
 }
   
+// 5. Override updateCellElementContent to preserve Font Awesome icons:
 updateCellElementContent(cellElement, x, y) {
   // Only update if within grid bounds
   if (y >= 0 && y < this.grid.length && x >= 0 && x < this.grid[0].length) {
@@ -1725,10 +1755,7 @@ shuffleArray(array) {
   return newArray;
 }
 
-/**
- * Get a random nautical icon
- * @return {string} Random nautical icon
- */
+// 4. Update the getRandomNauticalIcon method:
 getRandomNauticalIcon() {
   const index = Math.floor(Math.random() * this.nauticalIcons.length);
   return this.nauticalIcons[index];
@@ -2641,6 +2668,29 @@ cellHasContent(x, y) {
   return cell && cell.letter && cell.letter.trim() !== '';
 }
 
+// 6. Add this helper function to detect true deep sea cells (not beach or shore):
+isDeepSeaCell(x, y) {
+  // Check if coordinates are within grid bounds
+  if (y < 0 || y >= this.grid.length || x < 0 || x >= this.grid[0].length) {
+    return false;
+  }
+  
+  const cell = this.grid[y][x];
+  
+  // A deep sea cell:
+  // 1. Is not a path cell
+  // 2. Does not have a letter
+  // 3. Is not marked as sea-adjacent (which would be beach/shore)
+  // 4. Is not the start cell
+  return (
+    !cell.isPath &&
+    (!cell.letter || cell.letter.trim() === '') &&
+    !cell.isSeaAdjacent &&
+    !(x === 35 && y === 35) // Not the start cell
+  );
+}
+
+  
 /**
  * Enhanced Scroll Method for GridRenderer
  * Makes individual scrolls smoother
