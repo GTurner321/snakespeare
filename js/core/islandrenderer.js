@@ -1155,26 +1155,27 @@ setupTooltipEvents(iconElement) {
     
     // Set tooltip content
     tooltipContainer.textContent = tooltip;
-    tooltipContainer.classList.add('visible');
     
     // Position tooltip above the icon
     const rect = iconElement.getBoundingClientRect();
     tooltipContainer.style.left = `${rect.left + rect.width / 2}px`;
     tooltipContainer.style.top = `${rect.top - 10 - tooltipContainer.offsetHeight}px`;
+    
+    // Make tooltip visible
     tooltipContainer.style.display = 'block';
+    tooltipContainer.classList.add('visible');
     
     // Ensure icon remains visible
     iconElement.style.opacity = '0.8'; // Slightly boost opacity when hovered
   });
   
-  // Mouse leave - hide tooltip but keep icon visible
+  // Mouse leave - hide tooltip immediately
   iconElement.addEventListener('mouseleave', () => {
+    // Remove visible class
     tooltipContainer.classList.remove('visible');
-    setTimeout(() => {
-      if (!tooltipContainer.classList.contains('visible')) {
-        tooltipContainer.style.display = 'none';
-      }
-    }, 300);
+    
+    // Hide the tooltip immediately
+    tooltipContainer.style.display = 'none';
     
     // Return icon to normal opacity
     iconElement.style.opacity = '0.7';
