@@ -62,7 +62,6 @@
         import IslandRenderer from './js/core/islandrenderer.js';
         import SnakePath from './js/core/snakepath.js';
         import ArrowButtons from './js/core/arrowbuttons.js';
-        import SeaIcons from './js/core/seaicons.js'; // Add this import
         
         // Initialize game when DOM is loaded
         document.addEventListener('DOMContentLoaded', () => {
@@ -92,14 +91,6 @@
                 // Initialize IslandRenderer
                 new IslandRenderer(gridRenderer);
 
-    // Initialize SeaIcons after IslandRenderer
-    try {
-        console.log('Initializing sea icons...');
-        new SeaIcons(gridRenderer);
-    } catch (error) {
-        console.error('Error initializing SeaIcons:', error);
-    }
-                
                 // Initialize SnakePath after IslandRenderer
                 setTimeout(() => {
                     try {
