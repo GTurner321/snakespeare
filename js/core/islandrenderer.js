@@ -155,13 +155,13 @@ addIconStyles() {
   const style = document.createElement('style');
   style.id = 'sea-icons-css';
   style.textContent = `
-    /* Icon styles */
+    /* Icon styles - permanently visible */
     .sea-icon {
       position: absolute !important;
       top: 50% !important;
       left: 50% !important;
       transform: translate(-50%, -50%) !important;
-      color: #444444 !important; /* Dark grey instead of blue */
+      color: #444444 !important; /* Dark grey */
       font-size: 22px !important;
       opacity: 0.7 !important;
       z-index: 50 !important;
@@ -170,6 +170,9 @@ addIconStyles() {
       user-select: none !important;
       background: transparent !important;
       cursor: help !important;
+      /* Ensure icons aren't accidentally hidden */
+      visibility: visible !important;
+      display: block !important;
     }
     
     /* Add subtle animation to make icons feel alive */
@@ -202,19 +205,17 @@ addIconStyles() {
       z-index: 1000;
       pointer-events: none;
       opacity: 0;
-      transition: opacity 0.3s ease;
+      transition: opacity 0.2s ease;
       font-style: italic;
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-      /* Add subtle post-it shadow and border */
       border: 1px solid rgba(180, 160, 60, 0.5);
+      display: none; /* Initially hidden */
     }
     
     .sea-icon-tooltip.visible {
       opacity: 1;
+      display: block;
     }
-    
-    /* Remove tooltip arrow - no speech bubble effect */
-    /* .sea-icon-tooltip:after { ... } - removed */
   `;
   
   document.head.appendChild(style);
@@ -573,10 +574,13 @@ _setupEventListeners() {
     this._calculateStyles();
     this._applyBeachCellStyles(true);
     
-    // Hide sea icons during scrolling to improve performance
+    // Reduce opacity of sea icons during scrolling but keep them visible
     const seaIcons = document.querySelectorAll('.sea-icon');
     seaIcons.forEach(icon => {
-      icon.style.opacity = '0';
+      icon.style.opacity = '0.3'; // Reduce opacity but don't hide completely
+      // Ensure icons remain in DOM and visible
+      icon.style.visibility = 'visible';
+      icon.style.display = 'block';
     });
   });
   
@@ -597,6 +601,14 @@ _setupEventListeners() {
     if (e.detail.isScrolling) {
       setTimeout(() => {
         this._applyBeachCellStyles(true);
+        
+        // Ensure any sea icons in the visible grid are still at reduced opacity
+        const seaIcons = document.querySelectorAll('.sea-icon');
+        seaIcons.forEach(icon => {
+          icon.style.opacity = '0.3';
+          icon.style.visibility = 'visible';
+          icon.style.display = 'block';
+        });
       }, 0);
     } else {
       // Only process if not during a scroll
@@ -605,31 +617,53 @@ _setupEventListeners() {
         this._applyStyles();
         
         // Apply sea icons after grid is rebuilt
-        setTimeout(() => this.applyIcons(), 100);
+        setTimeout(() => {
+          this.applyIcons();
+          
+          // Ensure full opacity for all icons
+          const seaIcons = document.querySelectorAll('.sea-icon');
+          seaIcons.forEach(icon => {
+            icon.style.opacity = '0.7';
+            icon.style.visibility = 'visible';
+            icon.style.display = 'block';
+          });
+        }, 100);
       });
     }
   });
   
-document.addEventListener('gridScrollComplete', () => {
-  this._scrollInProgress = false;
-  
-  // Update styles after scroll completes
-  this._updateVisibleBounds();
-  
-  requestAnimationFrame(() => {
-    this._calculateStyles();
-    this._applyStyles();
+  document.addEventListener('gridScrollComplete', () => {
+    this._scrollInProgress = false;
     
-    // Ensure sea icons are visible again after scroll
-    const seaIcons = document.querySelectorAll('.sea-icon');
-    seaIcons.forEach(icon => {
-      icon.style.opacity = '0.7'; // Make icons visible
+    // Update styles after scroll completes
+    this._updateVisibleBounds();
+    
+    requestAnimationFrame(() => {
+      this._calculateStyles();
+      this._applyStyles();
+      
+      // Restore sea icons to normal opacity
+      const seaIcons = document.querySelectorAll('.sea-icon');
+      seaIcons.forEach(icon => {
+        icon.style.opacity = '0.7'; // Normal opacity
+        icon.style.visibility = 'visible'; // Ensure visibility
+        icon.style.display = 'block';      // Ensure display
+      });
+      
+      // Apply sea icons after scroll completes to ensure all cells have icons
+      setTimeout(() => {
+        this.applyIcons();
+        
+        // Double-check all icons are visible with correct opacity
+        const allSeaIcons = document.querySelectorAll('.sea-icon');
+        allSeaIcons.forEach(icon => {
+          icon.style.opacity = '0.7';
+          icon.style.visibility = 'visible';
+          icon.style.display = 'block';
+        });
+      }, 200);
     });
-    
-    // Apply sea icons after scroll completes
-    setTimeout(() => this.applyIcons(), 200);
   });
-});
   
   // Event categories for different processing approaches
   const immediateEvents = [
@@ -655,7 +689,17 @@ document.addEventListener('gridScrollComplete', () => {
         this._applyStyles();
         
         // Update sea icons after high-priority events
-        setTimeout(() => this.applyIcons(), 100);
+        setTimeout(() => {
+          this.applyIcons();
+          
+          // Ensure all icons are visible
+          const seaIcons = document.querySelectorAll('.sea-icon');
+          seaIcons.forEach(icon => {
+            icon.style.opacity = '0.7';
+            icon.style.visibility = 'visible';
+            icon.style.display = 'block';
+          });
+        }, 100);
       });
     });
   });
@@ -679,7 +723,17 @@ document.addEventListener('gridScrollComplete', () => {
           this._applyStyles();
           
           // Update sea icons after delayed events
-          setTimeout(() => this.applyIcons(), 100);
+          setTimeout(() => {
+            this.applyIcons();
+            
+            // Ensure all icons are visible
+            const seaIcons = document.querySelectorAll('.sea-icon');
+            seaIcons.forEach(icon => {
+              icon.style.opacity = '0.7';
+              icon.style.visibility = 'visible';
+              icon.style.display = 'block';
+            });
+          }, 100);
         });
       }, 100);
     });
@@ -694,7 +748,17 @@ document.addEventListener('gridScrollComplete', () => {
       this._applyStyles();
       
       // Update sea icons after explicit styling requests
-      setTimeout(() => this.applyIcons(), 100);
+      setTimeout(() => {
+        this.applyIcons();
+        
+        // Ensure all icons are visible
+        const seaIcons = document.querySelectorAll('.sea-icon');
+        seaIcons.forEach(icon => {
+          icon.style.opacity = '0.7';
+          icon.style.visibility = 'visible';
+          icon.style.display = 'block';
+        });
+      }, 100);
     });
   });
   
@@ -705,6 +769,14 @@ document.addEventListener('gridScrollComplete', () => {
       this._calculateStyles();
       this._applyStyles(true);
       this.applyIcons();
+      
+      // Ensure all icons are visible
+      const seaIcons = document.querySelectorAll('.sea-icon');
+      seaIcons.forEach(icon => {
+        icon.style.opacity = '0.7';
+        icon.style.visibility = 'visible';
+        icon.style.display = 'block';
+      });
     }, 200);
   });
   
@@ -1165,19 +1237,17 @@ setupTooltipEvents(iconElement) {
     tooltipContainer.style.display = 'block';
     tooltipContainer.classList.add('visible');
     
-    // Ensure icon remains visible
-    iconElement.style.opacity = '0.8'; // Slightly boost opacity when hovered
+    // Just increase opacity slightly on hover
+    iconElement.style.opacity = '0.9';
   });
   
-  // Mouse leave - hide tooltip immediately
+  // Mouse leave - hide ONLY the tooltip
   iconElement.addEventListener('mouseleave', () => {
-    // Remove visible class
+    // Hide tooltip
     tooltipContainer.classList.remove('visible');
-    
-    // Hide the tooltip immediately
     tooltipContainer.style.display = 'none';
     
-    // Return icon to normal opacity
+    // Return icon to normal opacity but keep visible
     iconElement.style.opacity = '0.7';
   });
 }
@@ -1305,6 +1375,8 @@ applyIcons() {
         iconElement.style.textShadow = '0 0 2px rgba(255, 255, 255, 0.3)';
         iconElement.style.background = 'transparent';
         iconElement.style.cursor = 'help';
+        iconElement.style.visibility = 'visible'; // Ensure visibility
+        iconElement.style.display = 'block';      // Ensure display
         
         // Append after any text content to ensure it's not overwritten
         cellElement.appendChild(iconElement);
