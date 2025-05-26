@@ -91,6 +91,14 @@
                 
                 // Initialize IslandRenderer
                 new IslandRenderer(gridRenderer);
+
+    // Initialize SeaIcons after IslandRenderer
+    try {
+        console.log('Initializing sea icons...');
+        new SeaIcons(gridRenderer);
+    } catch (error) {
+        console.error('Error initializing SeaIcons:', error);
+    }
                 
                 // Initialize SnakePath after IslandRenderer
                 setTimeout(() => {
