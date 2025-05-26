@@ -161,15 +161,15 @@ addIconStyles() {
       top: 50% !important;
       left: 50% !important;
       transform: translate(-50%, -50%) !important;
-      color: #00008B !important; /* Dark navy blue */
-      font-size: 22px !important; /* Larger icons */
+      color: #444444 !important; /* Dark grey instead of blue */
+      font-size: 22px !important;
       opacity: 0.7 !important;
-      z-index: 50 !important; /* Higher z-index to ensure visibility */
-      pointer-events: auto !important; /* Changed to auto for hover effects */
-      text-shadow: 0 0 2px rgba(255, 255, 255, 0.3) !important; /* Light text shadow for contrast */
+      z-index: 50 !important;
+      pointer-events: auto !important;
+      text-shadow: 0 0 2px rgba(255, 255, 255, 0.3) !important;
       user-select: none !important;
-      background: transparent !important; /* Ensure transparent background */
-      cursor: help !important; /* Show help cursor on hover */
+      background: transparent !important;
+      cursor: help !important;
     }
     
     /* Add subtle animation to make icons feel alive */
@@ -189,13 +189,13 @@ addIconStyles() {
       animation-delay: 1s !important;
     }
     
-    /* Tooltip styles */
+    /* Tooltip styles - post-it note style */
     .sea-icon-tooltip {
       position: absolute;
-      background-color: rgba(0, 0, 0, 0.8);
-      color: #fff;
-      padding: 8px 12px;
-      border-radius: 6px;
+      background-color: rgba(255, 246, 122, 0.9); /* Muted yellow with transparency */
+      color: #444444; /* Dark grey text */
+      padding: 10px 15px;
+      border-radius: 2px; /* Less rounded for post-it look */
       font-size: 14px;
       max-width: 200px;
       text-align: center;
@@ -205,30 +205,22 @@ addIconStyles() {
       transition: opacity 0.3s ease;
       font-style: italic;
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      /* Add subtle post-it shadow and border */
+      border: 1px solid rgba(180, 160, 60, 0.5);
     }
     
     .sea-icon-tooltip.visible {
       opacity: 1;
     }
     
-    /* Tooltip arrow */
-    .sea-icon-tooltip:after {
-      content: '';
-      position: absolute;
-      bottom: -10px;
-      left: 50%;
-      margin-left: -10px;
-      border-width: 10px 10px 0;
-      border-style: solid;
-      border-color: rgba(0, 0, 0, 0.8) transparent transparent transparent;
-    }
+    /* Remove tooltip arrow - no speech bubble effect */
+    /* .sea-icon-tooltip:after { ... } - removed */
   `;
   
   document.head.appendChild(style);
   console.log('IslandRenderer: Added sea icon styles to document');
 }
-
+  
 /**
  * Create tooltip container for sea icons
  */
@@ -618,27 +610,26 @@ _setupEventListeners() {
     }
   });
   
-  document.addEventListener('gridScrollComplete', () => {
-    this._scrollInProgress = false;
+document.addEventListener('gridScrollComplete', () => {
+  this._scrollInProgress = false;
+  
+  // Update styles after scroll completes
+  this._updateVisibleBounds();
+  
+  requestAnimationFrame(() => {
+    this._calculateStyles();
+    this._applyStyles();
     
-    // Update styles after scroll completes, using animation frame for smoother performance
-    this._updateVisibleBounds();
-    
-    // Use requestAnimationFrame for better performance
-    requestAnimationFrame(() => {
-      this._calculateStyles();
-      this._applyStyles();
-      
-      // Show sea icons again after scroll completes
-      const seaIcons = document.querySelectorAll('.sea-icon');
-      seaIcons.forEach(icon => {
-        icon.style.opacity = '0.7';
-      });
-      
-      // Apply sea icons after scroll completes
-      setTimeout(() => this.applyIcons(), 200);
+    // Ensure sea icons are visible again after scroll
+    const seaIcons = document.querySelectorAll('.sea-icon');
+    seaIcons.forEach(icon => {
+      icon.style.opacity = '0.7'; // Make icons visible
     });
+    
+    // Apply sea icons after scroll completes
+    setTimeout(() => this.applyIcons(), 200);
   });
+});
   
   // Event categories for different processing approaches
   const immediateEvents = [
@@ -1171,9 +1162,12 @@ setupTooltipEvents(iconElement) {
     tooltipContainer.style.left = `${rect.left + rect.width / 2}px`;
     tooltipContainer.style.top = `${rect.top - 10 - tooltipContainer.offsetHeight}px`;
     tooltipContainer.style.display = 'block';
+    
+    // Ensure icon remains visible
+    iconElement.style.opacity = '0.8'; // Slightly boost opacity when hovered
   });
   
-  // Mouse leave - hide tooltip
+  // Mouse leave - hide tooltip but keep icon visible
   iconElement.addEventListener('mouseleave', () => {
     tooltipContainer.classList.remove('visible');
     setTimeout(() => {
@@ -1181,6 +1175,9 @@ setupTooltipEvents(iconElement) {
         tooltipContainer.style.display = 'none';
       }
     }, 300);
+    
+    // Return icon to normal opacity
+    iconElement.style.opacity = '0.7';
   });
 }
   
@@ -1299,7 +1296,7 @@ applyIcons() {
         iconElement.style.top = '50%';
         iconElement.style.left = '50%';
         iconElement.style.transform = 'translate(-50%, -50%)';
-        iconElement.style.color = '#00008B'; // Dark navy blue
+        iconElement.style.color = '#444444'; // Dark grey
         iconElement.style.fontSize = '22px';
         iconElement.style.zIndex = '50';
         iconElement.style.opacity = '0.7';
