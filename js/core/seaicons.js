@@ -1,14 +1,17 @@
 /**
- * SeaIcons.js - Module for handling sea icons with tooltips
- * This version fixes the issues with icons not appearing
+ * SeaIcons.js - Fixed Module for handling sea icons with tooltips
+ * This version properly identifies deep sea cells and ensures icons are maintained during scrolling
  */
-
 class SeaIcons {
   constructor(gridRenderer) {
     this.gridRenderer = gridRenderer;
     // Store a reference to window.seaIcons for debugging
     window.seaIcons = this;
-    this.initialize();
+    
+    // Wait for proper grid initialization before starting
+    setTimeout(() => this.initialize(), 800);
+    
+    console.log('SeaIcons: Module created, waiting for grid initialization');
   }
   
   initialize() {
@@ -49,17 +52,18 @@ class SeaIcons {
     this.setupEventListeners();
     
     // Initial icon application with delay to ensure grid is ready
-    setTimeout(() => {
-      this.applyIcons();
-      console.log('SeaIcons: Applied sea icons after initial delay');
-    }, 500);
+    this.applyIcons();
+    console.log('SeaIcons: Applied sea icons during initialization');
+    
+    // Set up interval to periodically check for new deep sea cells
+    this.checkInterval = setInterval(() => this.applyIcons(), 2000);
   }
   
   setupEventListeners() {
     // Listen for grid rebuilds to reapply icons
     document.addEventListener('gridRebuilt', (e) => {
       console.log('SeaIcons: Grid rebuilt event detected');
-      // Small delay to ensure grid is fully updated
+      // Apply icons with delay to ensure grid is updated
       setTimeout(() => this.applyIcons(), 100);
     });
     
@@ -188,17 +192,15 @@ class SeaIcons {
 
     console.log('SeaIcons: Starting to apply icons');
 
-    // CRITICAL FIX: Use a simpler selector to find sea cells - we'll filter them by color
-    // This selector just looks for all grid cells that aren't path cells, start cells, or out of bounds
-    const seaCells = gridElement.querySelectorAll('.grid-cell:not(.path-cell):not(.start-cell):not(.out-of-bounds)');
-    
-    console.log(`SeaIcons: Found ${seaCells.length} potential sea cells`);
+    // FIXED: Simplify the sea cell selector to get all cells that look like deep sea
+    // Instead of complicated CSS selectors, we'll check the background color directly
+    const allCells = gridElement.querySelectorAll('.grid-cell');
     
     let deepSeaCount = 0;
     let iconedCellCount = 0;
 
-    // Process each potential sea cell
-    seaCells.forEach(cellElement => {
+    // Process each cell
+    allCells.forEach(cellElement => {
       const x = parseInt(cellElement.dataset.gridX, 10);
       const y = parseInt(cellElement.dataset.gridY, 10);
       
@@ -207,13 +209,17 @@ class SeaIcons {
       
       const cellKey = `${x},${y}`;
       
-      // CRITICAL FIX: Directly check the computed background color
-      const cellStyle = window.getComputedStyle(cellElement);
-      const backgroundColor = cellStyle.backgroundColor;
+      // FIXED: Directly check for the deep sea color
+      // Get computed style
+      const computedStyle = window.getComputedStyle(cellElement);
+      const backgroundColor = computedStyle.backgroundColor;
       
-      // Check if it's a dark blue sea cell (true deep sea cells)
-      // Using a more permissive detection approach
-      const isDeepSeaCell = this.isDeepSeaCell(cellElement, backgroundColor);
+      // Check if this is a deep sea cell by color
+      const isDeepSeaCell = this.isDeepBlueSeaColor(backgroundColor) && 
+                           !cellElement.classList.contains('sea-adjacent') &&
+                           !cellElement.classList.contains('path-cell') &&
+                           !cellElement.classList.contains('selected-cell') &&
+                           !cellElement.classList.contains('start-cell');
       
       if (!isDeepSeaCell) {
         // If not a deep sea cell, remove any existing icon
@@ -293,47 +299,38 @@ class SeaIcons {
     console.log(`SeaIcons: Found ${deepSeaCount} deep sea cells, added icons to ${iconedCellCount} cells`);
   }
   
-  // IMPROVED: More reliable deep sea cell detection that works in multiple ways
-  isDeepSeaCell(cellElement, backgroundColor) {
-    // Method 1: Check by class combinations
-    const hasSeaAdjacentClass = cellElement.classList.contains('sea-adjacent');
-    const hasBeachClass = cellElement.classList.contains('beach-cell');
-    const hasShoreClass = cellElement.classList.contains('shore-cell');
-    const hasSelectedClass = cellElement.classList.contains('selected-cell');
+  // IMPROVED: Simpler deep sea color check
+  isDeepBlueSeaColor(backgroundColor) {
+    // Check for the default blue sea color
+    if (!backgroundColor) return false;
     
-    // Method 2: Check background color
-    // This handles both rgb() and rgba() formats
-    const rgbMatch = backgroundColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/);
-    let colorMatches = false;
+    // Convert rgb/rgba to lowercase for consistent comparison
+    const colorStr = backgroundColor.toLowerCase();
+    
+    // Check for any of the default blue variations
+    const isDefaultBlue = 
+      colorStr === 'rgb(86, 165, 214)' || // var(--defaultblue)
+      colorStr === 'rgb(74, 145, 187)' || // var(--defaultblue-dark)
+      colorStr === 'rgb(58, 130, 173)' || // var(--defaultblue-darker)
+      colorStr === '#56a5d6' ||
+      colorStr === '#4a91bb';
+    
+    // If exact match for default blue colors
+    if (isDefaultBlue) return true;
+    
+    // Also check RGB components for bluish colors
+    const rgbMatch = colorStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/);
     
     if (rgbMatch) {
       const r = parseInt(rgbMatch[1], 10);
       const g = parseInt(rgbMatch[2], 10);
       const b = parseInt(rgbMatch[3], 10);
       
-      // RELAXED criteria - any bluish color that's not too light
-      colorMatches = (
-        r < 100 && // Low red component
-        g < 100 && // Low green component
-        b > 50    // Some blue component
-      );
+      // Check if it's a blue color (blue component much higher than others)
+      return r < 120 && g < 180 && b > 160 && b > (r + g) / 2;
     }
     
-    // Method 3: Check computed background-color directly
-    // This matches the default sea color from your CSS
-    const isDefaultBlue = 
-      backgroundColor === 'rgb(86, 165, 214)' || // var(--defaultblue)
-      backgroundColor === 'rgb(74, 145, 187)' || // var(--defaultblue-dark)
-      backgroundColor === 'rgb(58, 130, 173)' || // var(--defaultblue-darker)
-      backgroundColor === '#56A5D6' ||
-      backgroundColor === '#4A91BB';
-    
-    // A cell is a deep sea cell if:
-    // 1. It doesn't have sea-adjacent, beach, or shore classes (which would make it a beach cell)
-    // 2. It's not selected (which changes its color)
-    // 3. Its color matches a deep blue sea color
-    return (!hasSeaAdjacentClass && !hasBeachClass && !hasShoreClass && !hasSelectedClass) &&
-           (colorMatches || isDefaultBlue);
+    return false;
   }
   
   setupTooltipEvents(iconElement) {
