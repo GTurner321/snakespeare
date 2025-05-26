@@ -1248,30 +1248,22 @@ renderVisibleGrid() {
   }
 }
     
-// 5. Override updateCellElementContent to preserve Font Awesome icons:
+/**
+ * Update the content of a cell element without handling icons
+ * @param {HTMLElement} cellElement - The cell element to update
+ * @param {number} x - X coordinate
+ * @param {number} y - Y coordinate
+ */
 updateCellElementContent(cellElement, x, y) {
   // Only update if within grid bounds
   if (y >= 0 && y < this.grid.length && x >= 0 && x < this.grid[0].length) {
     const cell = this.grid[y][x];
-    
-    // Check if there's an existing nautical icon
-    const existingIcon = cellElement.querySelector('.nautical-icon');
-    
-    // If there's an icon, temporarily remove it
-    if (existingIcon) {
-      cellElement.removeChild(existingIcon);
-    }
     
     // Update the cell content if it's different
     const currentText = cellElement.textContent;
     const modelText = cell.letter || '•'; // Use dot if no letter
     if (currentText !== modelText) {
       cellElement.textContent = modelText;
-    }
-    
-    // If there was an icon, add it back
-    if (existingIcon) {
-      cellElement.appendChild(existingIcon);
     }
   }
 }
@@ -2443,29 +2435,6 @@ cellHasContent(x, y) {
   const cell = this.grid[y][x];
   return cell && cell.letter && cell.letter.trim() !== '';
 }
-
-// 6. Add this helper function to detect true deep sea cells (not beach or shore):
-isDeepSeaCell(x, y) {
-  // Check if coordinates are within grid bounds
-  if (y < 0 || y >= this.grid.length || x < 0 || x >= this.grid[0].length) {
-    return false;
-  }
-  
-  const cell = this.grid[y][x];
-  
-  // A deep sea cell:
-  // 1. Is not a path cell
-  // 2. Does not have a letter
-  // 3. Is not marked as sea-adjacent (which would be beach/shore)
-  // 4. Is not the start cell
-  return (
-    !cell.isPath &&
-    (!cell.letter || cell.letter.trim() === '') &&
-    !cell.isSeaAdjacent &&
-    !(x === 35 && y === 35) // Not the start cell
-  );
-}
-
   
 /**
  * Enhanced Scroll Method for GridRenderer
