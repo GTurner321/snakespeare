@@ -840,200 +840,232 @@ getIconUnicode(iconClass) {
     });
   }
 
-  /**
-   * Set up optimized event listeners with scroll awareness and sea icon management
-   * @private
-   */
-  _setupEventListeners() {
-    // Track scroll events to pause updates during scrolling
-    document.addEventListener('gridScrollStarted', (e) => {
-      this._scrollInProgress = true;
-      
-      // Update visible bounds immediately when scrolling starts
-      this._updateVisibleBounds();
-      
-      // Pre-calculate and apply beach cell styles with a larger buffer before scrolling
-      this._calculateStyles();
-      this._applyBeachCellStyles(true);
-      
-      // Hide any active tooltips during scrolling
-      this.hideTooltip();
-      
-      console.log('Scroll started - preserving sea icons during transform');
-    });
+ /**
+ * FIXED: _setupEventListeners method for IslandRenderer
+ * Prevents sea icon updates during smooth CSS transforms
+ */
+_setupEventListeners() {
+  // Track scroll events to pause updates during scrolling
+  document.addEventListener('gridScrollStarted', (e) => {
+    this._scrollInProgress = true;
     
-    document.addEventListener('gridScrolled', (e) => {
-      // Keep track that scrolling is in progress
-      this._scrollInProgress = true;
-      
-      // Update visible bounds
-      this._updateVisibleBounds();
-    });
+    // Update visible bounds immediately when scrolling starts
+    this._updateVisibleBounds();
     
-    // Listen for grid rebuild events (which happen during scrolling)
-    document.addEventListener('gridRebuilt', (e) => {
-      // Update visible bounds
-      this._updateVisibleBounds();
-      
-      // If a rebuild happens during scrolling, ensure beach cells are styled
-      if (e.detail.isScrolling) {
-        setTimeout(() => {
-          this._applyBeachCellStyles(true);
-        }, 0);
-      } else {
-        // Only process if not during a scroll
-        requestAnimationFrame(() => {
-          this._calculateStyles();
-          this._applyStyles();
-          
-          // Apply sea icons with buffer zone after grid is rebuilt
-          setTimeout(() => {
-            this.applySeaIconsWithBuffer();
-          }, 100);
-        });
-      }
-    });
+    // Pre-calculate and apply beach cell styles with a larger buffer before scrolling
+    this._calculateStyles();
+    this._applyBeachCellStyles(true);
     
-    document.addEventListener('gridScrollComplete', () => {
-      this._scrollInProgress = false;
-      
-      // Update styles after scroll completes
-      this._updateVisibleBounds();
-      
-      requestAnimationFrame(() => {
-        this._calculateStyles();
-        this._applyStyles();
-        
-        // Apply sea icons with buffer zone after scroll completes
-        setTimeout(() => {
-          this.applySeaIconsWithBuffer();
-        }, 200);
-      });
-    });
-    
-    // Event categories for different processing approaches
-    const immediateEvents = [
-      'pathSet',
-      'islandLettersUpdated',
-      'islandReductionLevelChanged'
-    ];
-    
-    const delayedEvents = [
-      'gridCompletionChanged', 
-      'selectionsCleared'
-    ];
-    
-    // Handle high-priority events immediately
-    immediateEvents.forEach(eventName => {
-      document.addEventListener(eventName, () => {
-        // Don't update during scrolling
-        if (this._scrollInProgress) return;
-        
-        // Update on next animation frame
-        requestAnimationFrame(() => {
-          this._calculateStyles();
-          this._applyStyles();
-          
-          // Update sea icons with buffer zone after high-priority events
-          setTimeout(() => {
-            this.applySeaIconsWithBuffer();
-          }, 100);
-        });
-      });
-    });
-    
-    // Handle lower-priority events with debouncing
-    let updateTimeoutId = null;
-    delayedEvents.forEach(eventName => {
-      document.addEventListener(eventName, () => {
-        // Don't update during scrolling
-        if (this._scrollInProgress) return;
-        
-        // Clear existing timeout to debounce multiple events
-        if (updateTimeoutId) {
-          clearTimeout(updateTimeoutId);
-        }
-        
-        // Schedule update with delay
-        updateTimeoutId = setTimeout(() => {
-          requestAnimationFrame(() => {
-            this._calculateStyles();
-            this._applyStyles();
-            
-            // Update sea icons with buffer zone after delayed events
-            setTimeout(() => {
-              this.applySeaIconsWithBuffer();
-            }, 100);
-          });
-        }, 100);
-      });
-    });
-    
-    // Handle explicit update requests
-    document.addEventListener('updateIslandStyling', () => {
-      if (this._scrollInProgress) return;
-      
-      requestAnimationFrame(() => {
-        this._calculateStyles();
-        this._applyStyles();
-        
-        // Update sea icons with buffer zone after explicit styling requests
-        setTimeout(() => {
-          this.applySeaIconsWithBuffer();
-        }, 100);
-      });
-    });
-    
-    // Listen for grid created events (initial setup)
-    document.addEventListener('gridCreated', (e) => {
-      console.log('IslandRenderer: Grid created event detected');
-      setTimeout(() => {
-        this._calculateStyles();
-        this._applyStyles(true);
-        
-        // Apply sea icons with buffer zone after grid creation
-        this.applySeaIconsWithBuffer();
-      }, 200);
-    });
-    
-    // SEA ICONS: Listen for new puzzle/phrase events
-    document.addEventListener('pathSet', () => {
-      console.log('New path set - refreshing sea icons');
-      // Clear old decisions
-      this.clearSeaIconDecisions();
-      
-      // Apply new icons after a delay to let grid settle
-      setTimeout(() => {
-        this._updateVisibleBounds();
-        this.applySeaIconsWithBuffer();
-      }, 300);
-    });
-    
-    // SEA ICONS: Listen for island letters updated (new puzzle)
-    document.addEventListener('islandLettersUpdated', () => {
-      setTimeout(() => {
-        this._updateVisibleBounds();
-        this.applySeaIconsWithBuffer();
-      }, 200);
-    });
-
-document.addEventListener('click', (e) => {
-  // FIXED: Don't hide tooltip if this was a sea icon click
-  if (e._seaIconClick) {
-    return;
-  }
-  
-  // FIXED: More robust check for sea icon clicks
-  const isSeaIconClick = e.target.closest('.has-sea-icon') || 
-                        e.target.classList.contains('has-sea-icon');
-  
-  if (!isSeaIconClick) {
+    // Hide any active tooltips during scrolling
     this.hideTooltip();
-  }
-}, true); // FIXED: Use capture phase to handle before other listeners
+    
+    // FIXED: Don't update sea icons during scroll start
+    console.log('Scroll started - sea icons will move with CSS transform');
+  });
+  
+  document.addEventListener('gridScrolled', (e) => {
+    // Keep track that scrolling is in progress
+    this._scrollInProgress = true;
+    
+    // Update visible bounds
+    this._updateVisibleBounds();
+    
+    // FIXED: Don't update sea icons during scrolling - they move with CSS transforms
+  });
+  
+  // Listen for grid rebuild events (which happen during scrolling)
+  document.addEventListener('gridRebuilt', (e) => {
+    // Update visible bounds
+    this._updateVisibleBounds();
+    
+    // If a rebuild happens during scrolling, ensure beach cells are styled
+    if (e.detail.isScrolling) {
+      setTimeout(() => {
+        this._applyBeachCellStyles(true);
+      }, 0);
+      // FIXED: Don't update sea icons during scroll rebuilds
+    } else {
+      // Only process if not during a scroll
+      requestAnimationFrame(() => {
+        this._calculateStyles();
+        this._applyStyles();
         
-    console.log('IslandRenderer: Clean event listeners set up');
-  }
+        // FIXED: Only apply sea icons when NOT scrolling
+        if (!this._scrollInProgress) {
+          setTimeout(() => {
+            this.applySeaIconsWithBuffer();
+          }, 100);
+        }
+      });
+    }
+  });
+  
+  document.addEventListener('gridScrollComplete', () => {
+    this._scrollInProgress = false;
+    
+    // Update styles after scroll completes
+    this._updateVisibleBounds();
+    
+    requestAnimationFrame(() => {
+      this._calculateStyles();
+      this._applyStyles();
+      
+      // FIXED: Only apply sea icons after scroll is completely finished
+      // Use longer delay to ensure CSS transforms are done
+      setTimeout(() => {
+        if (!this._scrollInProgress) { // Double-check scroll is finished
+          this.applySeaIconsWithBuffer();
+        }
+      }, 300); // Increased delay to ensure transforms are complete
+    });
+  });
+  
+  // Event categories for different processing approaches
+  const immediateEvents = [
+    'pathSet',
+    'islandLettersUpdated',
+    'islandReductionLevelChanged'
+  ];
+  
+  const delayedEvents = [
+    'gridCompletionChanged', 
+    'selectionsCleared'
+  ];
+  
+  // Handle high-priority events immediately
+  immediateEvents.forEach(eventName => {
+    document.addEventListener(eventName, () => {
+      // FIXED: Don't update during scrolling
+      if (this._scrollInProgress) {
+        console.log(`Skipping ${eventName} update during scroll`);
+        return;
+      }
+      
+      // Update on next animation frame
+      requestAnimationFrame(() => {
+        this._calculateStyles();
+        this._applyStyles();
+        
+        // Update sea icons with buffer zone after high-priority events
+        setTimeout(() => {
+          if (!this._scrollInProgress) {
+            this.applySeaIconsWithBuffer();
+          }
+        }, 100);
+      });
+    });
+  });
+  
+  // Handle lower-priority events with debouncing
+  let updateTimeoutId = null;
+  delayedEvents.forEach(eventName => {
+    document.addEventListener(eventName, () => {
+      // FIXED: Don't update during scrolling
+      if (this._scrollInProgress) {
+        console.log(`Skipping ${eventName} update during scroll`);
+        return;
+      }
+      
+      // Clear existing timeout to debounce multiple events
+      if (updateTimeoutId) {
+        clearTimeout(updateTimeoutId);
+      }
+      
+      // Schedule update with delay
+      updateTimeoutId = setTimeout(() => {
+        requestAnimationFrame(() => {
+          this._calculateStyles();
+          this._applyStyles();
+          
+          // Update sea icons with buffer zone after delayed events
+          setTimeout(() => {
+            if (!this._scrollInProgress) {
+              this.applySeaIconsWithBuffer();
+            }
+          }, 100);
+        });
+      }, 100);
+    });
+  });
+  
+  // Handle explicit update requests
+  document.addEventListener('updateIslandStyling', () => {
+    if (this._scrollInProgress) {
+      console.log('Skipping island styling update during scroll');
+      return;
+    }
+    
+    requestAnimationFrame(() => {
+      this._calculateStyles();
+      this._applyStyles();
+      
+      // Update sea icons with buffer zone after explicit styling requests
+      setTimeout(() => {
+        if (!this._scrollInProgress) {
+          this.applySeaIconsWithBuffer();
+        }
+      }, 100);
+    });
+  });
+  
+  // Listen for grid created events (initial setup)
+  document.addEventListener('gridCreated', (e) => {
+    console.log('IslandRenderer: Grid created event detected');
+    setTimeout(() => {
+      this._calculateStyles();
+      this._applyStyles(true);
+      
+      // Apply sea icons with buffer zone after grid creation
+      this.applySeaIconsWithBuffer();
+    }, 200);
+  });
+  
+  // SEA ICONS: Listen for new puzzle/phrase events
+  document.addEventListener('pathSet', () => {
+    console.log('New path set - refreshing sea icons');
+    // Clear old decisions
+    this.clearSeaIconDecisions();
+    
+    // Apply new icons after a delay to let grid settle
+    setTimeout(() => {
+      this._updateVisibleBounds();
+      if (!this._scrollInProgress) {
+        this.applySeaIconsWithBuffer();
+      }
+    }, 300);
+  });
+  
+  // SEA ICONS: Listen for island letters updated (new puzzle)
+  document.addEventListener('islandLettersUpdated', () => {
+    setTimeout(() => {
+      this._updateVisibleBounds();
+      if (!this._scrollInProgress) {
+        this.applySeaIconsWithBuffer();
+      }
+    }, 200);
+  });
+
+  // FIXED: Only hide tooltip on non-sea-icon clicks during non-scroll periods
+  document.addEventListener('click', (e) => {
+    // Don't hide tooltip during scrolling
+    if (this._scrollInProgress) return;
+    
+    // Don't hide tooltip if this was a sea icon click
+    if (e._seaIconClick) {
+      return;
+    }
+    
+    // More robust check for sea icon clicks
+    const isSeaIconClick = e.target.closest('.has-sea-icon') || 
+                          e.target.classList.contains('has-sea-icon');
+    
+    if (!isSeaIconClick) {
+      this.hideTooltip();
+    }
+  }, true); // Use capture phase to handle before other listeners
+        
+  console.log('IslandRenderer: FIXED event listeners set up - sea icons preserved during scrolling');
+}
   
   /**
    * Calculate current visible bounds of the grid
