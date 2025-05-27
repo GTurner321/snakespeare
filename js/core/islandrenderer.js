@@ -209,170 +209,94 @@ class IslandRenderer {
   }
 
 applySeaIconsWithBuffer() {
-  if (!this.gridRenderer) return;
-  
-  console.log('Applying sea icons with buffer zone approach (SCROLL-STABLE)');
-  
-  // Calculate visible bounds with buffer
-  const bufferMinX = this._visibleBounds.minX - this._bufferSize;
-  const bufferMaxX = this._visibleBounds.maxX + this._bufferSize;
-  const bufferMinY = this._visibleBounds.minY - this._bufferSize;
-  const bufferMaxY = this._visibleBounds.maxY + this._bufferSize;
-  
-  // Get all grid cells in buffer zone
-  const bufferedCells = document.querySelectorAll('.grid-cell');
-  
-  let processedCount = 0;
-  let iconsApplied = 0;
-  let seashoreExcluded = 0;
-  
-  bufferedCells.forEach(cellElement => {
-    const x = parseInt(cellElement.dataset.gridX, 10);
-    const y = parseInt(cellElement.dataset.gridY, 10);
-    
-    // Skip if invalid coordinates
-    if (isNaN(x) || isNaN(y)) return;
-    
-    // Only process cells within buffer zone
-    if (x < bufferMinX || x >= bufferMaxX || y < bufferMinY || y >= bufferMaxY) {
-      return;
-    }
-    
-    processedCount++;
-    const cellKey = `${x},${y}`;
-    
-    // Deep sea check
-    const isDeepSeaCell = this.isDeepSeaCell(cellElement);
-    
-    // Skip non-deep-sea cells
-    if (!isDeepSeaCell) {
-      if (cellElement.classList.contains('sea-adjacent') || 
-          cellElement.classList.contains('preserved-beach-cell')) {
-        seashoreExcluded++;
-      }
-      return;
-    }
-    
-    // CRITICAL FIX: Check if cell already has a sea icon - if so, preserve it
-    if (cellElement.classList.contains('has-sea-icon')) {
-      console.log(`Preserving existing sea icon at ${x},${y}`);
-      iconsApplied++; // Count as applied since it's already there
-      return;
-    }
-    
-    // Check if we already have a decision for this cell
-    if (!this.seaIconDecisions.has(cellKey)) {
-      // Make a permanent decision for this cell
-      const shouldHaveIcon = Math.random() < this.iconChance;
-      
-      if (shouldHaveIcon) {
-        const iconData = this.getRandomIconData();
-        this.seaIconDecisions.set(cellKey, {
-          hasIcon: true,
-          iconData: iconData
-        });
-      } else {
-        this.seaIconDecisions.set(cellKey, { hasIcon: false });
-      }
-    }
-    
-    // Apply icon based on decision
-    const decision = this.seaIconDecisions.get(cellKey);
-    if (decision.hasIcon) {
-      this.applySeaIconToCell(cellElement, decision.iconData);
-      iconsApplied++;
-    }
-  });
-  
-  console.log(`Processed ${processedCount} cells, excluded ${seashoreExcluded} seashore cells, applied ${iconsApplied} sea icons`);
-}
-  
-// NEW: Method to pre-apply sea icons to cells that will come into view
-_preApplySeaIconsForScroll(direction) {
-  if (!this.gridRenderer) return;
-  
-  // Calculate which cells will come into view based on scroll direction
-  const isMobile = window.innerWidth < 768;
-  const width = isMobile ? this.gridRenderer.options.gridWidthSmall : this.gridRenderer.options.gridWidth;
-  const height = isMobile ? this.gridRenderer.options.gridHeightSmall : this.gridRenderer.options.gridHeight;
-  
-  let newCellsToCheck = [];
-  
-  switch(direction) {
-    case 'up':
-      // Top row that will come into view
-      for (let x = this._visibleBounds.minX; x < this._visibleBounds.maxX; x++) {
-        newCellsToCheck.push({x, y: this._visibleBounds.minY - 1});
-      }
-      break;
-    case 'down':
-      // Bottom row that will come into view
-      for (let x = this._visibleBounds.minX; x < this._visibleBounds.maxX; x++) {
-        newCellsToCheck.push({x, y: this._visibleBounds.maxY});
-      }
-      break;
-    case 'left':
-      // Left column that will come into view
-      for (let y = this._visibleBounds.minY; y < this._visibleBounds.maxY; y++) {
-        newCellsToCheck.push({x: this._visibleBounds.minX - 1, y});
-      }
-      break;
-    case 'right':
-      // Right column that will come into view
-      for (let y = this._visibleBounds.minY; y < this._visibleBounds.maxY; y++) {
-        newCellsToCheck.push({x: this._visibleBounds.maxX, y});
-      }
-      break;
+  // SIMPLE FIX: Skip during scrolling to let CSS transforms handle movement
+  if (this._scrollInProgress) {
+    console.log('Skipping sea icon updates during scroll - icons move with CSS transforms');
+    return;
   }
   
-  // Pre-apply sea icons to these cells
-  newCellsToCheck.forEach(({x, y}) => {
-    // Check if this will be a valid sea icon cell
-    const cellKey = `${x},${y}`;
+  if (!this.gridRenderer) return;
+  
+  console.log('Applying sea icons with buffer zone approach');
+  
+  // Ensure beach cell styling is applied FIRST
+  console.log('Ensuring beach cell styling is complete before applying sea icons...');
+  this._calculateStyles();
+  this._applyBeachCellStyles(true);
+  
+  // Use requestAnimationFrame to ensure DOM updates are complete
+  requestAnimationFrame(() => {
+    // Calculate visible bounds with buffer
+    const bufferMinX = this._visibleBounds.minX - this._bufferSize;
+    const bufferMaxX = this._visibleBounds.maxX + this._bufferSize;
+    const bufferMinY = this._visibleBounds.minY - this._bufferSize;
+    const bufferMaxY = this._visibleBounds.maxY + this._bufferSize;
     
-    // Only pre-apply if we don't already have a decision
-    if (!this.seaIconDecisions.has(cellKey)) {
-      const shouldHaveIcon = Math.random() < this.iconChance;
+    // Get all grid cells in buffer zone
+    const bufferedCells = document.querySelectorAll('.grid-cell');
+    
+    let processedCount = 0;
+    let iconsApplied = 0;
+    let seashoreExcluded = 0;
+    
+    bufferedCells.forEach(cellElement => {
+      const x = parseInt(cellElement.dataset.gridX, 10);
+      const y = parseInt(cellElement.dataset.gridY, 10);
       
-      if (shouldHaveIcon) {
-        const iconData = this.getRandomIconData();
-        this.seaIconDecisions.set(cellKey, {
-          hasIcon: true,
-          iconData: iconData
-        });
-      } else {
-        this.seaIconDecisions.set(cellKey, { hasIcon: false });
+      // Skip if invalid coordinates
+      if (isNaN(x) || isNaN(y)) return;
+      
+      // Only process cells within buffer zone
+      if (x < bufferMinX || x >= bufferMaxX || y < bufferMinY || y >= bufferMaxY) {
+        return;
       }
-    }
-  });
-  
-  console.log(`Pre-applied sea icon decisions for ${newCellsToCheck.length} cells coming into view`);
-}
-
-// NEW: Method to apply sea icons only to newly visible cells after scroll
-_applySeaIconsToNewlyVisibleCells() {
-  // Get all cells that are now visible but might not have been processed
-  const bufferedCells = document.querySelectorAll('.grid-cell');
-  
-  bufferedCells.forEach(cellElement => {
-    const x = parseInt(cellElement.dataset.gridX, 10);
-    const y = parseInt(cellElement.dataset.gridY, 10);
-    
-    if (isNaN(x) || isNaN(y)) return;
-    
-    // Skip if cell already has a sea icon
-    if (cellElement.classList.contains('has-sea-icon')) return;
-    
-    const cellKey = `${x},${y}`;
-    
-    // Check if this cell should have a sea icon based on our decisions
-    const decision = this.seaIconDecisions.get(cellKey);
-    if (decision && decision.hasIcon) {
-      // Only apply if this is a valid deep sea cell
-      if (this.isDeepSeaCell(cellElement)) {
+      
+      processedCount++;
+      const cellKey = `${x},${y}`;
+      
+      // Deep sea check
+      const isDeepSeaCell = this.isDeepSeaCell(cellElement);
+      
+      // Skip non-deep-sea cells (including seashore cells)
+      if (!isDeepSeaCell) {
+        if (cellElement.classList.contains('sea-adjacent') || 
+            cellElement.classList.contains('preserved-beach-cell')) {
+          seashoreExcluded++;
+        }
+        return;
+      }
+      
+      // SIMPLE FIX: Preserve existing sea icons - don't remove and recreate them
+      if (cellElement.classList.contains('has-sea-icon')) {
+        iconsApplied++; // Count as applied since it's already there
+        return; // SKIP - don't modify existing icons
+      }
+      
+      // Check if we already have a decision for this cell
+      if (!this.seaIconDecisions.has(cellKey)) {
+        // Make a permanent decision for this cell
+        const shouldHaveIcon = Math.random() < this.iconChance;
+        
+        if (shouldHaveIcon) {
+          const iconData = this.getRandomIconData();
+          this.seaIconDecisions.set(cellKey, {
+            hasIcon: true,
+            iconData: iconData
+          });
+        } else {
+          this.seaIconDecisions.set(cellKey, { hasIcon: false });
+        }
+      }
+      
+      // Apply icon based on decision (ONLY if not already present)
+      const decision = this.seaIconDecisions.get(cellKey);
+      if (decision.hasIcon) {
         this.applySeaIconToCell(cellElement, decision.iconData);
+        iconsApplied++;
       }
-    }
+    });
+    
+    console.log(`Processed ${processedCount} cells, excluded ${seashoreExcluded} seashore cells, applied ${iconsApplied} sea icons`);
   });
 }
   
@@ -1023,9 +947,13 @@ getIconUnicode(iconClass) {
     });
   }
 
-/**
+ /**
  * COMPLETE: _setupEventListeners method for IslandRenderer
- * Includes all functionality with sea icon scroll fixes and optimizations
+ * Includes all functionality with sea icon tooltip fixes and scroll optimizations
+ */
+/**
+ * FULLY UPDATED: _setupEventListeners method for IslandRenderer
+ * Includes all fixes: scroll optimization, sea icon timing, and tooltip enhancements
  */
 _setupEventListeners() {
   // Track scroll events to pause updates during scrolling
@@ -1038,9 +966,6 @@ _setupEventListeners() {
     // Pre-calculate and apply beach cell styles with a larger buffer before scrolling
     this._calculateStyles();
     this._applyBeachCellStyles(true);
-    
-    // PRE-APPLY sea icons to cells that will come into view
-    this._preApplySeaIconsForScroll(e.detail.direction);
     
     // Hide any active tooltips during scrolling
     this.hideTooltip();
@@ -1056,32 +981,32 @@ _setupEventListeners() {
     this._updateVisibleBounds();
   });
   
-  // Listen for grid rebuild events (which happen during scrolling)
-  document.addEventListener('gridRebuilt', (e) => {
-    // Update visible bounds
-    this._updateVisibleBounds();
+// Listen for grid rebuild events (which happen during scrolling)
+document.addEventListener('gridRebuilt', (e) => {
+  // Update visible bounds
+  this._updateVisibleBounds();
+  
+  // SIMPLE FIX: Don't reprocess sea icons during scrolling - they move with CSS transforms
+  if (e.detail.isScrolling) {
+    console.log('Grid rebuilt during scrolling - preserving existing sea icons');
+    // Only handle beach cell styling during scrolling
+    setTimeout(() => {
+      this._applyBeachCellStyles(true);
+    }, 0);
+    return; // EXIT EARLY - don't touch sea icons
+  }
+  
+  // Only process sea icons if not during a scroll
+  requestAnimationFrame(() => {
+    this._calculateStyles();
+    this._applyStyles();
     
-    // CRITICAL FIX: Don't remove/reapply sea icons during scrolling
-    if (e.detail.isScrolling) {
-      console.log('Grid rebuilt during scrolling - preserving existing sea icons');
-      // Apply beach cell styles but don't touch sea icons
-      setTimeout(() => {
-        this._applyBeachCellStyles(true);
-      }, 0);
-      return;
-    }
-    
-    // Only process if not during a scroll
-    requestAnimationFrame(() => {
-      this._calculateStyles();
-      this._applyStyles();
-      
-      // Apply sea icons with buffer zone after grid is rebuilt
-      setTimeout(() => {
-        this.applySeaIconsWithBuffer();
-      }, 100);
-    });
+    // Apply sea icons with buffer zone after grid is rebuilt (NON-SCROLLING ONLY)
+    setTimeout(() => {
+      this.applySeaIconsWithBuffer();
+    }, 100);
   });
+});
   
   document.addEventListener('gridScrollComplete', () => {
     this._scrollInProgress = false;
@@ -1093,10 +1018,10 @@ _setupEventListeners() {
       this._calculateStyles();
       this._applyStyles();
       
-      // FIXED: Apply sea icons only to newly visible areas
+      // Apply sea icons with buffer zone after scroll completes
       setTimeout(() => {
-        this._applySeaIconsToNewlyVisibleCells();
-      }, 100);
+        this.applySeaIconsWithBuffer();
+      }, 400); // Longer delay to ensure transforms are done
     });
   });
   
@@ -1182,28 +1107,28 @@ _setupEventListeners() {
     });
   });
   
-  // Grid created event handler with proper sequencing
+  // UPDATED: Grid created event handler with proper sequencing
   document.addEventListener('gridCreated', (e) => {
     console.log('IslandRenderer: Grid created event detected');
     setTimeout(() => {
       this._calculateStyles();
       this._applyStyles(true);
       
-      // Ensure beach styling is complete before sea icons
+      // ENHANCED: Ensure beach styling is complete before sea icons
       setTimeout(() => {
         console.log('Applying sea icons after grid creation and beach styling');
         this.applySeaIconsWithBuffer();
-      }, 200);
-    }, 400);
+      }, 200); // Additional delay after beach styling
+    }, 400); // Increased initial delay
   });
   
-  // SEA ICONS - Listen for new puzzle/phrase events with proper sequencing
+  // UPDATED: SEA ICONS - Listen for new puzzle/phrase events with proper sequencing
   document.addEventListener('pathSet', () => {
     console.log('New path set - refreshing sea icons with proper sequencing');
     // Clear old decisions
     this.clearSeaIconDecisions();
     
-    // Longer delay and ensure beach styling happens first
+    // ENHANCED: Longer delay and ensure beach styling happens first
     setTimeout(() => {
       this._updateVisibleBounds();
       // Force beach cell calculations first
@@ -1214,10 +1139,10 @@ _setupEventListeners() {
       setTimeout(() => {
         this.applySeaIconsWithBuffer();
       }, 100);
-    }, 500);
+    }, 500); // Increased delay to ensure grid is fully settled
   });
   
-  // SEA ICONS - Listen for island letters updated with proper sequencing
+  // UPDATED: SEA ICONS - Listen for island letters updated with proper sequencing
   document.addEventListener('islandLettersUpdated', () => {
     setTimeout(() => {
       this._updateVisibleBounds();
@@ -1229,10 +1154,10 @@ _setupEventListeners() {
       setTimeout(() => {
         this.applySeaIconsWithBuffer();
       }, 100);
-    }, 300);
+    }, 300); // Increased delay
   });
 
-  // Click handler with sea icon toggle support
+  // ENHANCED: Click handler with sea icon toggle support
   document.addEventListener('click', (e) => {
     // Don't hide tooltip during scrolling
     if (this._scrollInProgress) return;
@@ -1251,7 +1176,7 @@ _setupEventListeners() {
     }
   }, true); // Use capture phase to handle before other listeners
   
-  // Touch handler for hiding tooltips on touch devices
+  // ADDED: Touch handler for hiding tooltips on touch devices
   document.addEventListener('touchend', (e) => {
     // Don't hide tooltip during scrolling
     if (this._scrollInProgress) return;
@@ -1277,9 +1202,29 @@ _setupEventListeners() {
     }
   }, true); // Use capture phase to handle before other listeners
         
-  console.log('IslandRenderer: Event listeners set up with scroll-stable sea icons');
+  console.log('IslandRenderer: Fully updated event listeners set up with all fixes');
 }
   
+  /**
+   * Calculate current visible bounds of the grid
+   * @private
+   */
+  _updateVisibleBounds() {
+    if (!this.gridRenderer) return;
+    
+    const viewOffset = this.gridRenderer.viewOffset || { x: 0, y: 0 };
+    const isMobile = window.innerWidth < 768;
+    const width = isMobile ? this.gridRenderer.options.gridWidthSmall : this.gridRenderer.options.gridWidth;
+    const height = isMobile ? this.gridRenderer.options.gridHeightSmall : this.gridRenderer.options.gridHeight;
+    
+    this._visibleBounds = {
+      minX: viewOffset.x,
+      maxX: viewOffset.x + width,
+      minY: viewOffset.y,
+      maxY: viewOffset.y + height
+    };
+  }
+    
   /**
    * Calculate styles for all visible cells
    * @private
