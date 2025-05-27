@@ -917,7 +917,7 @@ clearRandomLetters() {
         
         // NEW: Reset sea icon properties when clearing letters
         // These cells may now be eligible for sea icons again
-        this.grid[y][x].hasSeaIcon = false;
+        this.grid[y][x].hasSeaIcon = undefined;
         this.grid[y][x].seaIconData = null;
       }
     }
