@@ -605,43 +605,53 @@ body {
   animation: standardized-flash 0.5s ease-in-out 2; /* Run 2 cycles */
 }
 
+
 /* ==========================================================================
-   2c. Sea Icons - Transform-based styling that works with buffer zones
-   Add this section to your grid.css file
+   2c. Sea Icons - SVG Font Awesome Elements (Updated for real DOM elements)
+   Replace your existing sea icon CSS with this
    ========================================================================== */
 
-/* Sea icons as permanent cell styling using CSS pseudo-elements */
+/* Sea icon container styling */
 .grid-cell.has-sea-icon {
   position: relative;
 }
 
-.grid-cell.has-sea-icon::after {
-  content: attr(data-sea-icon);
+/* SVG sea icon styling - targets the actual <i> elements */
+.sea-icon-svg {
   position: absolute !important;
   top: 50% !important;
   left: 50% !important;
   transform: translate(-50%, -50%) !important;
-  font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands" !important;
-  font-weight: 900 !important;
-  color: #444444 !important;
   font-size: 22px !important;
+  color: #444444 !important;
   opacity: 0.7 !important;
-  z-index: 50 !important;
   pointer-events: auto !important;
-  text-shadow: 0 0 2px rgba(255, 255, 255, 0.3) !important;
-  user-select: none !important;
+  z-index: 50 !important;
   cursor: pointer !important;
-  visibility: visible !important;
-  display: block !important;
-  /* CRITICAL: Works with CSS transforms during scrolling */
-  will-change: auto !important;
+  user-select: none !important;
+  text-shadow: 0 0 2px rgba(255, 255, 255, 0.3) !important;
+  
+  /* CRITICAL: Smooth transform properties for CSS scrolling */
+  will-change: transform !important;
+  backface-visibility: hidden !important;
+  transform-origin: center center !important;
   transition: opacity 0.2s ease, transform 0.2s ease !important;
-  /* Ensure icons move with their cells during transforms */
-  backface-visibility: hidden;
 }
 
-/* Hover effect to indicate clickability */
-.grid-cell.has-sea-icon:hover::after {
+/* Ensure Font Awesome solid icons render correctly */
+.sea-icon-svg.fa-solid {
+  font-family: 'Font Awesome 6 Free', 'Font Awesome 5 Free' !important;
+  font-weight: 900 !important;
+}
+
+/* Ensure Font Awesome brand icons render correctly */
+.sea-icon-svg.fa-brands {
+  font-family: 'Font Awesome 6 Brands', 'Font Awesome 5 Brands' !important;
+  font-weight: 400 !important;
+}
+
+/* Hover effects for sea icons */
+.sea-icon-svg:hover {
   opacity: 1 !important;
   transform: translate(-50%, -50%) scale(1.1) !important;
   color: #222222 !important;
@@ -654,42 +664,51 @@ body {
   100% { transform: translate(-50%, -50%) rotate(0deg); }
 }
 
-.grid-cell.has-sea-icon::after {
+.sea-icon-svg {
   animation: seaIconFloat 4s ease-in-out infinite;
 }
 
 /* Staggered animation timing for variety */
-.grid-cell.has-sea-icon:nth-child(odd)::after {
+.grid-cell:nth-child(odd) .sea-icon-svg {
   animation-duration: 5s;
   animation-delay: 1s;
 }
 
-.grid-cell.has-sea-icon:nth-child(even)::after {
+.grid-cell:nth-child(even) .sea-icon-svg {
   animation-duration: 4.5s;
   animation-delay: 0.5s;
 }
 
-/* Ensure icons work properly during grid transforms */
-.grid-container.fast-scroll .grid-cell.has-sea-icon::after,
-.grid-container.slow-scroll .grid-cell.has-sea-icon::after {
-  /* Icons move with their parent cells during transforms */
-  transition: none !important;
+/* Ensure sea icons participate in CSS transforms during scrolling */
+.grid-container.slow-scroll .sea-icon-svg,
+.grid-container.fast-scroll .sea-icon-svg {
+  transition: none !important; /* Disable transitions during scrolling for performance */
+}
+
+/* Make sure sea icons are visible during grid animations */
+.grid-cell.has-sea-icon .sea-icon-svg {
+  visibility: visible !important;
+}
+
+/* Ensure sea icons don't interfere with cell text */
+.grid-cell.has-sea-icon {
+  overflow: visible;
 }
 
 /* Mobile optimizations */
 @media (max-width: 768px) {
-  .grid-cell.has-sea-icon::after {
+  .sea-icon-svg {
     font-size: 20px !important;
   }
 }
 
 @media (max-width: 480px) {
-  .grid-cell.has-sea-icon::after {
+  .sea-icon-svg {
     font-size: 18px !important;
   }
 }
 
-/* Tooltip styles for sea icons */
+/* Tooltip styles for sea icons - Keep these the same */
 .sea-icon-tooltip {
   position: fixed;
   background-color: rgba(255, 246, 122, 0.95);
@@ -702,7 +721,7 @@ body {
   z-index: 2000;
   pointer-events: none;
   opacity: 0;
-  transform: translateY(10px);
+  transform: translateX(-50%) translateY(-100%) scale(0.9);
   transition: opacity 0.3s ease, transform 0.3s ease;
   font-style: italic;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
@@ -714,15 +733,15 @@ body {
 
 .sea-icon-tooltip.visible {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateX(-50%) translateY(-100%) scale(1);
   display: block;
 }
 
-/* Tooltip arrow pointing to icon */
+/* Tooltip arrow pointing down to icon */
 .sea-icon-tooltip::after {
   content: '';
   position: absolute;
-  bottom: -8px;
+  top: 100%;
   left: 50%;
   transform: translateX(-50%);
   width: 0;
