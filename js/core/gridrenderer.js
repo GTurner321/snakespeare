@@ -2031,7 +2031,7 @@ updatePhraseWithRevealedLetters() {
 }  
   
 /**
- * Create a cell element with proper attributes and event handlers
+ * Updated createCellElement method to use SVG sea icons
  * @param {number} x - X coordinate
  * @param {number} y - Y coordinate
  * @return {HTMLElement} The created cell element
@@ -2055,10 +2055,10 @@ createCellElement(x, y) {
     cellElement.dataset.gridX = x;
     cellElement.dataset.gridY = y;
     
-    // CRITICAL: Update cell classes FIRST so we can detect beach cells
+    // Update cell classes FIRST so we can detect beach cells
     this.updateCellElementClasses(cellElement, x, y);
     
-    // NEW: Handle sea icons AFTER classes are set and ONLY for deep sea cells
+    // Handle sea icons AFTER classes are set and ONLY for deep sea cells
     // Skip cells with letters
     if (!cell.letter || cell.letter.trim() === '') {
       // Skip beach/seashore cells (they have sea-adjacent class)
@@ -2066,22 +2066,17 @@ createCellElement(x, y) {
         // This is a deep sea cell - ensure it has a sea icon decision
         this.ensureSeaIconDecision(x, y);
         
-        // Apply sea icon if the cell should have one
+        // Apply SVG sea icon if the cell should have one
         if (cell.hasSeaIcon && cell.seaIconData) {
-          cellElement.classList.add('has-sea-icon');
-          cellElement.dataset.seaIcon = this.getIconUnicode(cell.seaIconData.icon);
-          cellElement.dataset.seaTooltip = cell.seaIconData.tooltip;
-          
-          // Set up event listeners for sea icon interaction
-          this.setupSeaIconEventListeners(cellElement);
+          this.addSVGSeaIcon(cellElement, cell.seaIconData);
         }
       }
     }
     
     // Add click event handler for cell selection
     cellElement.addEventListener('click', (e) => {
-      // CRITICAL CHANGE: Only process clicks if not recently handled touch
-      if (this.recentlyHandledTouch) return;
+      // Only process clicks if not recently handled touch and not a sea icon click
+      if (this.recentlyHandledTouch || e._seaIconClick) return;
       
       this.handleCellSelection(x, y, false);
       
@@ -2098,58 +2093,83 @@ createCellElement(x, y) {
   
   return cellElement;
 }
-  
-/**
- * Get Unicode character for Font Awesome icon
- * @param {string} iconClass - Font Awesome icon class
- * @return {string} Unicode character for the icon
- */
-getIconUnicode(iconClass) {
-  // Map of Font Awesome classes to correct Unicode characters
-  const iconMap = {
-    'fa-solid fa-cloud-rain': '\uf73d',        // Rain cloud icon
-    'fa-solid fa-map': '\uf279',               // Map icon
-    'fa-solid fa-compass': '\uf14e',           // Compass icon  
-    'fa-solid fa-anchor': '\uf13d',            // Anchor icon
-    'fa-solid fa-sailboat': '\ue445',          // Sailboat icon (FA6)
-    'fa-solid fa-skull-crossbones': '\uf714',  // Skull crossbones
-    'fa-solid fa-fish-fins': '\ue4f2',         // Fish with fins (FA6)
-    'fa-solid fa-water': '\uf773',             // Water droplet
-    'fa-solid fa-wind': '\uf72e',              // Wind icon
-    'fa-solid fa-wine-bottle': '\uf72f'        // Wine bottle
-  };
-  
-  return iconMap[iconClass] || '\uf279'; // Default to map icon
-}
 
 /**
- * Set up event listeners for sea icon interaction
- * @param {HTMLElement} cellElement - The cell element with a sea icon
+ * Add SVG sea icon to cell element
+ * @param {HTMLElement} cellElement - The cell element
+ * @param {Object} iconData - Icon data with icon class and tooltip
  */
-setupSeaIconEventListeners(cellElement) {
-  // Mouse click handler
-  cellElement.addEventListener('click', (e) => this.handleSeaIconClick(e), true);
+addSVGSeaIcon(cellElement, iconData) {
+  // Create Font Awesome icon element
+  const iconElement = document.createElement('i');
+  iconElement.className = iconData.icon + ' sea-icon-svg';
+  iconElement.setAttribute('data-sea-tooltip', iconData.tooltip);
+  
+  // Style the icon for perfect positioning and smooth transforms
+  iconElement.style.position = 'absolute';
+  iconElement.style.top = '50%';
+  iconElement.style.left = '50%';
+  iconElement.style.transform = 'translate(-50%, -50%)';
+  iconElement.style.fontSize = '14px';
+  iconElement.style.color = 'var(--sea-icon-color, #4a90e2)';
+  iconElement.style.opacity = '0.7';
+  iconElement.style.pointerEvents = 'auto';
+  iconElement.style.zIndex = '3';
+  iconElement.style.cursor = 'pointer';
+  
+  // CRITICAL: Ensure smooth CSS transforms
+  iconElement.style.willChange = 'transform';
+  iconElement.style.backfaceVisibility = 'hidden';
+  iconElement.style.transformOrigin = 'center center';
+  
+  // Make cell relative positioned for absolute icon
+  cellElement.style.position = 'relative';
+  
+  // Add the icon to the cell
+  cellElement.appendChild(iconElement);
+  cellElement.classList.add('has-sea-icon');
+  
+  // Set up event listeners for sea icon interaction
+  this.setupSeaIconEventListeners(iconElement);
+  
+  console.log('Added SVG sea icon:', iconData.icon);
+}
+  
+/**
+ * Set up event listeners for SVG sea icon interaction
+ * @param {HTMLElement} iconElement - The icon element
+ */
+setupSeaIconEventListeners(iconElement) {
+  // Mouse click handler with proper event delegation
+  iconElement.addEventListener('click', (e) => {
+    if (window.islandRenderer && window.islandRenderer.handleSeaIconClick) {
+      window.islandRenderer.handleSeaIconClick(e);
+    }
+  }, true);
   
   // Touch handlers for mobile devices
-  cellElement.addEventListener('touchstart', (e) => {
+  iconElement.addEventListener('touchstart', (e) => {
     // Store touch start info to detect taps vs swipes
-    cellElement._seaIconTouchStart = {
+    iconElement._seaIconTouchStart = {
       time: Date.now(),
       x: e.touches[0].clientX,
       y: e.touches[0].clientY
     };
+    
+    // Prevent event from bubbling to cell
+    e.stopPropagation();
   }, true);
   
-  cellElement.addEventListener('touchend', (e) => {
+  iconElement.addEventListener('touchend', (e) => {
     // Only handle if we have touch start data
-    if (!cellElement._seaIconTouchStart) return;
+    if (!iconElement._seaIconTouchStart) return;
     
-    const touchDuration = Date.now() - cellElement._seaIconTouchStart.time;
+    const touchDuration = Date.now() - iconElement._seaIconTouchStart.time;
     const touchEndX = e.changedTouches[0].clientX;
     const touchEndY = e.changedTouches[0].clientY;
     const moveDistance = Math.sqrt(
-      Math.pow(touchEndX - cellElement._seaIconTouchStart.x, 2) + 
-      Math.pow(touchEndY - cellElement._seaIconTouchStart.y, 2)
+      Math.pow(touchEndX - iconElement._seaIconTouchStart.x, 2) + 
+      Math.pow(touchEndY - iconElement._seaIconTouchStart.y, 2)
     );
     
     // Consider it a tap if duration < 500ms and movement < 10px
@@ -2157,17 +2177,31 @@ setupSeaIconEventListeners(cellElement) {
     
     if (isTap) {
       // Handle as sea icon click
-      this.handleSeaIconClick(e);
+      if (window.islandRenderer && window.islandRenderer.handleSeaIconClick) {
+        window.islandRenderer.handleSeaIconClick(e);
+      }
     }
     
     // Clean up touch start data
-    delete cellElement._seaIconTouchStart;
+    delete iconElement._seaIconTouchStart;
+    
+    // Prevent event from bubbling to cell
+    e.stopPropagation();
   }, true);
   
-  // Mark that listeners are set up
-  cellElement.dataset.seaIconListener = 'true';
+  // Add hover effects for better UX
+  iconElement.addEventListener('mouseenter', () => {
+    iconElement.style.opacity = '1';
+    iconElement.style.transform = 'translate(-50%, -50%) scale(1.1)';
+    iconElement.style.transition = 'all 0.2s ease';
+  });
+  
+  iconElement.addEventListener('mouseleave', () => {
+    iconElement.style.opacity = '0.7';
+    iconElement.style.transform = 'translate(-50%, -50%) scale(1)';
+  });
 }
-
+  
 /**
  * Handle sea icon click events
  * @param {Event} e - Click or touch event
@@ -2615,8 +2649,7 @@ cellHasContent(x, y) {
 }
 
 /**
- * Ensure a cell has a sea icon decision made, and apply it if needed
- * This is called during cell creation to handle sea icons like letters
+ * Updated ensureSeaIconDecision method (no changes needed but included for completeness)
  * @param {number} x - Grid X coordinate
  * @param {number} y - Grid Y coordinate
  */
