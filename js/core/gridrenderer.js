@@ -876,8 +876,10 @@ applyRandomLetters(cells) {
         
         // NEW: Clear sea icon properties when adding letters
         // Cells with letters should not have sea icons
-        this.grid[gridY][gridX].hasSeaIcon = false;
-        this.grid[gridY][gridX].seaIconData = null;
+        if (this.grid[gridY][gridX].letter && this.grid[gridY][gridX].letter.trim() !== '') {
+          this.grid[gridY][gridX].hasSeaIcon = false;
+          this.grid[gridY][gridX].seaIconData = null;
+        }
       }
     }
   });
@@ -2053,23 +2055,26 @@ createCellElement(x, y) {
     cellElement.dataset.gridX = x;
     cellElement.dataset.gridY = y;
     
-    // Update cell classes based on current state
+    // CRITICAL: Update cell classes FIRST so we can detect beach cells
     this.updateCellElementClasses(cellElement, x, y);
     
-    // NEW: Handle sea icons during cell creation (like letters)
-    // Only for cells without letters (deep sea cells)
+    // NEW: Handle sea icons AFTER classes are set and ONLY for deep sea cells
+    // Skip cells with letters
     if (!cell.letter || cell.letter.trim() === '') {
-      // Ensure this cell has a sea icon decision made
-      this.ensureSeaIconDecision(x, y);
-      
-      // Apply sea icon if the cell should have one
-      if (cell.hasSeaIcon && cell.seaIconData) {
-        cellElement.classList.add('has-sea-icon');
-        cellElement.dataset.seaIcon = this.getIconUnicode(cell.seaIconData.icon);
-        cellElement.dataset.seaTooltip = cell.seaIconData.tooltip;
+      // Skip beach/seashore cells (they have sea-adjacent class)
+      if (!cellElement.classList.contains('sea-adjacent')) {
+        // This is a deep sea cell - ensure it has a sea icon decision
+        this.ensureSeaIconDecision(x, y);
         
-        // Set up event listeners for sea icon interaction
-        this.setupSeaIconEventListeners(cellElement);
+        // Apply sea icon if the cell should have one
+        if (cell.hasSeaIcon && cell.seaIconData) {
+          cellElement.classList.add('has-sea-icon');
+          cellElement.dataset.seaIcon = this.getIconUnicode(cell.seaIconData.icon);
+          cellElement.dataset.seaTooltip = cell.seaIconData.tooltip;
+          
+          // Set up event listeners for sea icon interaction
+          this.setupSeaIconEventListeners(cellElement);
+        }
       }
     }
     
@@ -2093,7 +2098,7 @@ createCellElement(x, y) {
   
   return cellElement;
 }
-
+  
 /**
  * Get Unicode character for Font Awesome icon
  * @param {string} iconClass - Font Awesome icon class
@@ -2260,8 +2265,8 @@ setPath(path) {
       this.grid[y][x].isCompleted = false;
       // NEW: Reset the revealed state
       this.grid[y][x].isRevealed = false;
-      // NEW: Reset sea icon properties (they'll be set when cells are created)
-      this.grid[y][x].hasSeaIcon = false;
+      // NEW: Reset sea icon properties (they'll be re-decided when cells are created)
+      this.grid[y][x].hasSeaIcon = undefined; // undefined = no decision made yet
       this.grid[y][x].seaIconData = null;
     }
   }
@@ -2272,6 +2277,9 @@ setPath(path) {
   this.grid[centerY][centerX].isPath = true;
   this.grid[centerY][centerX].isStart = true;
   this.grid[centerY][centerX].pathIndex = 0;
+  // NEW: Start cell never has sea icon
+  this.grid[centerY][centerX].hasSeaIcon = false;
+  this.grid[centerY][centerX].seaIconData = null;
   
   // Track if all path cells were successfully placed
   let allCellsPlaced = true;
@@ -2287,9 +2295,13 @@ setPath(path) {
       this.grid[gridY][gridX].letter = point.letter;
       this.grid[gridY][gridX].isPath = true;
       this.grid[gridY][gridX].pathIndex = index;
+      
       // NEW: Path cells never have sea icons
-      this.grid[gridY][gridX].hasSeaIcon = false;
-      this.grid[gridY][gridX].seaIconData = null;
+      // Clear any existing sea icon decision for path cells
+      if (this.grid[gridY][gridX].letter && this.grid[gridY][gridX].letter.trim() !== '') {
+        this.grid[gridY][gridX].hasSeaIcon = false;
+        this.grid[gridY][gridX].seaIconData = null;
+      }
     } else {
       // Path point is outside grid bounds
       allCellsPlaced = false;
@@ -2656,13 +2668,7 @@ ensureSeaIconDecision(x, y) {
  * @return {boolean} True if this is a beach cell
  */
 isSeashoreCell(x, y) {
-  // Use IslandRenderer's logic if available
-  if (window.islandRenderer && window.islandRenderer.getAdjacentLetterCells) {
-    const adjacentDirections = window.islandRenderer.getAdjacentLetterCells(x, y);
-    return adjacentDirections.length > 0;
-  }
-  
-  // Fallback: check if adjacent to any cell with a letter
+  // Direct check without relying on IslandRenderer
   const directions = [[0, -1], [1, 0], [0, 1], [-1, 0]]; // up, right, down, left
   
   for (const [dx, dy] of directions) {
