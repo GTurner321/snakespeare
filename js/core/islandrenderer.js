@@ -46,41 +46,41 @@ class IslandRenderer {
   /**
    * Initialize sea icons functionality with transform-based approach
    */
-  initializeSeaIcons() {
-    console.log('IslandRenderer: Initializing transform-based sea icons...');
-    
-    // Set of Font Awesome nautical icons with tooltips
-    this.iconData = [
-      { icon: 'fa-solid fa-cloud-showers-water', tooltip: "Methinks the heavens are having a weep." },
-      { icon: 'fa-solid fa-map', tooltip: "X marks the spot—if ye dare to dream!" },
-      { icon: 'fa-solid fa-compass', tooltip: "North by bardwest, I reckon." },
-      { icon: 'fa-solid fa-anchor', tooltip: "Droppeth anchor, not thy spirits." },
-      { icon: 'fa-solid fa-sailboat', tooltip: "To sail, perchance to drift." },
-      { icon: 'fa-solid fa-skull-crossbones', tooltip: "Avast! A pirate ship on poetic business." },
-      { icon: 'fa-solid fa-fish-fins', tooltip: "Enough fish here to feed the whole crew." },
-      { icon: 'fa-solid fa-water', tooltip: "Sea, sea, everywhere—but not a drop for tea." },
-      { icon: 'fa-solid fa-wind', tooltip: "The wind fancies itself a playwright." },
-      { icon: 'fa-solid fa-wine-bottle', tooltip: "A message! Or a mermaid's forgotten flask." }
-    ];
+ initializeSeaIcons() {
+  console.log('IslandRenderer: Initializing transform-based sea icons...');
+  
+  // Set of Font Awesome nautical icons with tooltips - FIXED UNICODE VALUES
+  this.iconData = [
+    { icon: 'fa-solid fa-cloud-rain', tooltip: "Methinks the heavens are having a weep." }, // Changed from cloud-showers-water
+    { icon: 'fa-solid fa-map', tooltip: "X marks the spot—if ye dare to dream!" },
+    { icon: 'fa-solid fa-compass', tooltip: "North by bardwest, I reckon." },
+    { icon: 'fa-solid fa-anchor', tooltip: "Droppeth anchor, not thy spirits." },
+    { icon: 'fa-solid fa-sailboat', tooltip: "To sail, perchance to drift." },
+    { icon: 'fa-solid fa-skull-crossbones', tooltip: "Avast! A pirate ship on poetic business." },
+    { icon: 'fa-solid fa-fish-fins', tooltip: "Enough fish here to feed the whole crew." },
+    { icon: 'fa-solid fa-water', tooltip: "Sea, sea, everywhere—but not a drop for tea." },
+    { icon: 'fa-solid fa-wind', tooltip: "The wind fancies itself a playwright." },
+    { icon: 'fa-solid fa-wine-bottle', tooltip: "A message! Or a mermaid's forgotten flask." }
+  ];
 
-    // Chance of a sea cell having an icon (1 in 20)
-    this.iconChance = 0.05;
+  // Chance of a sea cell having an icon (1 in 20)
+  this.iconChance = 0.05;
 
-    // Store icon decisions permanently by grid coordinates
-    this.seaIconDecisions = new Map(); // key: "x,y", value: {hasIcon: boolean, iconData: object}
-    
-    // Track currently visible tooltip
-    this.activeTooltip = null;
-    this.tooltipTimeout = null;
+  // Store icon decisions permanently by grid coordinates
+  this.seaIconDecisions = new Map(); // key: "x,y", value: {hasIcon: boolean, iconData: object}
+  
+  // Track currently visible tooltip
+  this.activeTooltip = null;
+  this.tooltipTimeout = null;
 
-    // Add CSS for sea icons
-    this.addSeaIconStyles();
-    
-    // Create tooltip container
-    this.createTooltipContainer();
-    
-    console.log('Sea icons initialized with transform-based approach');
-  }
+  // Add CSS for sea icons
+  this.addSeaIconStyles();
+  
+  // Create tooltip container
+  this.createTooltipContainer();
+  
+  console.log('Sea icons initialized with transform-based approach');
+}
 
   /**
    * Add CSS styles that work with transforms and buffer zones
@@ -282,37 +282,45 @@ class IslandRenderer {
     console.log(`Processed ${processedCount} cells in buffer zone, applied ${iconsApplied} sea icons`);
   }
 
-  /**
-   * Apply sea icon to a cell using CSS classes and data attributes
-   */
   applySeaIconToCell(cellElement, iconData) {
-    // Check if cell already has the icon
-    if (cellElement.classList.contains('has-sea-icon') && 
-        cellElement.dataset.seaIcon === this.getIconUnicode(iconData.icon)) {
-      return; // Already applied
-    }
-    
-    // Apply the icon as CSS class and data
-    cellElement.classList.add('has-sea-icon');
-    cellElement.dataset.seaIcon = this.getIconUnicode(iconData.icon);
-    cellElement.dataset.seaTooltip = iconData.tooltip;
-    
-    // Set up click event if not already set
-    if (!cellElement.dataset.seaIconListener) {
-      cellElement.addEventListener('click', (e) => this.handleSeaIconClick(e));
-      cellElement.dataset.seaIconListener = 'true';
-    }
+  // Check if cell already has the icon
+  if (cellElement.classList.contains('has-sea-icon') && 
+      cellElement.dataset.seaIcon === this.getIconUnicode(iconData.icon)) {
+    return; // Already applied
   }
-
+  
+  // Apply the icon as CSS class and data
+  cellElement.classList.add('has-sea-icon');
+  cellElement.dataset.seaIcon = this.getIconUnicode(iconData.icon);
+  cellElement.dataset.seaTooltip = iconData.tooltip;
+  
+  // FIXED: Set up click event with more robust handling
+  if (!cellElement.dataset.seaIconListener) {
+    const clickHandler = (e) => this.handleSeaIconClick(e);
+    cellElement.addEventListener('click', clickHandler, true); // Use capture phase
+    cellElement.dataset.seaIconListener = 'true';
+    
+    // Store reference to handler for potential cleanup
+    cellElement._seaIconClickHandler = clickHandler;
+  }
+}
+  
   /**
    * Remove sea icon from a cell
    */
-  removeSeaIconFromCell(cellElement) {
-    cellElement.classList.remove('has-sea-icon');
-    delete cellElement.dataset.seaIcon;
-    delete cellElement.dataset.seaTooltip;
+removeSeaIconFromCell(cellElement) {
+  cellElement.classList.remove('has-sea-icon');
+  delete cellElement.dataset.seaIcon;
+  delete cellElement.dataset.seaTooltip;
+  
+  // FIXED: Clean up event listener if it exists
+  if (cellElement._seaIconClickHandler) {
+    cellElement.removeEventListener('click', cellElement._seaIconClickHandler, true);
+    delete cellElement._seaIconClickHandler;
+    delete cellElement.dataset.seaIconListener;
   }
-
+}
+  
   /**
    * Check if a cell is a deep sea cell
    */
@@ -330,25 +338,33 @@ class IslandRenderer {
   /**
    * Handle sea icon click events
    */
-  handleSeaIconClick(e) {
-    // Only handle clicks on the pseudo-element area (center of cell)
-    const rect = e.currentTarget.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    const clickX = e.clientX;
-    const clickY = e.clientY;
-    
-    // Check if click is near center (where icon is)
-    const distance = Math.sqrt(Math.pow(clickX - centerX, 2) + Math.pow(clickY - centerY, 2));
-    if (distance > 25) return; // Click too far from icon
-    
-    e.stopPropagation();
-    
-    const tooltip = e.currentTarget.dataset.seaTooltip;
-    if (!tooltip) return;
-    
-    this.showTooltip(tooltip, e.currentTarget);
-  }
+ handleSeaIconClick(e) {
+  // Only handle clicks on the pseudo-element area (center of cell)
+  const rect = e.currentTarget.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+  const clickX = e.clientX;
+  const clickY = e.clientY;
+  
+  // Check if click is near center (where icon is)
+  const distance = Math.sqrt(Math.pow(clickX - centerX, 2) + Math.pow(clickY - centerY, 2));
+  if (distance > 25) return; // Click too far from icon
+  
+  // FIXED: Prevent the click from propagating AND mark it as handled
+  e.preventDefault();
+  e.stopPropagation();
+  e.stopImmediatePropagation();
+  
+  const tooltip = e.currentTarget.dataset.seaTooltip;
+  if (!tooltip) return;
+  
+  // FIXED: Add a flag to indicate this was a sea icon click
+  e._seaIconClick = true;
+  
+  this.showTooltip(tooltip, e.currentTarget);
+  
+  console.log('Sea icon clicked - showing tooltip:', tooltip);
+}
 
   /**
    * Show tooltip for sea icon
@@ -419,24 +435,24 @@ class IslandRenderer {
   /**
    * Get Unicode character for Font Awesome icon
    */
-  getIconUnicode(iconClass) {
-    // Map of Font Awesome classes to Unicode characters
-    const iconMap = {
-      'fa-solid fa-cloud-showers-water': '\uf4e4',
-      'fa-solid fa-map': '\uf279',
-      'fa-solid fa-compass': '\uf14e',
-      'fa-solid fa-anchor': '\uf13d',
-      'fa-solid fa-sailboat': '\ue445',
-      'fa-solid fa-skull-crossbones': '\uf714',
-      'fa-solid fa-fish-fins': '\ue4f2',
-      'fa-solid fa-water': '\uf773',
-      'fa-solid fa-wind': '\uf72e',
-      'fa-solid fa-wine-bottle': '\uf72f'
-    };
-    
-    return iconMap[iconClass] || '\uf279'; // Default to map icon
-  }
-
+getIconUnicode(iconClass) {
+  // FIXED: Map of Font Awesome classes to correct Unicode characters
+  const iconMap = {
+    'fa-solid fa-cloud-rain': '\uf73d',        // FIXED: Correct rain cloud icon
+    'fa-solid fa-map': '\uf279',               // Map icon
+    'fa-solid fa-compass': '\uf14e',           // Compass icon  
+    'fa-solid fa-anchor': '\uf13d',            // Anchor icon
+    'fa-solid fa-sailboat': '\ue445',          // Sailboat icon (FA6)
+    'fa-solid fa-skull-crossbones': '\uf714',  // Skull crossbones
+    'fa-solid fa-fish-fins': '\ue4f2',         // Fish with fins (FA6)
+    'fa-solid fa-water': '\uf773',             // Water droplet
+    'fa-solid fa-wind': '\uf72e',              // Wind icon
+    'fa-solid fa-wine-bottle': '\uf72f'        // Wine bottle
+  };
+  
+  return iconMap[iconClass] || '\uf279'; // Default to map icon
+}
+  
   /**
    * Get random icon data from the icon set
    */
@@ -1011,14 +1027,22 @@ class IslandRenderer {
         this.applySeaIconsWithBuffer();
       }, 200);
     });
-    
-    // SEA ICONS: Global click handler to hide tooltips when clicking elsewhere
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('.has-sea-icon')) {
-        this.hideTooltip();
-      }
-    });
-    
+
+document.addEventListener('click', (e) => {
+  // FIXED: Don't hide tooltip if this was a sea icon click
+  if (e._seaIconClick) {
+    return;
+  }
+  
+  // FIXED: More robust check for sea icon clicks
+  const isSeaIconClick = e.target.closest('.has-sea-icon') || 
+                        e.target.classList.contains('has-sea-icon');
+  
+  if (!isSeaIconClick) {
+    this.hideTooltip();
+  }
+}, true); // FIXED: Use capture phase to handle before other listeners
+        
     console.log('IslandRenderer: Clean event listeners set up');
   }
   
