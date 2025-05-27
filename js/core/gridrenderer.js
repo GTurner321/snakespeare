@@ -95,29 +95,38 @@ constructor(containerId, options = {}) {
   /**
    * Initialize the grid data structure
    */
-  initializeGrid() {
-    // Create 51x51 grid
-    this.grid = Array(this.fullGridSize).fill().map(() => 
-      Array(this.fullGridSize).fill().map(() => ({
-        letter: '',
-        isPath: false,
-        isStart: false,
-        isSelected: false,
-        pathIndex: -1
-      }))
-    );
-    
-    // Set center as start (changed to 25,25 for 51x51 grid)
-    const centerX = 35;
-    const centerY = 35;
-    this.grid[centerY][centerX] = {
+/**
+ * Initialize the grid data structure
+ */
+initializeGrid() {
+  // Create 71x71 grid
+  this.grid = Array(this.fullGridSize).fill().map(() => 
+    Array(this.fullGridSize).fill().map(() => ({
       letter: '',
-      isPath: true,
-      isStart: true, 
+      isPath: false,
+      isStart: false,
       isSelected: false,
-      pathIndex: 0
-    };
-  }
+      pathIndex: -1,
+      // NEW: Add sea icon properties to grid data model
+      hasSeaIcon: false,
+      seaIconData: null
+    }))
+  );
+  
+  // Set center as start (changed to 35,35 for 71x71 grid)
+  const centerX = 35;
+  const centerY = 35;
+  this.grid[centerY][centerX] = {
+    letter: '',
+    isPath: true,
+    isStart: true, 
+    isSelected: false,
+    pathIndex: 0,
+    // NEW: Start cell never has sea icon
+    hasSeaIcon: false,
+    seaIconData: null
+  };
+}
   
 /**
  * Set up event listeners for grid interaction and scrolling coordination
@@ -837,6 +846,11 @@ handleCellSelection(x, y, forceSelect = false) {
   
   return false;
 }  
+  
+/**
+ * Apply random letters to the grid
+ * @param {Array} cells - Array of {x, y, letter} objects
+ */
 applyRandomLetters(cells) {
   // Reset any existing random cells first
   this.clearRandomLetters();
@@ -859,6 +873,11 @@ applyRandomLetters(cells) {
       // Apply letter (don't overwrite path cells if they have a letter)
       if (!this.grid[gridY][gridX].isPath || !this.grid[gridY][gridX].letter) {
         this.grid[gridY][gridX].letter = cell.letter;
+        
+        // NEW: Clear sea icon properties when adding letters
+        // Cells with letters should not have sea icons
+        this.grid[gridY][gridX].hasSeaIcon = false;
+        this.grid[gridY][gridX].seaIconData = null;
       }
     }
   });
@@ -878,6 +897,10 @@ applyRandomLetters(cells) {
   }));
 }
   
+/**
+ * Clear random letters from the grid
+ * @return {number} Number of cells that were cleared
+ */
 clearRandomLetters() {
   // Keep track of how many cells were cleared
   let clearedCount = 0;
@@ -889,6 +912,11 @@ clearRandomLetters() {
       if (!this.grid[y][x].isPath && this.grid[y][x].letter !== '') {
         this.grid[y][x].letter = '';
         clearedCount++;
+        
+        // NEW: Reset sea icon properties when clearing letters
+        // These cells may now be eligible for sea icons again
+        this.grid[y][x].hasSeaIcon = false;
+        this.grid[y][x].seaIconData = null;
       }
     }
   }
@@ -896,7 +924,7 @@ clearRandomLetters() {
   console.log(`Cleared ${clearedCount} random letters from grid`);
   return clearedCount;
 }
-
+  
 /**
  * Manual fix for handleAutoScroll with direction-specific buffer thresholds
  */
@@ -2000,54 +2028,186 @@ updatePhraseWithRevealedLetters() {
   }));
 }  
   
-  /**
-   * Create a cell element with proper attributes and event handlers
-   * @param {number} x - X coordinate
-   * @param {number} y - Y coordinate
-   * @return {HTMLElement} The created cell element
-   */
-  createCellElement(x, y) {
-    const cellElement = document.createElement('div');
-    cellElement.className = 'grid-cell';
+/**
+ * Create a cell element with proper attributes and event handlers
+ * @param {number} x - X coordinate
+ * @param {number} y - Y coordinate
+ * @return {HTMLElement} The created cell element
+ */
+createCellElement(x, y) {
+  const cellElement = document.createElement('div');
+  cellElement.className = 'grid-cell';
+  
+  // Ensure proper cell dimensions
+  cellElement.style.width = `${this.options.cellSize}px`;
+  cellElement.style.height = `${this.options.cellSize}px`;
+  
+  // If cell is within grid bounds
+  if (y >= 0 && y < this.grid.length && x >= 0 && x < this.grid[0].length) {
+    const cell = this.grid[y][x];
     
-    // Ensure proper cell dimensions
-    cellElement.style.width = `${this.options.cellSize}px`;
-    cellElement.style.height = `${this.options.cellSize}px`;
+    // Set cell content - ensure it has something visible
+    cellElement.textContent = cell.letter || '•'; // Use dot if no letter
     
-    // If cell is within grid bounds
-    if (y >= 0 && y < this.grid.length && x >= 0 && x < this.grid[0].length) {
-      const cell = this.grid[y][x];
+    // Store grid coordinates as data attributes for click handling
+    cellElement.dataset.gridX = x;
+    cellElement.dataset.gridY = y;
+    
+    // Update cell classes based on current state
+    this.updateCellElementClasses(cellElement, x, y);
+    
+    // NEW: Handle sea icons during cell creation (like letters)
+    // Only for cells without letters (deep sea cells)
+    if (!cell.letter || cell.letter.trim() === '') {
+      // Ensure this cell has a sea icon decision made
+      this.ensureSeaIconDecision(x, y);
       
-      // Set cell content - ensure it has something visible
-      cellElement.textContent = cell.letter || '•'; // Use dot if no letter
-      
-      // Store grid coordinates as data attributes for click handling
-      cellElement.dataset.gridX = x;
-      cellElement.dataset.gridY = y;
-      
-      // Update cell classes based on current state
-      this.updateCellElementClasses(cellElement, x, y);
-      
-      // Add click event handler for cell selection
-      cellElement.addEventListener('click', (e) => {
-        // CRITICAL CHANGE: Only process clicks if not recently handled touch
-        if (this.recentlyHandledTouch) return;
+      // Apply sea icon if the cell should have one
+      if (cell.hasSeaIcon && cell.seaIconData) {
+        cellElement.classList.add('has-sea-icon');
+        cellElement.dataset.seaIcon = this.getIconUnicode(cell.seaIconData.icon);
+        cellElement.dataset.seaTooltip = cell.seaIconData.tooltip;
         
-        this.handleCellSelection(x, y, false);
-        
-        // Call the click handler if provided
-        if (this.options.onCellClick) {
-          this.options.onCellClick(x, y, cell);
-        }
-      });
-    } else {
-      // Out of bounds cell - display as empty
-      cellElement.classList.add('out-of-bounds');
-      cellElement.textContent = '×'; // Use × for out of bounds
+        // Set up event listeners for sea icon interaction
+        this.setupSeaIconEventListeners(cellElement);
+      }
     }
     
-    return cellElement;
+    // Add click event handler for cell selection
+    cellElement.addEventListener('click', (e) => {
+      // CRITICAL CHANGE: Only process clicks if not recently handled touch
+      if (this.recentlyHandledTouch) return;
+      
+      this.handleCellSelection(x, y, false);
+      
+      // Call the click handler if provided
+      if (this.options.onCellClick) {
+        this.options.onCellClick(x, y, cell);
+      }
+    });
+  } else {
+    // Out of bounds cell - display as empty
+    cellElement.classList.add('out-of-bounds');
+    cellElement.textContent = '×'; // Use × for out of bounds
   }
+  
+  return cellElement;
+}
+
+/**
+ * Get Unicode character for Font Awesome icon
+ * @param {string} iconClass - Font Awesome icon class
+ * @return {string} Unicode character for the icon
+ */
+getIconUnicode(iconClass) {
+  // Map of Font Awesome classes to correct Unicode characters
+  const iconMap = {
+    'fa-solid fa-cloud-rain': '\uf73d',        // Rain cloud icon
+    'fa-solid fa-map': '\uf279',               // Map icon
+    'fa-solid fa-compass': '\uf14e',           // Compass icon  
+    'fa-solid fa-anchor': '\uf13d',            // Anchor icon
+    'fa-solid fa-sailboat': '\ue445',          // Sailboat icon (FA6)
+    'fa-solid fa-skull-crossbones': '\uf714',  // Skull crossbones
+    'fa-solid fa-fish-fins': '\ue4f2',         // Fish with fins (FA6)
+    'fa-solid fa-water': '\uf773',             // Water droplet
+    'fa-solid fa-wind': '\uf72e',              // Wind icon
+    'fa-solid fa-wine-bottle': '\uf72f'        // Wine bottle
+  };
+  
+  return iconMap[iconClass] || '\uf279'; // Default to map icon
+}
+
+/**
+ * Set up event listeners for sea icon interaction
+ * @param {HTMLElement} cellElement - The cell element with a sea icon
+ */
+setupSeaIconEventListeners(cellElement) {
+  // Mouse click handler
+  cellElement.addEventListener('click', (e) => this.handleSeaIconClick(e), true);
+  
+  // Touch handlers for mobile devices
+  cellElement.addEventListener('touchstart', (e) => {
+    // Store touch start info to detect taps vs swipes
+    cellElement._seaIconTouchStart = {
+      time: Date.now(),
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY
+    };
+  }, true);
+  
+  cellElement.addEventListener('touchend', (e) => {
+    // Only handle if we have touch start data
+    if (!cellElement._seaIconTouchStart) return;
+    
+    const touchDuration = Date.now() - cellElement._seaIconTouchStart.time;
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+    const moveDistance = Math.sqrt(
+      Math.pow(touchEndX - cellElement._seaIconTouchStart.x, 2) + 
+      Math.pow(touchEndY - cellElement._seaIconTouchStart.y, 2)
+    );
+    
+    // Consider it a tap if duration < 500ms and movement < 10px
+    const isTap = touchDuration < 500 && moveDistance < 10;
+    
+    if (isTap) {
+      // Handle as sea icon click
+      this.handleSeaIconClick(e);
+    }
+    
+    // Clean up touch start data
+    delete cellElement._seaIconTouchStart;
+  }, true);
+  
+  // Mark that listeners are set up
+  cellElement.dataset.seaIconListener = 'true';
+}
+
+/**
+ * Handle sea icon click events
+ * @param {Event} e - Click or touch event
+ */
+handleSeaIconClick(e) {
+  // Only handle clicks on the pseudo-element area (center of cell)
+  const rect = e.currentTarget.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+  
+  // Handle both mouse and touch events
+  let clickX, clickY;
+  if (e.type === 'touchend' && e.changedTouches && e.changedTouches.length > 0) {
+    // Touch event
+    clickX = e.changedTouches[0].clientX;
+    clickY = e.changedTouches[0].clientY;
+  } else {
+    // Mouse event
+    clickX = e.clientX;
+    clickY = e.clientY;
+  }
+  
+  // Check if click/touch is near center (where icon is)
+  const distance = Math.sqrt(Math.pow(clickX - centerX, 2) + Math.pow(clickY - centerY, 2));
+  if (distance > 25) return; // Click too far from icon
+  
+  // Prevent the click from propagating
+  e.preventDefault();
+  e.stopPropagation();
+  e.stopImmediatePropagation();
+  
+  const tooltip = e.currentTarget.dataset.seaTooltip;
+  if (!tooltip) return;
+  
+  // Mark this as a sea icon click
+  e._seaIconClick = true;
+  
+  // Delegate to IslandRenderer for tooltip handling if available
+  if (window.islandRenderer && window.islandRenderer.handleSeaIconClick) {
+    window.islandRenderer.handleSeaIconClick(e);
+  } else {
+    // Simple fallback tooltip handling
+    console.log('Sea icon clicked:', tooltip);
+  }
+}
   
   /**
    * Check if two cells are adjacent
@@ -2100,6 +2260,9 @@ setPath(path) {
       this.grid[y][x].isCompleted = false;
       // NEW: Reset the revealed state
       this.grid[y][x].isRevealed = false;
+      // NEW: Reset sea icon properties (they'll be set when cells are created)
+      this.grid[y][x].hasSeaIcon = false;
+      this.grid[y][x].seaIconData = null;
     }
   }
   
@@ -2124,6 +2287,9 @@ setPath(path) {
       this.grid[gridY][gridX].letter = point.letter;
       this.grid[gridY][gridX].isPath = true;
       this.grid[gridY][gridX].pathIndex = index;
+      // NEW: Path cells never have sea icons
+      this.grid[gridY][gridX].hasSeaIcon = false;
+      this.grid[gridY][gridX].seaIconData = null;
     } else {
       // Path point is outside grid bounds
       allCellsPlaced = false;
@@ -2434,6 +2600,87 @@ cellHasContent(x, y) {
   // Check if the cell has a non-empty letter
   const cell = this.grid[y][x];
   return cell && cell.letter && cell.letter.trim() !== '';
+}
+
+/**
+ * Ensure a cell has a sea icon decision made, and apply it if needed
+ * This is called during cell creation to handle sea icons like letters
+ * @param {number} x - Grid X coordinate
+ * @param {number} y - Grid Y coordinate
+ */
+ensureSeaIconDecision(x, y) {
+  // Skip if coordinates are out of bounds
+  if (y < 0 || y >= this.grid.length || x < 0 || x >= this.grid[0].length) {
+    return;
+  }
+  
+  const cell = this.grid[y][x];
+  
+  // Skip if cell already has a sea icon decision made
+  if (cell.hasSeaIcon !== false || cell.seaIconData !== null) {
+    return; // Decision already made
+  }
+  
+  // Skip if this cell has a letter (path cells, random letters, etc.)
+  if (cell.letter && cell.letter.trim() !== '') {
+    return; // Cells with letters never get sea icons
+  }
+  
+  // Skip if this is a beach/shore cell (sea-adjacent)
+  if (this.isSeashoreCell && this.isSeashoreCell(x, y)) {
+    return; // Beach cells don't get sea icons
+  }
+  
+  // This should be a deep sea cell - check if it should get an icon
+  const iconChance = 0.05; // 5% chance (same as IslandRenderer)
+  const shouldHaveIcon = Math.random() < iconChance;
+  
+  if (shouldHaveIcon && window.islandRenderer) {
+    // Get icon data from IslandRenderer
+    const iconData = window.islandRenderer.getRandomIconData();
+    
+    // Store the decision in the grid data model
+    cell.hasSeaIcon = true;
+    cell.seaIconData = iconData;
+  } else {
+    // No icon for this cell
+    cell.hasSeaIcon = false;
+    cell.seaIconData = null;
+  }
+}
+
+/**
+ * Helper method to check if a cell is a seashore/beach cell
+ * @param {number} x - Grid X coordinate  
+ * @param {number} y - Grid Y coordinate
+ * @return {boolean} True if this is a beach cell
+ */
+isSeashoreCell(x, y) {
+  // Use IslandRenderer's logic if available
+  if (window.islandRenderer && window.islandRenderer.getAdjacentLetterCells) {
+    const adjacentDirections = window.islandRenderer.getAdjacentLetterCells(x, y);
+    return adjacentDirections.length > 0;
+  }
+  
+  // Fallback: check if adjacent to any cell with a letter
+  const directions = [[0, -1], [1, 0], [0, 1], [-1, 0]]; // up, right, down, left
+  
+  for (const [dx, dy] of directions) {
+    const checkX = x + dx;
+    const checkY = y + dy;
+    
+    // Skip if out of bounds
+    if (checkY < 0 || checkY >= this.grid.length || checkX < 0 || checkX >= this.grid[0].length) {
+      continue;
+    }
+    
+    // If adjacent cell has a letter, this is a beach cell
+    if (this.grid[checkY][checkX].letter && this.grid[checkY][checkX].letter.trim() !== '') {
+      return true;
+    }
+  }
+  
+  return false;
 }
   
 /**
