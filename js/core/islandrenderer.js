@@ -208,11 +208,13 @@ class IslandRenderer {
     console.log('Created sea icon tooltip container');
   }
 
-  /**
-   * Apply sea icons using buffer zone approach (like beach cells)
-   * Icons become permanent cell styling that moves with CSS transforms
-   */
-  applySeaIconsWithBuffer() {
+applySeaIconsWithBuffer() {
+  // CRITICAL FIX: Don't do ANY DOM updates during scrolling
+  if (this._scrollInProgress) {
+    console.log('Skipping sea icon updates during scroll - icons move with CSS transforms');
+    return;
+  }
+  
   if (!this.gridRenderer) return;
   
   console.log('Applying sea icons with buffer zone approach');
@@ -244,10 +246,10 @@ class IslandRenderer {
     processedCount++;
     const cellKey = `${x},${y}`;
     
-    // SIMPLIFIED: Only check if this is a deep sea cell, don't remove existing icons
+    // FIXED: Enhanced deep sea check - exclude seashore cells
     const isDeepSeaCell = this.isDeepSeaCell(cellElement);
     
-    // Skip non-deep-sea cells but don't remove existing icons
+    // Skip non-deep-sea cells (including seashore cells)
     if (!isDeepSeaCell) {
       return;
     }
@@ -268,13 +270,12 @@ class IslandRenderer {
       }
     }
     
-    // Apply icon based on decision (but never remove)
+    // Apply icon based on decision
     const decision = this.seaIconDecisions.get(cellKey);
     if (decision.hasIcon) {
       this.applySeaIconToCell(cellElement, decision.iconData);
       iconsApplied++;
     }
-    // REMOVED: No longer remove icons during normal gameplay
   });
   
   console.log(`Processed ${processedCount} cells in buffer zone, applied ${iconsApplied} sea icons`);
@@ -313,17 +314,40 @@ removeSeaIconFromCell(cellElement) {
   /**
    * Check if a cell is a deep sea cell
    */
-  isDeepSeaCell(cellElement) {
-    const computedStyle = window.getComputedStyle(cellElement);
-    const backgroundColor = computedStyle.backgroundColor;
-    
-    return this.isDeepBlueSeaColor(backgroundColor) && 
-           !cellElement.classList.contains('sea-adjacent') &&
-           !cellElement.classList.contains('path-cell') &&
-           !cellElement.classList.contains('selected-cell') &&
-           !cellElement.classList.contains('start-cell');
+isDeepSeaCell(cellElement) {
+  // FIXED: Explicit check for seashore/beach cells first
+  if (cellElement.classList.contains('sea-adjacent')) {
+    console.log('Cell is sea-adjacent (seashore), excluding from sea icons');
+    return false;
   }
-
+  
+  if (cellElement.classList.contains('preserved-beach-cell')) {
+    console.log('Cell is preserved beach cell, excluding from sea icons');
+    return false;
+  }
+  
+  // Check computed background color
+  const computedStyle = window.getComputedStyle(cellElement);
+  const backgroundColor = computedStyle.backgroundColor;
+  
+  // FIXED: More specific color checks
+  const isDeepBlue = this.isDeepBlueSeaColor(backgroundColor);
+  
+  // Additional exclusions
+  const hasLetter = cellElement.classList.contains('path-cell') ||
+                   cellElement.classList.contains('selected-cell') ||
+                   cellElement.classList.contains('start-cell');
+  
+  // Must be deep blue AND not have any letters/special states
+  const result = isDeepBlue && !hasLetter;
+  
+  if (!result && isDeepBlue) {
+    console.log('Deep blue cell excluded due to letter/special state');
+  }
+  
+  return result;
+}
+  
   /**
    * Handle sea icon click events
    */
@@ -859,8 +883,7 @@ _setupEventListeners() {
     // Hide any active tooltips during scrolling
     this.hideTooltip();
     
-    // FIXED: Don't update sea icons during scroll start
-    console.log('Scroll started - sea icons will move with CSS transform');
+    console.log('Scroll started - sea icons preserved during transform');
   });
   
   document.addEventListener('gridScrolled', (e) => {
@@ -869,8 +892,6 @@ _setupEventListeners() {
     
     // Update visible bounds
     this._updateVisibleBounds();
-    
-    // FIXED: Don't update sea icons during scrolling - they move with CSS transforms
   });
   
   // Listen for grid rebuild events (which happen during scrolling)
@@ -883,19 +904,16 @@ _setupEventListeners() {
       setTimeout(() => {
         this._applyBeachCellStyles(true);
       }, 0);
-      // FIXED: Don't update sea icons during scroll rebuilds
     } else {
       // Only process if not during a scroll
       requestAnimationFrame(() => {
         this._calculateStyles();
         this._applyStyles();
         
-        // FIXED: Only apply sea icons when NOT scrolling
-        if (!this._scrollInProgress) {
-          setTimeout(() => {
-            this.applySeaIconsWithBuffer();
-          }, 100);
-        }
+        // Apply sea icons with buffer zone after grid is rebuilt
+        setTimeout(() => {
+          this.applySeaIconsWithBuffer();
+        }, 100);
       });
     }
   });
@@ -910,15 +928,15 @@ _setupEventListeners() {
       this._calculateStyles();
       this._applyStyles();
       
-      // FIXED: Only apply sea icons after scroll is completely finished
-      // Use longer delay to ensure CSS transforms are done
+      // ONLY NOW apply sea icons after scroll is completely finished
       setTimeout(() => {
-        if (!this._scrollInProgress) { // Double-check scroll is finished
-          this.applySeaIconsWithBuffer();
-        }
-      }, 300); // Increased delay to ensure transforms are complete
+        this.applySeaIconsWithBuffer();
+      }, 400); // Longer delay to ensure transforms are done
     });
   });
+  
+  // ... rest of your existing event listeners unchanged ...
+  // (Keep all the existing immediateEvents, delayedEvents, etc. exactly as they were)
   
   // Event categories for different processing approaches
   const immediateEvents = [
@@ -935,11 +953,8 @@ _setupEventListeners() {
   // Handle high-priority events immediately
   immediateEvents.forEach(eventName => {
     document.addEventListener(eventName, () => {
-      // FIXED: Don't update during scrolling
-      if (this._scrollInProgress) {
-        console.log(`Skipping ${eventName} update during scroll`);
-        return;
-      }
+      // Don't update during scrolling
+      if (this._scrollInProgress) return;
       
       // Update on next animation frame
       requestAnimationFrame(() => {
@@ -948,9 +963,7 @@ _setupEventListeners() {
         
         // Update sea icons with buffer zone after high-priority events
         setTimeout(() => {
-          if (!this._scrollInProgress) {
-            this.applySeaIconsWithBuffer();
-          }
+          this.applySeaIconsWithBuffer();
         }, 100);
       });
     });
@@ -960,11 +973,8 @@ _setupEventListeners() {
   let updateTimeoutId = null;
   delayedEvents.forEach(eventName => {
     document.addEventListener(eventName, () => {
-      // FIXED: Don't update during scrolling
-      if (this._scrollInProgress) {
-        console.log(`Skipping ${eventName} update during scroll`);
-        return;
-      }
+      // Don't update during scrolling
+      if (this._scrollInProgress) return;
       
       // Clear existing timeout to debounce multiple events
       if (updateTimeoutId) {
@@ -979,9 +989,7 @@ _setupEventListeners() {
           
           // Update sea icons with buffer zone after delayed events
           setTimeout(() => {
-            if (!this._scrollInProgress) {
-              this.applySeaIconsWithBuffer();
-            }
+            this.applySeaIconsWithBuffer();
           }, 100);
         });
       }, 100);
@@ -990,10 +998,7 @@ _setupEventListeners() {
   
   // Handle explicit update requests
   document.addEventListener('updateIslandStyling', () => {
-    if (this._scrollInProgress) {
-      console.log('Skipping island styling update during scroll');
-      return;
-    }
+    if (this._scrollInProgress) return;
     
     requestAnimationFrame(() => {
       this._calculateStyles();
@@ -1001,9 +1006,7 @@ _setupEventListeners() {
       
       // Update sea icons with buffer zone after explicit styling requests
       setTimeout(() => {
-        if (!this._scrollInProgress) {
-          this.applySeaIconsWithBuffer();
-        }
+        this.applySeaIconsWithBuffer();
       }, 100);
     });
   });
@@ -1029,9 +1032,7 @@ _setupEventListeners() {
     // Apply new icons after a delay to let grid settle
     setTimeout(() => {
       this._updateVisibleBounds();
-      if (!this._scrollInProgress) {
-        this.applySeaIconsWithBuffer();
-      }
+      this.applySeaIconsWithBuffer();
     }, 300);
   });
   
@@ -1039,17 +1040,11 @@ _setupEventListeners() {
   document.addEventListener('islandLettersUpdated', () => {
     setTimeout(() => {
       this._updateVisibleBounds();
-      if (!this._scrollInProgress) {
-        this.applySeaIconsWithBuffer();
-      }
+      this.applySeaIconsWithBuffer();
     }, 200);
   });
 
-  // FIXED: Only hide tooltip on non-sea-icon clicks during non-scroll periods
   document.addEventListener('click', (e) => {
-    // Don't hide tooltip during scrolling
-    if (this._scrollInProgress) return;
-    
     // Don't hide tooltip if this was a sea icon click
     if (e._seaIconClick) {
       return;
@@ -1062,9 +1057,9 @@ _setupEventListeners() {
     if (!isSeaIconClick) {
       this.hideTooltip();
     }
-  }, true); // Use capture phase to handle before other listeners
+  }, true);
         
-  console.log('IslandRenderer: FIXED event listeners set up - sea icons preserved during scrolling');
+  console.log('IslandRenderer: Clean event listeners set up');
 }
   
   /**
@@ -1425,38 +1420,58 @@ _setupEventListeners() {
    * @param {string} backgroundColor - CSS color value
    * @return {boolean} True if this is a deep blue sea color
    */
-  isDeepBlueSeaColor(backgroundColor) {
-    // Check for the default blue sea color
-    if (!backgroundColor) return false;
-    
-    // Convert rgb/rgba to lowercase for consistent comparison
-    const colorStr = backgroundColor.toLowerCase();
-    
-    // Check for any of the default blue variations
-    const isDefaultBlue = 
-      colorStr === 'rgb(86, 165, 214)' || // var(--defaultblue)
-      colorStr === 'rgb(74, 145, 187)' || // var(--defaultblue-dark)
-      colorStr === 'rgb(58, 130, 173)' || // var(--defaultblue-darker)
-      colorStr === '#56a5d6' ||
-      colorStr === '#4a91bb';
-    
-    // If exact match for default blue colors
-    if (isDefaultBlue) return true;
-    
-    // Also check RGB components for bluish colors
-    const rgbMatch = colorStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/);
-    
-    if (rgbMatch) {
-      const r = parseInt(rgbMatch[1], 10);
-      const g = parseInt(rgbMatch[2], 10);
-      const b = parseInt(rgbMatch[3], 10);
-      
-      // Check if it's a blue color (blue component much higher than others)
-      return r < 120 && g < 180 && b > 160 && b > (r + g) / 2;
-    }
-    
+isDeepBlueSeaColor(backgroundColor) {
+  if (!backgroundColor) return false;
+  
+  // Convert to lowercase for consistent comparison
+  const colorStr = backgroundColor.toLowerCase();
+  
+  // FIXED: Exclude seashore light blue colors explicitly
+  const isSeashoreBlue = 
+    colorStr === 'rgb(100, 192, 235)' || // var(--lightblue) - seashore color
+    colorStr === '#64c0eb' ||
+    colorStr.includes('100, 192, 235');
+  
+  if (isSeashoreBlue) {
+    console.log('Color identified as seashore blue, excluding');
     return false;
   }
+  
+  // Check for default deep blue sea colors
+  const isDefaultBlue = 
+    colorStr === 'rgb(86, 165, 214)' || // var(--defaultblue)
+    colorStr === 'rgb(74, 145, 187)' || // var(--defaultblue-dark)
+    colorStr === 'rgb(58, 130, 173)' || // var(--defaultblue-darker)
+    colorStr === '#56a5d6' ||
+    colorStr === '#4a91bb' ||
+    colorStr === '#3a82ad';
+  
+  if (isDefaultBlue) {
+    console.log('Color identified as deep sea blue');
+    return true;
+  }
+  
+  // Parse RGB components for additional blue color detection
+  const rgbMatch = colorStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/);
+  
+  if (rgbMatch) {
+    const r = parseInt(rgbMatch[1], 10);
+    const g = parseInt(rgbMatch[2], 10);
+    const b = parseInt(rgbMatch[3], 10);
+    
+    // FIXED: More restrictive blue detection to avoid seashore colors
+    // Deep sea: blue dominant, but not too bright (seashore is brighter)
+    const isDeepBlue = r < 100 && g < 180 && b > 160 && b > (r + g) / 1.5;
+    
+    if (isDeepBlue) {
+      console.log(`Color RGB(${r}, ${g}, ${b}) identified as deep sea blue`);
+    }
+    
+    return isDeepBlue;
+  }
+  
+  return false;
+}
 
   /**
    * Public method to update island appearance
