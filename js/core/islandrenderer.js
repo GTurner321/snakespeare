@@ -864,11 +864,7 @@ getIconUnicode(iconClass) {
     });
   }
 
- /**
- * FIXED: _setupEventListeners method for IslandRenderer
- * Prevents sea icon updates during smooth CSS transforms
- */
-_setupEventListeners() {
+ _setupEventListeners() {
   // Track scroll events to pause updates during scrolling
   document.addEventListener('gridScrollStarted', (e) => {
     this._scrollInProgress = true;
@@ -928,15 +924,12 @@ _setupEventListeners() {
       this._calculateStyles();
       this._applyStyles();
       
-      // ONLY NOW apply sea icons after scroll is completely finished
+      // Apply sea icons with buffer zone after scroll completes
       setTimeout(() => {
         this.applySeaIconsWithBuffer();
       }, 400); // Longer delay to ensure transforms are done
     });
   });
-  
-  // ... rest of your existing event listeners unchanged ...
-  // (Keep all the existing immediateEvents, delayedEvents, etc. exactly as they were)
   
   // Event categories for different processing approaches
   const immediateEvents = [
@@ -1045,19 +1038,19 @@ _setupEventListeners() {
   });
 
   document.addEventListener('click', (e) => {
-    // Don't hide tooltip if this was a sea icon click
+    // FIXED: Don't hide tooltip if this was a sea icon click
     if (e._seaIconClick) {
       return;
     }
     
-    // More robust check for sea icon clicks
+    // FIXED: More robust check for sea icon clicks
     const isSeaIconClick = e.target.closest('.has-sea-icon') || 
                           e.target.classList.contains('has-sea-icon');
     
     if (!isSeaIconClick) {
       this.hideTooltip();
     }
-  }, true);
+  }, true); // FIXED: Use capture phase to handle before other listeners
         
   console.log('IslandRenderer: Clean event listeners set up');
 }
