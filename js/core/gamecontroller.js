@@ -1774,11 +1774,6 @@ setInitialErosionPercentage(percentage) {
   
 /**
  * Modified loadPhrase method for GameController.js
- * Fixes both the path generation validation and async/await usage
- */
-
-/**
- * Modified loadPhrase method for GameController.js
  * Adds word boundary parsing for word completion feedback
  */
 async loadPhrase(phraseData) {
@@ -1792,6 +1787,12 @@ async loadPhrase(phraseData) {
   
   // Reset the completion state
   this.gridRenderer.setCompleted(false);
+  
+  // FIXED: Clear sea icon decisions before loading new phrase
+  if (window.islandRenderer && window.islandRenderer.clearSeaIconDecisions) {
+    console.log('Clearing sea icon decisions for new phrase');
+    window.islandRenderer.clearSeaIconDecisions();
+  }
   
   // Parse letter list from phrase data 
   const letterList = phraseData.letterlist;
@@ -1875,11 +1876,25 @@ async loadPhrase(phraseData) {
   // Center the grid on the start cell
   this.gridRenderer.centerGridOnStartCell();
   
+  // FIXED: Refresh sea icons after island is created
+  setTimeout(() => {
+    if (window.islandRenderer && window.islandRenderer.applySeaIconsWithBuffer) {
+      console.log('Refreshing sea icons for new phrase');
+      window.islandRenderer._updateVisibleBounds();
+      window.islandRenderer.applySeaIconsWithBuffer();
+    }
+  }, 500); // Delay to ensure grid is fully rendered
+  
   // Optimize the grid view
   setTimeout(() => {
     this.gridRenderer.optimizeGridView();
     console.log("Grid view optimized to minimize empty space");
-  }, 300);
+    
+    // FIXED: Apply sea icons again after optimization
+    if (window.islandRenderer && window.islandRenderer.applySeaIconsWithBuffer) {
+      window.islandRenderer.applySeaIconsWithBuffer();
+    }
+  }, 800);
   
   // Update scroll area states
   if (this.scrollHandler && this.scrollHandler.updateScrollAreaStates) {
@@ -2284,7 +2299,7 @@ injectWordCompletionCSS() {
 }
   
 /**
- * Reset all selections
+ * FIXED: Modified resetSelections method to preserve sea icons
  */
 resetSelections() {
   this.gridRenderer.clearSelections();
@@ -2305,7 +2320,8 @@ resetSelections() {
     }
   }
   
-  // Force island appearance update after reset
+  // FIXED: Don't refresh sea icons on selection reset - they should persist
+  // Force island appearance update after reset (but preserve sea icons)
   if (window.islandRenderer && typeof window.islandRenderer.updateIslandAppearance === 'function') {
     setTimeout(() => {
       window.islandRenderer.updateIslandAppearance();
