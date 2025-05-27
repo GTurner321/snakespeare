@@ -1,6 +1,6 @@
 /**
- * IslandRenderer - Fixed with click-to-reveal sea icons and buffer zone approach
- * Fixes sea icon disappearing issues and implements proper buffering like other styles
+ * IslandRenderer - Clean rewrite with transform-based sea icons
+ * Removes all old conflicting methods and uses only CSS-based approach
  */
 class IslandRenderer {
   constructor(gridRenderer) {
@@ -19,7 +19,7 @@ class IslandRenderer {
       minY: 0, maxY: 0
     };
 
-    // ENHANCED: Add buffer size for pre-styling cells outside view
+    // Add buffer size for pre-styling cells outside view
     this._bufferSize = 4; // Same as other styles
     
     // Add critical CSS for beach cells to ensure styles persist during transforms
@@ -36,441 +36,160 @@ class IslandRenderer {
     // Set up optimized event listeners
     this._setupEventListeners();
     
-    // SEA ICONS INTEGRATION: Initialize sea icons functionality with click-based system
+    // SEA ICONS: Initialize sea icons functionality with CSS-based system
     this.initializeSeaIcons();
     
-    console.log('IslandRenderer initialized with click-based sea icons and buffer zone approach');
+    console.log('IslandRenderer initialized with clean CSS-based sea icons');
     this.initialized = true;
   }
 
+  /**
+   * Initialize sea icons functionality with transform-based approach
+   */
   initializeSeaIcons() {
-  console.log('IslandRenderer: Initializing transform-based sea icons with full functionality...');
-  
-  // Complete set of Font Awesome nautical icons with tooltips
-  this.iconData = [
-    { icon: 'fa-solid fa-cloud-showers-water', tooltip: "Methinks the heavens are having a weep." },
-    { icon: 'fa-solid fa-map', tooltip: "X marks the spot—if ye dare to dream!" },
-    { icon: 'fa-solid fa-cloud-bolt', tooltip: "By my troth, the sky throws tantrums." },
-    { icon: 'fa-solid fa-person-drowning', tooltip: "He walked the plank… with questionable flair." },
-    { icon: 'fa-solid fa-person-swimming', tooltip: "Another bold stroke for Neptune's ledger." },
-    { icon: 'fa-solid fa-dharmachakra', tooltip: "Another ship? Or just a wheel of misfortune?" },
-    { icon: 'fa-solid fa-compass', tooltip: "North by bardwest, I reckon." },
-    { icon: 'fa-solid fa-water', tooltip: "Sea, sea, everywhere—but not a drop for tea." },
-    { icon: 'fa-brands fa-octopus-deploy', tooltip: "The kraken sends its compliments." },
-    { icon: 'fa-solid fa-skull-crossbones', tooltip: "Avast! A pirate ship on poetic business." },
-    { icon: 'fa-solid fa-fish-fins', tooltip: "Enough fish here to feed the whole crew." },
-    { icon: 'fa-solid fa-anchor', tooltip: "Droppeth anchor, not thy spirits." },
-    { icon: 'fa-solid fa-sailboat', tooltip: "To sail, perchance to drift." },
-    { icon: 'fa-solid fa-wine-bottle', tooltip: "A message! Or a mermaid's forgotten flask." },
-    { icon: 'fa-solid fa-wind', tooltip: "The wind fancies itself a playwright." }
-  ];
+    console.log('IslandRenderer: Initializing transform-based sea icons...');
+    
+    // Set of Font Awesome nautical icons with tooltips
+    this.iconData = [
+      { icon: 'fa-solid fa-cloud-showers-water', tooltip: "Methinks the heavens are having a weep." },
+      { icon: 'fa-solid fa-map', tooltip: "X marks the spot—if ye dare to dream!" },
+      { icon: 'fa-solid fa-compass', tooltip: "North by bardwest, I reckon." },
+      { icon: 'fa-solid fa-anchor', tooltip: "Droppeth anchor, not thy spirits." },
+      { icon: 'fa-solid fa-sailboat', tooltip: "To sail, perchance to drift." },
+      { icon: 'fa-solid fa-skull-crossbones', tooltip: "Avast! A pirate ship on poetic business." },
+      { icon: 'fa-solid fa-fish-fins', tooltip: "Enough fish here to feed the whole crew." },
+      { icon: 'fa-solid fa-water', tooltip: "Sea, sea, everywhere—but not a drop for tea." },
+      { icon: 'fa-solid fa-wind', tooltip: "The wind fancies itself a playwright." },
+      { icon: 'fa-solid fa-wine-bottle', tooltip: "A message! Or a mermaid's forgotten flask." }
+    ];
 
-  // Chance of a sea cell having an icon (1 in 20 = 5%)
-  this.iconChance = 0.05;
+    // Chance of a sea cell having an icon (1 in 20)
+    this.iconChance = 0.05;
 
-  // FIXED: Store icon decisions permanently by grid coordinates
-  // This replaces the old DOM tracking approach
-  this.seaIconDecisions = new Map(); // key: "x,y", value: {hasIcon: boolean, iconData: object}
-  
-  // Track currently visible tooltip for click-based system
-  this.activeTooltip = null;
-  this.tooltipTimeout = null;
-
-  // Add CSS styles for transform-based icons
-  this.addSeaIconStyles();
-  
-  // Create tooltip container for click-based tooltips
-  this.createTooltipContainer();
-  
-  // FIXED: Initial icon application with buffer zone (replaces the old immediate application)
-  setTimeout(() => {
-    this._updateVisibleBounds();
-    this.applySeaIconsWithBuffer();
-    console.log('IslandRenderer: Applied initial sea icons with buffer zone');
-  }, 800);
-  
-  // IMPORTANT: Removed the problematic setInterval that was causing scroll regeneration
-  // Icons now only update on specific events (new puzzle, grid changes)
-  
-  console.log('Sea icons initialized with transform-based approach - no more scroll regeneration!');
-}
-
-/**
- * Enhanced addSeaIconStyles with complete icon Unicode mapping
- */
-addSeaIconStyles() {
-  if (document.getElementById('sea-icons-transform-css')) return;
-  
-  const style = document.createElement('style');
-  style.id = 'sea-icons-transform-css';
-  style.textContent = `
-    /* Sea icons as permanent cell styling using CSS pseudo-elements */
-    .grid-cell.has-sea-icon {
-      position: relative;
-    }
+    // Store icon decisions permanently by grid coordinates
+    this.seaIconDecisions = new Map(); // key: "x,y", value: {hasIcon: boolean, iconData: object}
     
-    .grid-cell.has-sea-icon::after {
-      content: attr(data-sea-icon);
-      position: absolute !important;
-      top: 50% !important;
-      left: 50% !important;
-      transform: translate(-50%, -50%) !important;
-      font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands" !important;
-      font-weight: 900 !important;
-      color: #444444 !important;
-      font-size: 22px !important;
-      opacity: 0.7 !important;
-      z-index: 50 !important;
-      pointer-events: auto !important;
-      text-shadow: 0 0 2px rgba(255, 255, 255, 0.3) !important;
-      user-select: none !important;
-      cursor: pointer !important;
-      visibility: visible !important;
-      display: block !important;
-      /* CRITICAL: Preserve during transforms */
-      will-change: auto !important;
-      transition: opacity 0.2s ease, transform 0.2s ease !important;
-      backface-visibility: hidden;
-    }
-    
-    /* Hover effect for clickability indication */
-    .grid-cell.has-sea-icon:hover::after {
-      opacity: 1 !important;
-      transform: translate(-50%, -50%) scale(1.1) !important;
-      color: #222222 !important;
-    }
-    
-    /* Floating animation for visual appeal */
-    @keyframes seaIconFloat {
-      0% { transform: translate(-50%, -50%) rotate(0deg); }
-      50% { transform: translate(-50%, -50%) rotate(3deg); }
-      100% { transform: translate(-50%, -50%) rotate(0deg); }
-    }
-    
-    .grid-cell.has-sea-icon::after {
-      animation: seaIconFloat 4s ease-in-out infinite;
-    }
-    
-    /* Staggered timing for variety */
-    .grid-cell.has-sea-icon:nth-child(odd)::after {
-      animation-duration: 5s;
-      animation-delay: 1s;
-    }
-    
-    .grid-cell.has-sea-icon:nth-child(even)::after {
-      animation-duration: 4.5s;
-      animation-delay: 0.5s;
-    }
-    
-    /* Ensure icons work during grid transforms */
-    .grid-container.fast-scroll .grid-cell.has-sea-icon::after,
-    .grid-container.slow-scroll .grid-cell.has-sea-icon::after {
-      transition: none !important;
-    }
-    
-    /* Click-based tooltip styles */
-    .sea-icon-tooltip {
-      position: fixed;
-      background-color: rgba(255, 246, 122, 0.95);
-      color: #444444;
-      padding: 12px 16px;
-      border-radius: 6px;
-      font-size: 14px;
-      max-width: 220px;
-      text-align: center;
-      z-index: 2000;
-      pointer-events: none;
-      opacity: 0;
-      transform: translateY(10px);
-      transition: opacity 0.3s ease, transform 0.3s ease;
-      font-style: italic;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-      border: 2px solid rgba(180, 160, 60, 0.7);
-      display: none;
-      font-family: 'Trebuchet MS', Arial, sans-serif;
-      line-height: 1.3;
-    }
-    
-    .sea-icon-tooltip.visible {
-      opacity: 1;
-      transform: translateY(0);
-      display: block;
-    }
-    
-    .sea-icon-tooltip::after {
-      content: '';
-      position: absolute;
-      bottom: -8px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 0;
-      height: 0;
-      border-left: 8px solid transparent;
-      border-right: 8px solid transparent;
-      border-top: 8px solid rgba(255, 246, 122, 0.95);
-    }
-    
-    /* Mobile responsive */
-    @media (max-width: 768px) {
-      .grid-cell.has-sea-icon::after {
-        font-size: 20px !important;
-      }
-    }
-    
-    @media (max-width: 480px) {
-      .grid-cell.has-sea-icon::after {
-        font-size: 18px !important;
-      }
-    }
-  `;
-  
-  document.head.appendChild(style);
-  console.log('Added complete transform-based sea icon styles');
-}
-
-/**
- * FIXED: Apply sea icons using buffer zone approach (like beach cells)
- * Icons become permanent cell styling that moves with CSS transforms
- */
-applySeaIconsWithBuffer() {
-  if (!this.gridRenderer) return;
-  
-  console.log('Applying sea icons with buffer zone approach');
-  
-  // Calculate visible bounds with buffer
-  const bufferMinX = this._visibleBounds.minX - this._bufferSize;
-  const bufferMaxX = this._visibleBounds.maxX + this._bufferSize;
-  const bufferMinY = this._visibleBounds.minY - this._bufferSize;
-  const bufferMaxY = this._visibleBounds.maxY + this._bufferSize;
-  
-  // Get all grid cells in buffer zone
-  const bufferedCells = document.querySelectorAll('.grid-cell');
-  
-  let processedCount = 0;
-  let iconsApplied = 0;
-  
-  bufferedCells.forEach(cellElement => {
-    const x = parseInt(cellElement.dataset.gridX, 10);
-    const y = parseInt(cellElement.dataset.gridY, 10);
-    
-    // Skip if invalid coordinates
-    if (isNaN(x) || isNaN(y)) return;
-    
-    // Only process cells within buffer zone
-    if (x < bufferMinX || x >= bufferMaxX || y < bufferMinY || y >= bufferMaxY) {
-      return;
-    }
-    
-    processedCount++;
-    const cellKey = `${x},${y}`;
-    
-    // Check if this is a deep sea cell
-    const isDeepSeaCell = this.isDeepSeaCell(cellElement);
-    
-    if (!isDeepSeaCell) {
-      // Remove sea icon if cell is no longer deep sea
-      this.removeSeaIconFromCell(cellElement);
-      return;
-    }
-    
-    // FIXED: Check if we already have a decision for this cell
-    if (!this.seaIconDecisions.has(cellKey)) {
-      // Make a permanent decision for this cell
-      const shouldHaveIcon = Math.random() < this.iconChance;
-      
-      if (shouldHaveIcon) {
-        const iconData = this.getRandomIconData();
-        this.seaIconDecisions.set(cellKey, {
-          hasIcon: true,
-          iconData: iconData
-        });
-      } else {
-        this.seaIconDecisions.set(cellKey, { hasIcon: false });
-      }
-    }
-    
-    // Apply or remove icon based on decision
-    const decision = this.seaIconDecisions.get(cellKey);
-    if (decision.hasIcon) {
-      this.applySeaIconToCell(cellElement, decision.iconData);
-      iconsApplied++;
-    } else {
-      this.removeSeaIconFromCell(cellElement);
-    }
-  });
-  
-  console.log(`Processed ${processedCount} cells in buffer zone, applied ${iconsApplied} sea icons`);
-}
-
-/**
- * FIXED: Apply sea icon to a cell using CSS classes and data attributes
- */
-applySeaIconToCell(cellElement, iconData) {
-  // Check if cell already has the icon
-  if (cellElement.classList.contains('has-sea-icon') && 
-      cellElement.dataset.seaIcon === iconData.icon) {
-    return; // Already applied
-  }
-  
-  // Apply the icon as CSS class and data
-  cellElement.classList.add('has-sea-icon');
-  cellElement.dataset.seaIcon = this.getIconUnicode(iconData.icon);
-  cellElement.dataset.seaTooltip = iconData.tooltip;
-  
-  // Set up click event if not already set
-  if (!cellElement.dataset.seaIconListener) {
-    cellElement.addEventListener('click', (e) => this.handleSeaIconClick(e));
-    cellElement.dataset.seaIconListener = 'true';
-  }
-}
-
-/**
- * FIXED: Remove sea icon from a cell
- */
-removeSeaIconFromCell(cellElement) {
-  cellElement.classList.remove('has-sea-icon');
-  delete cellElement.dataset.seaIcon;
-  delete cellElement.dataset.seaTooltip;
-}
-
-/**
- * FIXED: Check if a cell is a deep sea cell
- */
-isDeepSeaCell(cellElement) {
-  const computedStyle = window.getComputedStyle(cellElement);
-  const backgroundColor = computedStyle.backgroundColor;
-  
-  return this.isDeepBlueSeaColor(backgroundColor) && 
-         !cellElement.classList.contains('sea-adjacent') &&
-         !cellElement.classList.contains('path-cell') &&
-         !cellElement.classList.contains('selected-cell') &&
-         !cellElement.classList.contains('start-cell');
-}
-
-  /**
- * FIXED: Handle sea icon click events
- */
-handleSeaIconClick(e) {
-  // Only handle clicks on the pseudo-element area (center of cell)
-  const rect = e.currentTarget.getBoundingClientRect();
-  const centerX = rect.left + rect.width / 2;
-  const centerY = rect.top + rect.height / 2;
-  const clickX = e.clientX;
-  const clickY = e.clientY;
-  
-  // Check if click is near center (where icon is)
-  const distance = Math.sqrt(Math.pow(clickX - centerX, 2) + Math.pow(clickY - centerY, 2));
-  if (distance > 25) return; // Click too far from icon
-  
-  e.stopPropagation();
-  
-  const tooltip = e.currentTarget.dataset.seaTooltip;
-  if (!tooltip) return;
-  
-  this.showTooltip(tooltip, e.currentTarget);
-}
-
-  /**
- * FIXED: Show tooltip for sea icon
- */
-showTooltip(message, cellElement) {
-  const tooltipContainer = document.getElementById('sea-icon-tooltip');
-  if (!tooltipContainer) return;
-  
-  // Hide any existing tooltip
-  this.hideTooltip();
-  
-  // Set tooltip content
-  tooltipContainer.textContent = message;
-  
-  // Position tooltip above the cell
-  const rect = cellElement.getBoundingClientRect();
-  let left = rect.left + rect.width / 2;
-  let top = rect.top - 10;
-  
-  // Adjust for screen edges
-  const padding = 10;
-  const tooltipWidth = 220; // max-width from CSS
-  
-  if (left + tooltipWidth / 2 > window.innerWidth - padding) {
-    left = window.innerWidth - tooltipWidth / 2 - padding;
-  }
-  if (left - tooltipWidth / 2 < padding) {
-    left = tooltipWidth / 2 + padding;
-  }
-  
-  tooltipContainer.style.left = `${left}px`;
-  tooltipContainer.style.top = `${top}px`;
-  tooltipContainer.style.transform = 'translateX(-50%) translateY(-100%)';
-  
-  // Show tooltip
-  tooltipContainer.style.display = 'block';
-  requestAnimationFrame(() => {
-    tooltipContainer.classList.add('visible');
-  });
-  
-  // Store reference
-  this.activeTooltip = tooltipContainer;
-  
-  // Hide after 8 seconds
-  this.tooltipTimeout = setTimeout(() => {
-    this.hideTooltip();
-  }, 8000);
-  
-  console.log('Tooltip shown:', message);
-}
-
-  /**
- * Hide tooltip
- */
-hideTooltip() {
-  if (this.activeTooltip) {
-    this.activeTooltip.classList.remove('visible');
-    this.activeTooltip.style.display = 'none';
+    // Track currently visible tooltip
     this.activeTooltip = null;
-  }
-  
-  if (this.tooltipTimeout) {
-    clearTimeout(this.tooltipTimeout);
     this.tooltipTimeout = null;
-  }
-}
 
-/**
- * FIXED: Get Unicode character for Font Awesome icon
- */
-getIconUnicode(iconClass) {
-  // Map of Font Awesome classes to Unicode characters
-  const iconMap = {
-    'fa-solid fa-cloud-showers-water': '\uf4e4',
-    'fa-solid fa-map': '\uf279',
-    'fa-solid fa-compass': '\uf14e',
-    'fa-solid fa-anchor': '\uf13d',
-    'fa-solid fa-sailboat': '\ue445',
-    'fa-solid fa-skull-crossbones': '\uf714',
-    'fa-solid fa-fish-fins': '\ue4f2',
-    'fa-solid fa-water': '\uf773',
-    'fa-solid fa-wind': '\uf72e',
-    'fa-solid fa-wine-bottle': '\uf72f'
-  };
-  
-  return iconMap[iconClass] || '\uf279'; // Default to map icon
-}
+    // Add CSS for sea icons
+    this.addSeaIconStyles();
+    
+    // Create tooltip container
+    this.createTooltipContainer();
+    
+    console.log('Sea icons initialized with transform-based approach');
+  }
 
   /**
- * FIXED: Clear all sea icon decisions (for new puzzle)
- */
-clearSeaIconDecisions() {
-  this.seaIconDecisions.clear();
-  
-  // Remove all existing sea icons from DOM
-  document.querySelectorAll('.grid-cell.has-sea-icon').forEach(cell => {
-    this.removeSeaIconFromCell(cell);
-  });
-  
-  console.log('Cleared all sea icon decisions and DOM icons');
-}
-  
+   * Add CSS styles that work with transforms and buffer zones
+   */
+  addSeaIconStyles() {
+    if (document.getElementById('sea-icons-transform-css')) return;
+    
+    const style = document.createElement('style');
+    style.id = 'sea-icons-transform-css';
+    style.textContent = `
+      /* Sea icons as permanent cell styling */
+      .grid-cell.has-sea-icon {
+        position: relative;
+      }
+      
+      .grid-cell.has-sea-icon::after {
+        content: attr(data-sea-icon);
+        position: absolute !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands" !important;
+        font-weight: 900 !important;
+        color: #444444 !important;
+        font-size: 22px !important;
+        opacity: 0.7 !important;
+        z-index: 50 !important;
+        pointer-events: auto !important;
+        text-shadow: 0 0 2px rgba(255, 255, 255, 0.3) !important;
+        user-select: none !important;
+        cursor: pointer !important;
+        visibility: visible !important;
+        display: block !important;
+        /* CRITICAL: Preserve during transforms */
+        will-change: auto !important;
+        transition: opacity 0.2s ease, transform 0.2s ease !important;
+      }
+      
+      /* Hover effect for clickability indication */
+      .grid-cell.has-sea-icon:hover::after {
+        opacity: 1 !important;
+        transform: translate(-50%, -50%) scale(1.1) !important;
+        color: #222222 !important;
+      }
+      
+      /* Animation for visual appeal */
+      @keyframes seaIconFloat {
+        0% { transform: translate(-50%, -50%) rotate(0deg); }
+        50% { transform: translate(-50%, -50%) rotate(3deg); }
+        100% { transform: translate(-50%, -50%) rotate(0deg); }
+      }
+      
+      .grid-cell.has-sea-icon::after {
+        animation: seaIconFloat 4s ease-in-out infinite;
+      }
+      
+      /* Different timing for variety */
+      .grid-cell.has-sea-icon:nth-child(odd)::after {
+        animation-duration: 5s;
+        animation-delay: 1s;
+      }
+      
+      /* Tooltip styles */
+      .sea-icon-tooltip {
+        position: fixed;
+        background-color: rgba(255, 246, 122, 0.95);
+        color: #444444;
+        padding: 12px 16px;
+        border-radius: 6px;
+        font-size: 14px;
+        max-width: 220px;
+        text-align: center;
+        z-index: 2000;
+        pointer-events: none;
+        opacity: 0;
+        transform: translateY(10px);
+        transition: opacity 0.3s ease, transform 0.3s ease;
+        font-style: italic;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        border: 2px solid rgba(180, 160, 60, 0.7);
+        display: none;
+        font-family: 'Trebuchet MS', Arial, sans-serif;
+        line-height: 1.3;
+      }
+      
+      .sea-icon-tooltip.visible {
+        opacity: 1;
+        transform: translateY(0);
+        display: block;
+      }
+      
+      .sea-icon-tooltip::after {
+        content: '';
+        position: absolute;
+        bottom: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-top: 8px solid rgba(255, 246, 122, 0.95);
+      }
+    `;
+    
+    document.head.appendChild(style);
+    console.log('Added transform-based sea icon styles');
+  }
+
   /**
    * Create tooltip container for sea icons
    */
@@ -486,84 +205,203 @@ clearSeaIconDecisions() {
     
     // Add to document body
     document.body.appendChild(tooltip);
-    console.log('IslandRenderer: Created sea icon tooltip container');
-  }
-  
-  /**
-   * ENHANCED: Setup click events for an icon element
-   * @param {HTMLElement} iconElement - The icon element to attach events to
-   */
-  setupIconClickEvents(iconElement) {
-    const tooltipContainer = document.getElementById('sea-icon-tooltip');
-    if (!tooltipContainer) return;
-    
-    // ENHANCED: Click event - show tooltip for 8 seconds
-    iconElement.addEventListener('click', (e) => {
-      e.stopPropagation(); // Prevent event bubbling
-      
-      const tooltip = e.target.getAttribute('data-tooltip');
-      if (!tooltip) return;
-      
-      // Hide any existing tooltip
-      this.hideTooltip();
-      
-      // Set tooltip content
-      tooltipContainer.textContent = tooltip;
-      
-      // ENHANCED: Position tooltip above the icon with better positioning
-      const rect = iconElement.getBoundingClientRect();
-      const tooltipRect = tooltipContainer.getBoundingClientRect();
-      
-      // Calculate position (above the icon, centered)
-      let left = rect.left + rect.width / 2;
-      let top = rect.top - 10;
-      
-      // Adjust for screen edges
-      const padding = 10;
-      if (left + tooltipRect.width / 2 > window.innerWidth - padding) {
-        left = window.innerWidth - tooltipRect.width / 2 - padding;
-      }
-      if (left - tooltipRect.width / 2 < padding) {
-        left = tooltipRect.width / 2 + padding;
-      }
-      
-      tooltipContainer.style.left = `${left}px`;
-      tooltipContainer.style.top = `${top}px`;
-      tooltipContainer.style.transform = 'translateX(-50%) translateY(-100%)';
-      
-      // Show tooltip
-      tooltipContainer.style.display = 'block';
-      
-      // Use requestAnimationFrame to ensure the element is rendered before adding visible class
-      requestAnimationFrame(() => {
-        tooltipContainer.classList.add('visible');
-      });
-      
-      // Store reference to active tooltip
-      this.activeTooltip = tooltipContainer;
-      
-      // ENHANCED: Hide tooltip after 8 seconds
-      this.tooltipTimeout = setTimeout(() => {
-        this.hideTooltip();
-      }, 8000);
-      
-      console.log('Tooltip shown for sea icon:', tooltip);
-    });
-    
-    // ENHANCED: Add visual feedback on hover (but don't show tooltip)
-    iconElement.addEventListener('mouseenter', () => {
-      iconElement.style.opacity = '1';
-      iconElement.style.transform = 'translate(-50%, -50%) scale(1.1)';
-    });
-    
-    iconElement.addEventListener('mouseleave', () => {
-      iconElement.style.opacity = '0.7';
-      iconElement.style.transform = 'translate(-50%, -50%) scale(1)';
-    });
+    console.log('Created sea icon tooltip container');
   }
 
   /**
-   * ENHANCED: Hide the currently active tooltip
+   * Apply sea icons using buffer zone approach (like beach cells)
+   * Icons become permanent cell styling that moves with CSS transforms
+   */
+  applySeaIconsWithBuffer() {
+    if (!this.gridRenderer) return;
+    
+    console.log('Applying sea icons with buffer zone approach');
+    
+    // Calculate visible bounds with buffer
+    const bufferMinX = this._visibleBounds.minX - this._bufferSize;
+    const bufferMaxX = this._visibleBounds.maxX + this._bufferSize;
+    const bufferMinY = this._visibleBounds.minY - this._bufferSize;
+    const bufferMaxY = this._visibleBounds.maxY + this._bufferSize;
+    
+    // Get all grid cells in buffer zone
+    const bufferedCells = document.querySelectorAll('.grid-cell');
+    
+    let processedCount = 0;
+    let iconsApplied = 0;
+    
+    bufferedCells.forEach(cellElement => {
+      const x = parseInt(cellElement.dataset.gridX, 10);
+      const y = parseInt(cellElement.dataset.gridY, 10);
+      
+      // Skip if invalid coordinates
+      if (isNaN(x) || isNaN(y)) return;
+      
+      // Only process cells within buffer zone
+      if (x < bufferMinX || x >= bufferMaxX || y < bufferMinY || y >= bufferMaxY) {
+        return;
+      }
+      
+      processedCount++;
+      const cellKey = `${x},${y}`;
+      
+      // Check if this is a deep sea cell
+      const isDeepSeaCell = this.isDeepSeaCell(cellElement);
+      
+      if (!isDeepSeaCell) {
+        // Remove sea icon if cell is no longer deep sea
+        this.removeSeaIconFromCell(cellElement);
+        return;
+      }
+      
+      // Check if we already have a decision for this cell
+      if (!this.seaIconDecisions.has(cellKey)) {
+        // Make a permanent decision for this cell
+        const shouldHaveIcon = Math.random() < this.iconChance;
+        
+        if (shouldHaveIcon) {
+          const iconData = this.getRandomIconData();
+          this.seaIconDecisions.set(cellKey, {
+            hasIcon: true,
+            iconData: iconData
+          });
+        } else {
+          this.seaIconDecisions.set(cellKey, { hasIcon: false });
+        }
+      }
+      
+      // Apply or remove icon based on decision
+      const decision = this.seaIconDecisions.get(cellKey);
+      if (decision.hasIcon) {
+        this.applySeaIconToCell(cellElement, decision.iconData);
+        iconsApplied++;
+      } else {
+        this.removeSeaIconFromCell(cellElement);
+      }
+    });
+    
+    console.log(`Processed ${processedCount} cells in buffer zone, applied ${iconsApplied} sea icons`);
+  }
+
+  /**
+   * Apply sea icon to a cell using CSS classes and data attributes
+   */
+  applySeaIconToCell(cellElement, iconData) {
+    // Check if cell already has the icon
+    if (cellElement.classList.contains('has-sea-icon') && 
+        cellElement.dataset.seaIcon === this.getIconUnicode(iconData.icon)) {
+      return; // Already applied
+    }
+    
+    // Apply the icon as CSS class and data
+    cellElement.classList.add('has-sea-icon');
+    cellElement.dataset.seaIcon = this.getIconUnicode(iconData.icon);
+    cellElement.dataset.seaTooltip = iconData.tooltip;
+    
+    // Set up click event if not already set
+    if (!cellElement.dataset.seaIconListener) {
+      cellElement.addEventListener('click', (e) => this.handleSeaIconClick(e));
+      cellElement.dataset.seaIconListener = 'true';
+    }
+  }
+
+  /**
+   * Remove sea icon from a cell
+   */
+  removeSeaIconFromCell(cellElement) {
+    cellElement.classList.remove('has-sea-icon');
+    delete cellElement.dataset.seaIcon;
+    delete cellElement.dataset.seaTooltip;
+  }
+
+  /**
+   * Check if a cell is a deep sea cell
+   */
+  isDeepSeaCell(cellElement) {
+    const computedStyle = window.getComputedStyle(cellElement);
+    const backgroundColor = computedStyle.backgroundColor;
+    
+    return this.isDeepBlueSeaColor(backgroundColor) && 
+           !cellElement.classList.contains('sea-adjacent') &&
+           !cellElement.classList.contains('path-cell') &&
+           !cellElement.classList.contains('selected-cell') &&
+           !cellElement.classList.contains('start-cell');
+  }
+
+  /**
+   * Handle sea icon click events
+   */
+  handleSeaIconClick(e) {
+    // Only handle clicks on the pseudo-element area (center of cell)
+    const rect = e.currentTarget.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const clickX = e.clientX;
+    const clickY = e.clientY;
+    
+    // Check if click is near center (where icon is)
+    const distance = Math.sqrt(Math.pow(clickX - centerX, 2) + Math.pow(clickY - centerY, 2));
+    if (distance > 25) return; // Click too far from icon
+    
+    e.stopPropagation();
+    
+    const tooltip = e.currentTarget.dataset.seaTooltip;
+    if (!tooltip) return;
+    
+    this.showTooltip(tooltip, e.currentTarget);
+  }
+
+  /**
+   * Show tooltip for sea icon
+   */
+  showTooltip(message, cellElement) {
+    const tooltipContainer = document.getElementById('sea-icon-tooltip');
+    if (!tooltipContainer) return;
+    
+    // Hide any existing tooltip
+    this.hideTooltip();
+    
+    // Set tooltip content
+    tooltipContainer.textContent = message;
+    
+    // Position tooltip above the cell
+    const rect = cellElement.getBoundingClientRect();
+    let left = rect.left + rect.width / 2;
+    let top = rect.top - 10;
+    
+    // Adjust for screen edges
+    const padding = 10;
+    const tooltipWidth = 220; // max-width from CSS
+    
+    if (left + tooltipWidth / 2 > window.innerWidth - padding) {
+      left = window.innerWidth - tooltipWidth / 2 - padding;
+    }
+    if (left - tooltipWidth / 2 < padding) {
+      left = tooltipWidth / 2 + padding;
+    }
+    
+    tooltipContainer.style.left = `${left}px`;
+    tooltipContainer.style.top = `${top}px`;
+    tooltipContainer.style.transform = 'translateX(-50%) translateY(-100%)';
+    
+    // Show tooltip
+    tooltipContainer.style.display = 'block';
+    requestAnimationFrame(() => {
+      tooltipContainer.classList.add('visible');
+    });
+    
+    // Store reference
+    this.activeTooltip = tooltipContainer;
+    
+    // Hide after 8 seconds
+    this.tooltipTimeout = setTimeout(() => {
+      this.hideTooltip();
+    }, 8000);
+    
+    console.log('Tooltip shown:', message);
+  }
+
+  /**
+   * Hide tooltip
    */
   hideTooltip() {
     if (this.activeTooltip) {
@@ -579,184 +417,58 @@ clearSeaIconDecisions() {
   }
 
   /**
-   * ENHANCED: Apply icons with buffer zone approach (like other styles)
+   * Get Unicode character for Font Awesome icon
    */
-  applyIconsWithBuffer() {
-    console.log('IslandRenderer: Applying sea icons with buffer zone approach');
+  getIconUnicode(iconClass) {
+    // Map of Font Awesome classes to Unicode characters
+    const iconMap = {
+      'fa-solid fa-cloud-showers-water': '\uf4e4',
+      'fa-solid fa-map': '\uf279',
+      'fa-solid fa-compass': '\uf14e',
+      'fa-solid fa-anchor': '\uf13d',
+      'fa-solid fa-sailboat': '\ue445',
+      'fa-solid fa-skull-crossbones': '\uf714',
+      'fa-solid fa-fish-fins': '\ue4f2',
+      'fa-solid fa-water': '\uf773',
+      'fa-solid fa-wind': '\uf72e',
+      'fa-solid fa-wine-bottle': '\uf72f'
+    };
     
-    // Calculate buffer zone bounds
-    const bufferMinX = this._visibleBounds.minX - this._bufferSize;
-    const bufferMaxX = this._visibleBounds.maxX + this._bufferSize;
-    const bufferMinY = this._visibleBounds.minY - this._bufferSize;
-    const bufferMaxY = this._visibleBounds.maxY + this._bufferSize;
-    
-    // Get all grid cells in the buffer zone
-    const bufferedCells = document.querySelectorAll('.grid-cell');
-    
-    let deepSeaCount = 0;
-    let iconedCellCount = 0;
-    let preservedIcons = 0;
+    return iconMap[iconClass] || '\uf279'; // Default to map icon
+  }
 
-    // Process each cell in the buffer zone
-    bufferedCells.forEach(cellElement => {
-      const x = parseInt(cellElement.dataset.gridX, 10);
-      const y = parseInt(cellElement.dataset.gridY, 10);
-      
-      // Skip if invalid coordinates
-      if (isNaN(x) || isNaN(y)) return;
-      
-      // ENHANCED: Only process cells within buffer zone
-      if (x < bufferMinX || x >= bufferMaxX || y < bufferMinY || y >= bufferMaxY) {
-        return;
-      }
-      
-      const cellKey = `${x},${y}`;
-      
-      // Check for deep sea color
-      const computedStyle = window.getComputedStyle(cellElement);
-      const backgroundColor = computedStyle.backgroundColor;
-      
-      // Check if this is a deep sea cell by color and classes
-      const isDeepSeaCell = this.isDeepBlueSeaColor(backgroundColor) && 
-                           !cellElement.classList.contains('sea-adjacent') &&
-                           !cellElement.classList.contains('path-cell') &&
-                           !cellElement.classList.contains('selected-cell') &&
-                           !cellElement.classList.contains('start-cell');
-      
-      if (!isDeepSeaCell) {
-        // ENHANCED: If not a deep sea cell, remove any existing icon but preserve the decision
-        const existingIcon = this.existingIcons.get(cellKey);
-        if (existingIcon && existingIcon.parentNode) {
-          existingIcon.parentNode.removeChild(existingIcon);
-          this.existingIcons.delete(cellKey);
-        }
-        return;
-      }
-      
-      // Count deep sea cells for debugging
-      deepSeaCount++;
-      
-      // ENHANCED: Check if this cell already has an icon decision
-      if (!this.cellsWithIcons.has(cellKey)) {
-        // Make a random decision: should this cell have an icon?
-        const shouldHaveIcon = Math.random() < this.iconChance;
-        
-        // Store the decision and icon data
-        if (shouldHaveIcon) {
-          this.cellsWithIcons.set(cellKey, {
-            hasIcon: true,
-            iconData: this.getRandomIconData()
-          });
-        } else {
-          this.cellsWithIcons.set(cellKey, { hasIcon: false });
-        }
-      }
-      
-      // Get the cell's icon status
-      const cellIconInfo = this.cellsWithIcons.get(cellKey);
-      
-      // Check if cell should have an icon
-      if (cellIconInfo && cellIconInfo.hasIcon) {
-        // ENHANCED: Check if icon already exists in DOM
-        let iconElement = this.existingIcons.get(cellKey);
-        
-        // If no icon exists in our tracking, check if one exists in the cell
-        if (!iconElement) {
-          iconElement = cellElement.querySelector('.sea-icon');
-          if (iconElement) {
-            // Found an existing icon, track it
-            this.existingIcons.set(cellKey, iconElement);
-            preservedIcons++;
-          }
-        }
-        
-        // If still no icon exists, create one
-        if (!iconElement) {
-          iconElement = document.createElement('i');
-          iconElement.className = `sea-icon ${cellIconInfo.iconData.icon}`;
-          iconElement.setAttribute('data-tooltip', cellIconInfo.iconData.tooltip);
-          
-          // Set up the click functionality
-          this.setupIconClickEvents(iconElement);
-          
-          // ENHANCED: Apply styles directly to ensure visibility
-          this.applyIconStyles(iconElement);
-          
-          // Track the icon
-          this.existingIcons.set(cellKey, iconElement);
-          
-          // Append to cell
-          cellElement.appendChild(iconElement);
-          iconedCellCount++;
-          
-          console.log(`IslandRenderer: Added sea icon ${cellIconInfo.iconData.icon} to cell at ${x},${y}`);
-        } else {
-          // ENHANCED: Icon exists, ensure it has proper styles and isn't hidden
-          this.ensureIconVisibility(iconElement);
-        }
-      } else {
-        // ENHANCED: Cell shouldn't have icon, remove if exists
-        const existingIcon = this.existingIcons.get(cellKey);
-        if (existingIcon && existingIcon.parentNode) {
-          existingIcon.parentNode.removeChild(existingIcon);
-          this.existingIcons.delete(cellKey);
-        }
-      }
+  /**
+   * Get random icon data from the icon set
+   */
+  getRandomIconData() {
+    const index = Math.floor(Math.random() * this.iconData.length);
+    return this.iconData[index];
+  }
+
+  /**
+   * Clear all sea icon decisions (for new puzzle)
+   */
+  clearSeaIconDecisions() {
+    this.seaIconDecisions.clear();
+    
+    // Remove all existing sea icons from DOM
+    document.querySelectorAll('.grid-cell.has-sea-icon').forEach(cell => {
+      this.removeSeaIconFromCell(cell);
     });
     
-    console.log(`IslandRenderer: Buffer zone processing complete - ${deepSeaCount} deep sea cells, ${iconedCellCount} new icons, ${preservedIcons} preserved icons`);
+    console.log('Cleared all sea icon decisions and DOM icons');
   }
 
   /**
-   * ENHANCED: Apply direct styles to icon element to ensure visibility
-   * @param {HTMLElement} iconElement - The icon element to style
+   * Legacy method - redirects to new buffer approach
    */
-  applyIconStyles(iconElement) {
-    iconElement.style.position = 'absolute';
-    iconElement.style.top = '50%';
-    iconElement.style.left = '50%';
-    iconElement.style.transform = 'translate(-50%, -50%)';
-    iconElement.style.color = '#444444';
-    iconElement.style.fontSize = '22px';
-    iconElement.style.zIndex = '50';
-    iconElement.style.opacity = '0.7';
-    iconElement.style.pointerEvents = 'auto';
-    iconElement.style.textShadow = '0 0 2px rgba(255, 255, 255, 0.3)';
-    iconElement.style.background = 'transparent';
-    iconElement.style.cursor = 'pointer';
-    iconElement.style.visibility = 'visible';
-    iconElement.style.display = 'block';
-    iconElement.style.userSelect = 'none';
-  }
-
-  /**
-   * ENHANCED: Ensure an existing icon remains visible and properly styled
-   * @param {HTMLElement} iconElement - The icon element to check
-   */
-  ensureIconVisibility(iconElement) {
-    // Re-apply critical styles to prevent disappearing
-    iconElement.style.visibility = 'visible';
-    iconElement.style.display = 'block';
-    iconElement.style.opacity = '0.7';
-    iconElement.style.zIndex = '50';
-    iconElement.style.pointerEvents = 'auto';
-    
-    // Ensure transform isn't broken
-    if (!iconElement.style.transform || iconElement.style.transform === 'none') {
-      iconElement.style.transform = 'translate(-50%, -50%)';
-    }
+  applyIcons() {
+    this._updateVisibleBounds();
+    this.applySeaIconsWithBuffer();
   }
 
 /**
- * LEGACY: Keep this method for compatibility but redirect to buffer approach
- */
-applyIcons() {
-  this._updateVisibleBounds();
-  this.applySeaIconsWithBuffer();
-}
-  
-  /**
-   * NEW: Inject critical CSS styles to fix beach cell flashing
+   * Inject critical CSS styles to fix beach cell flashing
    * @private
    */
   _injectCriticalBeachCellStyles() {
@@ -842,12 +554,12 @@ applyIcons() {
       this.refreshIsland(true);
     }, 1000);
     
-    // CRITICAL FIX: Intercept GridRenderer's scroll method to preserve beach cell styles
+    // Intercept GridRenderer's scroll method to preserve beach cell styles
     this._interceptGridRendererScroll();
   }
 
   /**
-   * NEW: Intercept GridRenderer's scroll method to preserve beach cells during transformation
+   * Intercept GridRenderer's scroll method to preserve beach cells during transformation
    * This is the key fix for the flashing issue
    * @private
    */
@@ -895,7 +607,7 @@ applyIcons() {
   }
   
   /**
-   * NEW: Preserve beach cell styles before transform by adding inline styles
+   * Preserve beach cell styles before transform by adding inline styles
    * @private
    */
   _preserveBeachCellStyles() {
@@ -928,7 +640,7 @@ applyIcons() {
   }
   
   /**
-   * NEW: Reinforce beach cell styles during long transitions
+   * Reinforce beach cell styles during long transitions
    * @private
    */
   _reinforceBeachCellStyles() {
@@ -954,7 +666,7 @@ applyIcons() {
   }
   
   /**
-   * NEW: Restore class-based styling after transform animation completes
+   * Restore class-based styling after transform animation completes
    * @private
    */
   _restoreBeachCellStyles() {
@@ -1014,8 +726,8 @@ applyIcons() {
     return newOffset;
   }
   
- /**
-   * NEW: Pre-style beach cells for a specific target offset
+  /**
+   * Pre-style beach cells for a specific target offset
    * This ensures cells that will come into view are already styled correctly
    * @param {number} targetOffsetX - Target X offset after scrolling
    * @param {number} targetOffsetY - Target Y offset after scrolling
@@ -1056,7 +768,7 @@ applyIcons() {
       }
     }
     
-    // Check vertical movement
+// Check vertical movement
     if (yDiff > 0) { // Moving down
       for (let y = this._visibleBounds.maxY; y < newVisibleArea.maxY; y++) {
         for (let x = newVisibleArea.minX; x < newVisibleArea.maxX; x++) {
@@ -1124,8 +836,7 @@ applyIcons() {
   }
 
   /**
-   * ENHANCED: Set up optimized event listeners with scroll awareness and sea icon management
-   * Handles both beach cell styling and sea icons with buffer zone approach
+   * Set up optimized event listeners with scroll awareness and sea icon management
    * @private
    */
   _setupEventListeners() {
@@ -1140,10 +851,9 @@ applyIcons() {
       this._calculateStyles();
       this._applyBeachCellStyles(true);
       
-      // ENHANCED: Hide any active tooltips during scrolling
+      // Hide any active tooltips during scrolling
       this.hideTooltip();
       
-      // ENHANCED: Don't modify sea icons during scrolling - they should stay put with transforms
       console.log('Scroll started - preserving sea icons during transform');
     });
     
@@ -1171,10 +881,9 @@ applyIcons() {
           this._calculateStyles();
           this._applyStyles();
           
-          // ENHANCED: Apply sea icons with buffer zone after grid is rebuilt
+          // Apply sea icons with buffer zone after grid is rebuilt
           setTimeout(() => {
-            this.applyIconsWithBuffer();
-            console.log('Applied sea icons with buffer zone after grid rebuild');
+            this.applySeaIconsWithBuffer();
           }, 100);
         });
       }
@@ -1190,10 +899,9 @@ applyIcons() {
         this._calculateStyles();
         this._applyStyles();
         
-        // ENHANCED: Apply sea icons with buffer zone after scroll completes
+        // Apply sea icons with buffer zone after scroll completes
         setTimeout(() => {
-          this.applyIconsWithBuffer();
-          console.log('Applied sea icons with buffer zone after scroll complete');
+          this.applySeaIconsWithBuffer();
         }, 200);
       });
     });
@@ -1221,10 +929,9 @@ applyIcons() {
           this._calculateStyles();
           this._applyStyles();
           
-          // ENHANCED: Update sea icons with buffer zone after high-priority events
+          // Update sea icons with buffer zone after high-priority events
           setTimeout(() => {
-            this.applyIconsWithBuffer();
-            console.log('Applied sea icons with buffer zone after high-priority event');
+            this.applySeaIconsWithBuffer();
           }, 100);
         });
       });
@@ -1248,10 +955,9 @@ applyIcons() {
             this._calculateStyles();
             this._applyStyles();
             
-            // ENHANCED: Update sea icons with buffer zone after delayed events
+            // Update sea icons with buffer zone after delayed events
             setTimeout(() => {
-              this.applyIconsWithBuffer();
-              console.log('Applied sea icons with buffer zone after delayed event');
+              this.applySeaIconsWithBuffer();
             }, 100);
           });
         }, 100);
@@ -1266,10 +972,9 @@ applyIcons() {
         this._calculateStyles();
         this._applyStyles();
         
-        // ENHANCED: Update sea icons with buffer zone after explicit styling requests
+        // Update sea icons with buffer zone after explicit styling requests
         setTimeout(() => {
-          this.applyIconsWithBuffer();
-          console.log('Applied sea icons with buffer zone after explicit styling request');
+          this.applySeaIconsWithBuffer();
         }, 100);
       });
     });
@@ -1281,60 +986,40 @@ applyIcons() {
         this._calculateStyles();
         this._applyStyles(true);
         
-        // ENHANCED: Apply sea icons with buffer zone after grid creation
-        this.applyIconsWithBuffer();
-        console.log('Applied sea icons with buffer zone after grid creation');
+        // Apply sea icons with buffer zone after grid creation
+        this.applySeaIconsWithBuffer();
       }, 200);
     });
     
-    // ENHANCED: Global click handler to hide tooltips when clicking elsewhere
+    // SEA ICONS: Listen for new puzzle/phrase events
+    document.addEventListener('pathSet', () => {
+      console.log('New path set - refreshing sea icons');
+      // Clear old decisions
+      this.clearSeaIconDecisions();
+      
+      // Apply new icons after a delay to let grid settle
+      setTimeout(() => {
+        this._updateVisibleBounds();
+        this.applySeaIconsWithBuffer();
+      }, 300);
+    });
+    
+    // SEA ICONS: Listen for island letters updated (new puzzle)
+    document.addEventListener('islandLettersUpdated', () => {
+      setTimeout(() => {
+        this._updateVisibleBounds();
+        this.applySeaIconsWithBuffer();
+      }, 200);
+    });
+    
+    // SEA ICONS: Global click handler to hide tooltips when clicking elsewhere
     document.addEventListener('click', (e) => {
-      // If the click wasn't on a sea icon, hide any active tooltip
-      if (!e.target.classList.contains('sea-icon')) {
+      if (!e.target.closest('.has-sea-icon')) {
         this.hideTooltip();
       }
     });
-
-// FIXED: Listen for new puzzle/phrase events
-document.addEventListener('pathSet', () => {
-  console.log('New path set - refreshing sea icons');
-  // Clear old decisions
-  this.clearSeaIconDecisions();
-  
-  // Apply new icons after a delay to let grid settle
-  setTimeout(() => {
-    this._updateVisibleBounds();
-    this.applySeaIconsWithBuffer();
-  }, 300);
-});
-
-// FIXED: Listen for grid rebuilt events
-document.addEventListener('gridRebuilt', (e) => {
-  if (!e.detail.isScrolling) {
-    // Only refresh icons if not scrolling (new puzzle)
-    setTimeout(() => {
-      this._updateVisibleBounds();
-      this.applySeaIconsWithBuffer();
-    }, 100);
-  }
-});
-
-// FIXED: Listen for island letters updated (new puzzle)
-document.addEventListener('islandLettersUpdated', () => {
-  setTimeout(() => {
-    this._updateVisibleBounds();
-    this.applySeaIconsWithBuffer();
-  }, 200);
-});
-
-// Global click handler to hide tooltips
-document.addEventListener('click', (e) => {
-  if (!e.target.closest('.has-sea-icon')) {
-    this.hideTooltip();
-  }
-});
     
-    console.log('IslandRenderer: Enhanced event listeners set up for beach cells and sea icons with buffer zone');
+    console.log('IslandRenderer: Clean event listeners set up');
   }
   
   /**
@@ -1355,20 +1040,6 @@ document.addEventListener('click', (e) => {
       minY: viewOffset.y,
       maxY: viewOffset.y + height
     };
-  }
-    
-  /**
-   * Check if cell coordinates are currently visible
-   * @param {number} x - X coordinate
-   * @param {number} y - Y coordinate
-   * @return {boolean} True if cell is visible
-   * @private
-   */
-  _isCellVisible(x, y) {
-    return x >= this._visibleBounds.minX && 
-           x < this._visibleBounds.maxX && 
-           y >= this._visibleBounds.minY && 
-           y < this._visibleBounds.maxY;
   }
     
   /**
@@ -1468,7 +1139,7 @@ document.addEventListener('click', (e) => {
   }
 
   /**
-   * Apply beach cell styles directly to DOM - focused implementation that only handles beach cells
+   * Apply beach cell styles directly to DOM
    * @param {boolean} force - Force application even during scrolling
    * @private
    */
@@ -1640,21 +1311,6 @@ document.addEventListener('click', (e) => {
   }
 
   /**
-   * Public method to update island appearance
-   * Maintained for backwards compatibility
-   */
-  updateIslandAppearance() {
-    // Skip if scrolling in progress
-    if (this._scrollInProgress) return;
-    
-    // Use animation frame for better performance
-    requestAnimationFrame(() => {
-      this._calculateStyles();
-      this._applyStyles();
-    });
-  }
-
-  /**
    * Get a list of directions where adjacent cells have letters
    * @param {number} x - X coordinate
    * @param {number} y - Y coordinate
@@ -1720,15 +1376,6 @@ document.addEventListener('click', (e) => {
   }
 
   /**
-   * Get random icon data from the icon set
-   * @return {Object} Random icon data with icon class and tooltip
-   */
-  getRandomIconData() {
-    const index = Math.floor(Math.random() * this.iconData.length);
-    return this.iconData[index];
-  }
-
-  /**
    * Check if a color is a deep blue sea color
    * @param {string} backgroundColor - CSS color value
    * @return {boolean} True if this is a deep blue sea color
@@ -1765,6 +1412,21 @@ document.addEventListener('click', (e) => {
     
     return false;
   }
+
+  /**
+   * Public method to update island appearance
+   * Maintained for backwards compatibility
+   */
+  updateIslandAppearance() {
+    // Skip if scrolling in progress
+    if (this._scrollInProgress) return;
+    
+    // Use animation frame for better performance
+    requestAnimationFrame(() => {
+      this._calculateStyles();
+      this._applyStyles();
+    });
+  }
   
   /**
    * Refresh island rendering - Public API for forced updates
@@ -1788,45 +1450,10 @@ document.addEventListener('click', (e) => {
     // Then apply all other styles
     this._applyStyles(force);
     
-    // ENHANCED: Apply sea icons with buffer zone
+    // Apply sea icons with buffer zone
     if (force || !this._scrollInProgress) {
-      this.applyIconsWithBuffer();
+      this.applySeaIconsWithBuffer();
     }
-  }
-
-  /**
-   * NEW: Fix beach cells after any DOM manipulation
-   * This should be called whenever grid cells might have been altered or rebuilt
-   */
-  fixBeachCellsAfterDOMChange() {
-    // Short circuit if scrolling
-    if (this._scrollInProgress) return;
-    
-    // Use requestAnimationFrame to ensure DOM is stable
-    requestAnimationFrame(() => {
-      this._applyBeachCellStyles(true);
-    });
-  }
-
-  /**
-   * NEW: Update all beach cells when the grid changes size or position
-   * Handles responsive layout changes
-   */
-  handleGridResize() {
-    // Update visible bounds
-    this._updateVisibleBounds();
-    
-    // Calculate new styles based on current grid
-    this._calculateStyles();
-    
-    // Apply beach cell styles with forced application
-    this._applyBeachCellStyles(true);
-    
-    // Apply all other styles
-    this._applyStyles(true);
-    
-    // ENHANCED: Update sea icons with buffer zone after resize
-    this.applyIconsWithBuffer();
   }
 }
 
