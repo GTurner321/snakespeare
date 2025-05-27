@@ -48,36 +48,41 @@ class IslandRenderer {
     this.initialized = true;
   }
 
-  /**
-   * Initialize sea icon support data and tooltip system
-   */
-  initializeSeaIconSupport() {
-    console.log('IslandRenderer: Initializing sea icon support...');
-    
-    // Sea icon data for GridRenderer to use
-    this.iconData = [
-      { icon: 'fa-solid fa-cloud-rain', tooltip: "Methinks the heavens are having a weep." },
-      { icon: 'fa-solid fa-map', tooltip: "X marks the spot—if ye dare to dream!" },
-      { icon: 'fa-solid fa-compass', tooltip: "North by bardwest, I reckon." },
-      { icon: 'fa-solid fa-anchor', tooltip: "Droppeth anchor, not thy spirits." },
-      { icon: 'fa-solid fa-sailboat', tooltip: "To sail, perchance to drift." },
-      { icon: 'fa-solid fa-skull-crossbones', tooltip: "Avast! A pirate ship on poetic business." },
-      { icon: 'fa-solid fa-fish-fins', tooltip: "Enough fish here to feed the whole crew." },
-      { icon: 'fa-solid fa-water', tooltip: "Sea, sea, everywhere—but not a drop for tea." },
-      { icon: 'fa-solid fa-wind', tooltip: "The wind fancies itself a playwright." },
-      { icon: 'fa-solid fa-wine-bottle', tooltip: "A message! Or a mermaid's forgotten flask." }
-    ];
+ /**
+ * Initialize sea icon support with Font Awesome SVG icons
+ */
+initializeSeaIconSupport() {
+  console.log('IslandRenderer: Initializing SVG-based sea icon support...');
+  
+  // Complete sea icon data with your original icons and tooltips
+  this.iconData = [
+    { icon: 'fa-solid fa-cloud-showers-water', tooltip: "Methinks the heavens are having a weep." },
+    { icon: 'fa-solid fa-map', tooltip: "X marks the spot—if ye dare to dream!" },
+    { icon: 'fa-solid fa-cloud-bolt', tooltip: "By my troth, the sky throws tantrums." },
+    { icon: 'fa-solid fa-person-drowning', tooltip: "He walked the plank… with questionable flair." },
+    { icon: 'fa-solid fa-person-swimming', tooltip: "Another bold stroke for Neptune's ledger." },
+    { icon: 'fa-solid fa-dharmachakra', tooltip: "Another ship? Or just a wheel of misfortune?" },
+    { icon: 'fa-solid fa-compass', tooltip: "North by bardwest, I reckon." },
+    { icon: 'fa-solid fa-water', tooltip: "Sea, sea, everywhere—but not a drop for tea." },
+    { icon: 'fa-brands fa-octopus-deploy', tooltip: "The kraken sends its compliments." },
+    { icon: 'fa-solid fa-skull-crossbones', tooltip: "Avast! A pirate ship on poetic business." },
+    { icon: 'fa-solid fa-fish-fins', tooltip: "Enough fish here to feed the whole crew." },
+    { icon: 'fa-solid fa-anchor', tooltip: "Droppeth anchor, not thy spirits." },
+    { icon: 'fa-solid fa-sailboat', tooltip: "To sail, perchance to drift." },
+    { icon: 'fa-solid fa-wine-bottle', tooltip: "A message! Or a mermaid's forgotten flask." },
+    { icon: 'fa-solid fa-wind', tooltip: "The wind fancies itself a playwright." }
+  ];
 
-    // Track currently visible tooltip
-    this.activeTooltip = null;
-    this.tooltipTimeout = null;
+  // Track currently visible tooltip
+  this.activeTooltip = null;
+  this.tooltipTimeout = null;
 
-    // Create tooltip container
-    this.createTooltipContainer();
-    
-    console.log('Sea icon support initialized');
-  }
-
+  // Create tooltip container
+  this.createTooltipContainer();
+  
+  console.log('SVG-based sea icon support initialized with complete icon set');
+}
+  
   /**
    * Get random icon data for GridRenderer to use
    * @return {Object} Random icon data object
@@ -109,79 +114,91 @@ class IslandRenderer {
    * Handle sea icon click events (called by GridRenderer)
    * @param {Event} e - Click or touch event
    */
-  handleSeaIconClick(e) {
-    const tooltip = e.currentTarget.dataset.seaTooltip;
-    if (!tooltip) return;
-    
-    // Check if this tooltip is already showing for this cell
-    const isCurrentlyShowing = this.activeTooltip && 
-                              this.activeTooltip.textContent === tooltip &&
-                              this.activeTooltip.classList.contains('visible');
-    
-    if (isCurrentlyShowing) {
-      // Same icon clicked again - hide the tooltip
-      console.log('Same sea icon clicked - hiding tooltip');
-      this.hideTooltip();
-    } else {
-      // Different icon or no tooltip showing - show this tooltip
-      console.log('Sea icon clicked - showing tooltip:', tooltip);
-      this.showTooltip(tooltip, e.currentTarget);
-    }
-  }
-
-  /**
-   * Show tooltip for sea icon
-   * @param {string} message - Tooltip message
-   * @param {HTMLElement} cellElement - Cell element that was clicked
-   */
-  showTooltip(message, cellElement) {
-    const tooltipContainer = document.getElementById('sea-icon-tooltip');
-    if (!tooltipContainer) return;
-    
-    // Hide any existing tooltip first
+ handleSeaIconClick(e) {
+  // Prevent the click from propagating to cell selection
+  e.preventDefault();
+  e.stopPropagation();
+  e.stopImmediatePropagation();
+  
+  // Mark this as a sea icon click
+  e._seaIconClick = true;
+  
+  const tooltip = e.currentTarget.dataset.seaTooltip || 
+                  e.currentTarget.getAttribute('data-sea-tooltip');
+  if (!tooltip) return;
+  
+  // Check if this tooltip is already showing for this cell
+  const isCurrentlyShowing = this.activeTooltip && 
+                            this.activeTooltip.textContent === tooltip &&
+                            this.activeTooltip.classList.contains('visible');
+  
+  if (isCurrentlyShowing) {
+    // Same icon clicked again - hide the tooltip
+    console.log('Same sea icon clicked - hiding tooltip');
     this.hideTooltip();
-    
-    // Set tooltip content
-    tooltipContainer.textContent = message;
-    
-    // Position tooltip above the cell
-    const rect = cellElement.getBoundingClientRect();
-    let left = rect.left + rect.width / 2;
-    let top = rect.top - 10;
-    
-    // Adjust for screen edges
-    const padding = 10;
-    const tooltipWidth = 220; // max-width from CSS
-    
-    if (left + tooltipWidth / 2 > window.innerWidth - padding) {
-      left = window.innerWidth - tooltipWidth / 2 - padding;
-    }
-    if (left - tooltipWidth / 2 < padding) {
-      left = tooltipWidth / 2 + padding;
-    }
-    
-    tooltipContainer.style.left = `${left}px`;
-    tooltipContainer.style.top = `${top}px`;
-    tooltipContainer.style.transform = 'translateX(-50%) translateY(-100%)';
-    
-    // Show tooltip
-    tooltipContainer.style.display = 'block';
-    requestAnimationFrame(() => {
-      tooltipContainer.classList.add('visible');
-    });
-    
-    // Store reference
-    this.activeTooltip = tooltipContainer;
-    this.activeTooltipCell = cellElement;
-    
-    // Hide after 8 seconds
-    this.tooltipTimeout = setTimeout(() => {
-      this.hideTooltip();
-    }, 8000);
-    
-    console.log('Tooltip shown:', message);
+  } else {
+    // Different icon or no tooltip showing - show this tooltip
+    console.log('Sea icon clicked - showing tooltip:', tooltip);
+    this.showTooltip(tooltip, e.currentTarget);
   }
-
+}
+  
+/**
+ * Show tooltip for sea icon (updated positioning for SVG icons)
+ * @param {string} message - Tooltip message
+ * @param {HTMLElement} iconElement - Icon element that was clicked
+ */
+showTooltip(message, iconElement) {
+  const tooltipContainer = document.getElementById('sea-icon-tooltip');
+  if (!tooltipContainer) return;
+  
+  // Hide any existing tooltip first
+  this.hideTooltip();
+  
+  // Set tooltip content
+  tooltipContainer.textContent = message;
+  
+  // Get the cell containing the icon for positioning
+  const cellElement = iconElement.closest('.grid-cell') || iconElement;
+  const rect = cellElement.getBoundingClientRect();
+  
+  // Position tooltip above the cell
+  let left = rect.left + rect.width / 2;
+  let top = rect.top - 10;
+  
+  // Adjust for screen edges
+  const padding = 10;
+  const tooltipWidth = 220; // max-width from CSS
+  
+  if (left + tooltipWidth / 2 > window.innerWidth - padding) {
+    left = window.innerWidth - tooltipWidth / 2 - padding;
+  }
+  if (left - tooltipWidth / 2 < padding) {
+    left = tooltipWidth / 2 + padding;
+  }
+  
+  tooltipContainer.style.left = `${left}px`;
+  tooltipContainer.style.top = `${top}px`;
+  tooltipContainer.style.transform = 'translateX(-50%) translateY(-100%)';
+  
+  // Show tooltip
+  tooltipContainer.style.display = 'block';
+  requestAnimationFrame(() => {
+    tooltipContainer.classList.add('visible');
+  });
+  
+  // Store reference
+  this.activeTooltip = tooltipContainer;
+  this.activeTooltipIcon = iconElement;
+  
+  // Hide after 8 seconds
+  this.tooltipTimeout = setTimeout(() => {
+    this.hideTooltip();
+  }, 8000);
+  
+  console.log('Tooltip shown:', message);
+}
+  
   /**
    * Hide tooltip
    */
