@@ -213,75 +213,73 @@ class IslandRenderer {
    * Icons become permanent cell styling that moves with CSS transforms
    */
   applySeaIconsWithBuffer() {
-    if (!this.gridRenderer) return;
+  if (!this.gridRenderer) return;
+  
+  console.log('Applying sea icons with buffer zone approach');
+  
+  // Calculate visible bounds with buffer
+  const bufferMinX = this._visibleBounds.minX - this._bufferSize;
+  const bufferMaxX = this._visibleBounds.maxX + this._bufferSize;
+  const bufferMinY = this._visibleBounds.minY - this._bufferSize;
+  const bufferMaxY = this._visibleBounds.maxY + this._bufferSize;
+  
+  // Get all grid cells in buffer zone
+  const bufferedCells = document.querySelectorAll('.grid-cell');
+  
+  let processedCount = 0;
+  let iconsApplied = 0;
+  
+  bufferedCells.forEach(cellElement => {
+    const x = parseInt(cellElement.dataset.gridX, 10);
+    const y = parseInt(cellElement.dataset.gridY, 10);
     
-    console.log('Applying sea icons with buffer zone approach');
+    // Skip if invalid coordinates
+    if (isNaN(x) || isNaN(y)) return;
     
-    // Calculate visible bounds with buffer
-    const bufferMinX = this._visibleBounds.minX - this._bufferSize;
-    const bufferMaxX = this._visibleBounds.maxX + this._bufferSize;
-    const bufferMinY = this._visibleBounds.minY - this._bufferSize;
-    const bufferMaxY = this._visibleBounds.maxY + this._bufferSize;
+    // Only process cells within buffer zone
+    if (x < bufferMinX || x >= bufferMaxX || y < bufferMinY || y >= bufferMaxY) {
+      return;
+    }
     
-    // Get all grid cells in buffer zone
-    const bufferedCells = document.querySelectorAll('.grid-cell');
+    processedCount++;
+    const cellKey = `${x},${y}`;
     
-    let processedCount = 0;
-    let iconsApplied = 0;
+    // SIMPLIFIED: Only check if this is a deep sea cell, don't remove existing icons
+    const isDeepSeaCell = this.isDeepSeaCell(cellElement);
     
-    bufferedCells.forEach(cellElement => {
-      const x = parseInt(cellElement.dataset.gridX, 10);
-      const y = parseInt(cellElement.dataset.gridY, 10);
+    // Skip non-deep-sea cells but don't remove existing icons
+    if (!isDeepSeaCell) {
+      return;
+    }
+    
+    // Check if we already have a decision for this cell
+    if (!this.seaIconDecisions.has(cellKey)) {
+      // Make a permanent decision for this cell
+      const shouldHaveIcon = Math.random() < this.iconChance;
       
-      // Skip if invalid coordinates
-      if (isNaN(x) || isNaN(y)) return;
-      
-      // Only process cells within buffer zone
-      if (x < bufferMinX || x >= bufferMaxX || y < bufferMinY || y >= bufferMaxY) {
-        return;
-      }
-      
-      processedCount++;
-      const cellKey = `${x},${y}`;
-      
-      // Check if this is a deep sea cell
-      const isDeepSeaCell = this.isDeepSeaCell(cellElement);
-      
-      if (!isDeepSeaCell) {
-        // Remove sea icon if cell is no longer deep sea
-        this.removeSeaIconFromCell(cellElement);
-        return;
-      }
-      
-      // Check if we already have a decision for this cell
-      if (!this.seaIconDecisions.has(cellKey)) {
-        // Make a permanent decision for this cell
-        const shouldHaveIcon = Math.random() < this.iconChance;
-        
-        if (shouldHaveIcon) {
-          const iconData = this.getRandomIconData();
-          this.seaIconDecisions.set(cellKey, {
-            hasIcon: true,
-            iconData: iconData
-          });
-        } else {
-          this.seaIconDecisions.set(cellKey, { hasIcon: false });
-        }
-      }
-      
-      // Apply or remove icon based on decision
-      const decision = this.seaIconDecisions.get(cellKey);
-      if (decision.hasIcon) {
-        this.applySeaIconToCell(cellElement, decision.iconData);
-        iconsApplied++;
+      if (shouldHaveIcon) {
+        const iconData = this.getRandomIconData();
+        this.seaIconDecisions.set(cellKey, {
+          hasIcon: true,
+          iconData: iconData
+        });
       } else {
-        this.removeSeaIconFromCell(cellElement);
+        this.seaIconDecisions.set(cellKey, { hasIcon: false });
       }
-    });
+    }
     
-    console.log(`Processed ${processedCount} cells in buffer zone, applied ${iconsApplied} sea icons`);
-  }
-
+    // Apply icon based on decision (but never remove)
+    const decision = this.seaIconDecisions.get(cellKey);
+    if (decision.hasIcon) {
+      this.applySeaIconToCell(cellElement, decision.iconData);
+      iconsApplied++;
+    }
+    // REMOVED: No longer remove icons during normal gameplay
+  });
+  
+  console.log(`Processed ${processedCount} cells in buffer zone, applied ${iconsApplied} sea icons`);
+}
+  
   applySeaIconToCell(cellElement, iconData) {
   // Check if cell already has the icon
   if (cellElement.classList.contains('has-sea-icon') && 
@@ -294,14 +292,10 @@ class IslandRenderer {
   cellElement.dataset.seaIcon = this.getIconUnicode(iconData.icon);
   cellElement.dataset.seaTooltip = iconData.tooltip;
   
-  // FIXED: Set up click event with more robust handling
+  // SIMPLIFIED: Set up click event (no need for cleanup since icons persist)
   if (!cellElement.dataset.seaIconListener) {
-    const clickHandler = (e) => this.handleSeaIconClick(e);
-    cellElement.addEventListener('click', clickHandler, true); // Use capture phase
+    cellElement.addEventListener('click', (e) => this.handleSeaIconClick(e), true);
     cellElement.dataset.seaIconListener = 'true';
-    
-    // Store reference to handler for potential cleanup
-    cellElement._seaIconClickHandler = clickHandler;
   }
 }
   
@@ -312,13 +306,8 @@ removeSeaIconFromCell(cellElement) {
   cellElement.classList.remove('has-sea-icon');
   delete cellElement.dataset.seaIcon;
   delete cellElement.dataset.seaTooltip;
-  
-  // FIXED: Clean up event listener if it exists
-  if (cellElement._seaIconClickHandler) {
-    cellElement.removeEventListener('click', cellElement._seaIconClickHandler, true);
-    delete cellElement._seaIconClickHandler;
-    delete cellElement.dataset.seaIconListener;
-  }
+  delete cellElement.dataset.seaIconListener;
+  // Note: Event listeners will be cleaned up when DOM elements are replaced
 }
   
   /**
