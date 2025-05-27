@@ -219,66 +219,80 @@ applySeaIconsWithBuffer() {
   
   console.log('Applying sea icons with buffer zone approach');
   
-  // Calculate visible bounds with buffer
-  const bufferMinX = this._visibleBounds.minX - this._bufferSize;
-  const bufferMaxX = this._visibleBounds.maxX + this._bufferSize;
-  const bufferMinY = this._visibleBounds.minY - this._bufferSize;
-  const bufferMaxY = this._visibleBounds.maxY + this._bufferSize;
+  // CRITICAL FIX: Ensure beach cell styling is applied FIRST
+  console.log('Ensuring beach cell styling is complete before applying sea icons...');
+  this._calculateStyles();
+  this._applyBeachCellStyles(true); // Force apply beach cell styles first
   
-  // Get all grid cells in buffer zone
-  const bufferedCells = document.querySelectorAll('.grid-cell');
-  
-  let processedCount = 0;
-  let iconsApplied = 0;
-  
-  bufferedCells.forEach(cellElement => {
-    const x = parseInt(cellElement.dataset.gridX, 10);
-    const y = parseInt(cellElement.dataset.gridY, 10);
+  // Use requestAnimationFrame to ensure DOM updates are complete
+  requestAnimationFrame(() => {
+    // Calculate visible bounds with buffer
+    const bufferMinX = this._visibleBounds.minX - this._bufferSize;
+    const bufferMaxX = this._visibleBounds.maxX + this._bufferSize;
+    const bufferMinY = this._visibleBounds.minY - this._bufferSize;
+    const bufferMaxY = this._visibleBounds.maxY + this._bufferSize;
     
-    // Skip if invalid coordinates
-    if (isNaN(x) || isNaN(y)) return;
+    // Get all grid cells in buffer zone
+    const bufferedCells = document.querySelectorAll('.grid-cell');
     
-    // Only process cells within buffer zone
-    if (x < bufferMinX || x >= bufferMaxX || y < bufferMinY || y >= bufferMaxY) {
-      return;
-    }
+    let processedCount = 0;
+    let iconsApplied = 0;
+    let seashoreExcluded = 0;
     
-    processedCount++;
-    const cellKey = `${x},${y}`;
-    
-    // FIXED: Enhanced deep sea check - exclude seashore cells
-    const isDeepSeaCell = this.isDeepSeaCell(cellElement);
-    
-    // Skip non-deep-sea cells (including seashore cells)
-    if (!isDeepSeaCell) {
-      return;
-    }
-    
-    // Check if we already have a decision for this cell
-    if (!this.seaIconDecisions.has(cellKey)) {
-      // Make a permanent decision for this cell
-      const shouldHaveIcon = Math.random() < this.iconChance;
+    bufferedCells.forEach(cellElement => {
+      const x = parseInt(cellElement.dataset.gridX, 10);
+      const y = parseInt(cellElement.dataset.gridY, 10);
       
-      if (shouldHaveIcon) {
-        const iconData = this.getRandomIconData();
-        this.seaIconDecisions.set(cellKey, {
-          hasIcon: true,
-          iconData: iconData
-        });
-      } else {
-        this.seaIconDecisions.set(cellKey, { hasIcon: false });
+      // Skip if invalid coordinates
+      if (isNaN(x) || isNaN(y)) return;
+      
+      // Only process cells within buffer zone
+      if (x < bufferMinX || x >= bufferMaxX || y < bufferMinY || y >= bufferMaxY) {
+        return;
       }
-    }
+      
+      processedCount++;
+      const cellKey = `${x},${y}`;
+      
+      // ENHANCED: Deep sea check with detailed logging
+      const isDeepSeaCell = this.isDeepSeaCell(cellElement);
+      
+      // Skip non-deep-sea cells (including seashore cells)
+      if (!isDeepSeaCell) {
+        // Check if this was excluded because it's a seashore cell
+        if (cellElement.classList.contains('sea-adjacent') || 
+            cellElement.classList.contains('preserved-beach-cell')) {
+          seashoreExcluded++;
+        }
+        return;
+      }
+      
+      // Check if we already have a decision for this cell
+      if (!this.seaIconDecisions.has(cellKey)) {
+        // Make a permanent decision for this cell
+        const shouldHaveIcon = Math.random() < this.iconChance;
+        
+        if (shouldHaveIcon) {
+          const iconData = this.getRandomIconData();
+          this.seaIconDecisions.set(cellKey, {
+            hasIcon: true,
+            iconData: iconData
+          });
+        } else {
+          this.seaIconDecisions.set(cellKey, { hasIcon: false });
+        }
+      }
+      
+      // Apply icon based on decision
+      const decision = this.seaIconDecisions.get(cellKey);
+      if (decision.hasIcon) {
+        this.applySeaIconToCell(cellElement, decision.iconData);
+        iconsApplied++;
+      }
+    });
     
-    // Apply icon based on decision
-    const decision = this.seaIconDecisions.get(cellKey);
-    if (decision.hasIcon) {
-      this.applySeaIconToCell(cellElement, decision.iconData);
-      iconsApplied++;
-    }
+    console.log(`Processed ${processedCount} cells, excluded ${seashoreExcluded} seashore cells, applied ${iconsApplied} sea icons`);
   });
-  
-  console.log(`Processed ${processedCount} cells in buffer zone, applied ${iconsApplied} sea icons`);
 }
   
  applySeaIconToCell(cellElement, iconData) {
@@ -351,14 +365,14 @@ removeSeaIconFromCell(cellElement) {
    * Check if a cell is a deep sea cell
    */
 isDeepSeaCell(cellElement) {
-  // FIXED: Explicit check for seashore/beach cells first
+  // EXPLICIT: Check for seashore/beach cells first with logging
   if (cellElement.classList.contains('sea-adjacent')) {
-    console.log('Cell is sea-adjacent (seashore), excluding from sea icons');
+    console.log('Cell excluded: sea-adjacent (seashore)');
     return false;
   }
   
   if (cellElement.classList.contains('preserved-beach-cell')) {
-    console.log('Cell is preserved beach cell, excluding from sea icons');
+    console.log('Cell excluded: preserved-beach-cell');
     return false;
   }
   
@@ -366,22 +380,27 @@ isDeepSeaCell(cellElement) {
   const computedStyle = window.getComputedStyle(cellElement);
   const backgroundColor = computedStyle.backgroundColor;
   
-  // FIXED: More specific color checks
+  // More specific color checks
   const isDeepBlue = this.isDeepBlueSeaColor(backgroundColor);
   
-  // Additional exclusions
+  // Additional exclusions for cells with content
   const hasLetter = cellElement.classList.contains('path-cell') ||
                    cellElement.classList.contains('selected-cell') ||
                    cellElement.classList.contains('start-cell');
   
-  // Must be deep blue AND not have any letters/special states
-  const result = isDeepBlue && !hasLetter;
-  
-  if (!result && isDeepBlue) {
-    console.log('Deep blue cell excluded due to letter/special state');
+  if (hasLetter) {
+    console.log('Cell excluded: has letter or special state');
+    return false;
   }
   
-  return result;
+  if (!isDeepBlue) {
+    console.log(`Cell excluded: not deep blue (color: ${backgroundColor})`);
+    return false;
+  }
+  
+  // This is a valid deep sea cell
+  console.log('Cell approved for sea icon: deep blue sea');
+  return true;
 }
   
   /**
@@ -927,6 +946,10 @@ getIconUnicode(iconClass) {
  * COMPLETE: _setupEventListeners method for IslandRenderer
  * Includes all functionality with sea icon tooltip fixes and scroll optimizations
  */
+/**
+ * FULLY UPDATED: _setupEventListeners method for IslandRenderer
+ * Includes all fixes: scroll optimization, sea icon timing, and tooltip enhancements
+ */
 _setupEventListeners() {
   // Track scroll events to pause updates during scrolling
   document.addEventListener('gridScrollStarted', (e) => {
@@ -1076,37 +1099,54 @@ _setupEventListeners() {
     });
   });
   
-  // Listen for grid created events (initial setup)
+  // UPDATED: Grid created event handler with proper sequencing
   document.addEventListener('gridCreated', (e) => {
     console.log('IslandRenderer: Grid created event detected');
     setTimeout(() => {
       this._calculateStyles();
       this._applyStyles(true);
       
-      // Apply sea icons with buffer zone after grid creation
-      this.applySeaIconsWithBuffer();
-    }, 200);
+      // ENHANCED: Ensure beach styling is complete before sea icons
+      setTimeout(() => {
+        console.log('Applying sea icons after grid creation and beach styling');
+        this.applySeaIconsWithBuffer();
+      }, 200); // Additional delay after beach styling
+    }, 400); // Increased initial delay
   });
   
-  // SEA ICONS: Listen for new puzzle/phrase events
+  // UPDATED: SEA ICONS - Listen for new puzzle/phrase events with proper sequencing
   document.addEventListener('pathSet', () => {
-    console.log('New path set - refreshing sea icons');
+    console.log('New path set - refreshing sea icons with proper sequencing');
     // Clear old decisions
     this.clearSeaIconDecisions();
     
-    // Apply new icons after a delay to let grid settle
+    // ENHANCED: Longer delay and ensure beach styling happens first
     setTimeout(() => {
       this._updateVisibleBounds();
-      this.applySeaIconsWithBuffer();
-    }, 300);
+      // Force beach cell calculations first
+      this._calculateStyles();
+      this._applyBeachCellStyles(true);
+      
+      // Then apply sea icons after beach styling is complete
+      setTimeout(() => {
+        this.applySeaIconsWithBuffer();
+      }, 100);
+    }, 500); // Increased delay to ensure grid is fully settled
   });
   
-  // SEA ICONS: Listen for island letters updated (new puzzle)
+  // UPDATED: SEA ICONS - Listen for island letters updated with proper sequencing
   document.addEventListener('islandLettersUpdated', () => {
     setTimeout(() => {
       this._updateVisibleBounds();
-      this.applySeaIconsWithBuffer();
-    }, 200);
+      // Force beach cell calculations first
+      this._calculateStyles();
+      this._applyBeachCellStyles(true);
+      
+      // Then apply sea icons after beach styling is complete
+      setTimeout(() => {
+        this.applySeaIconsWithBuffer();
+      }, 100);
+    }, 300); // Increased delay
   });
 
   // ENHANCED: Click handler with sea icon toggle support
@@ -1154,7 +1194,7 @@ _setupEventListeners() {
     }
   }, true); // Use capture phase to handle before other listeners
         
-  console.log('IslandRenderer: Complete event listeners set up with sea icon tooltip fixes');
+  console.log('IslandRenderer: Fully updated event listeners set up with all fixes');
 }
   
   /**
