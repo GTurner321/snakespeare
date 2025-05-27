@@ -108,7 +108,7 @@ initializeGrid() {
       isSelected: false,
       pathIndex: -1,
       // NEW: Add sea icon properties to grid data model
-      hasSeaIcon: false,
+      hasSeaIcon: undefined,
       seaIconData: null
     }))
   );
@@ -2616,39 +2616,39 @@ ensureSeaIconDecision(x, y) {
   
   const cell = this.grid[y][x];
   
-  // Skip if cell already has a sea icon decision made
-  if (cell.hasSeaIcon !== false || cell.seaIconData !== null) {
-    return; // Decision already made
+  // Skip if cell already has ANY sea icon decision made (including false)
+  if (cell.hasSeaIcon !== undefined) {
+    return; // Decision already exists
   }
   
   // Skip if this cell has a letter (path cells, random letters, etc.)
   if (cell.letter && cell.letter.trim() !== '') {
-    return; // Cells with letters never get sea icons
+    cell.hasSeaIcon = false;
+    cell.seaIconData = null;
+    return;
   }
   
   // Skip if this is a beach/shore cell (sea-adjacent)
-  if (this.isSeashoreCell && this.isSeashoreCell(x, y)) {
-    return; // Beach cells don't get sea icons
+  if (this.isSeashoreCell(x, y)) {
+    cell.hasSeaIcon = false;
+    cell.seaIconData = null;
+    return;
   }
   
-  // This should be a deep sea cell - check if it should get an icon
-  const iconChance = 0.05; // 5% chance (same as IslandRenderer)
+  // Make the decision only once
+  const iconChance = 0.05; // 5% chance
   const shouldHaveIcon = Math.random() < iconChance;
   
   if (shouldHaveIcon && window.islandRenderer) {
-    // Get icon data from IslandRenderer
     const iconData = window.islandRenderer.getRandomIconData();
-    
-    // Store the decision in the grid data model
     cell.hasSeaIcon = true;
     cell.seaIconData = iconData;
   } else {
-    // No icon for this cell
     cell.hasSeaIcon = false;
     cell.seaIconData = null;
   }
 }
-
+  
 /**
  * Helper method to check if a cell is a seashore/beach cell
  * @param {number} x - Grid X coordinate  
