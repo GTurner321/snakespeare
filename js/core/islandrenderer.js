@@ -281,7 +281,7 @@ applySeaIconsWithBuffer() {
   console.log(`Processed ${processedCount} cells in buffer zone, applied ${iconsApplied} sea icons`);
 }
   
-  applySeaIconToCell(cellElement, iconData) {
+ applySeaIconToCell(cellElement, iconData) {
   // Check if cell already has the icon
   if (cellElement.classList.contains('has-sea-icon') && 
       cellElement.dataset.seaIcon === this.getIconUnicode(iconData.icon)) {
@@ -293,9 +293,45 @@ applySeaIconsWithBuffer() {
   cellElement.dataset.seaIcon = this.getIconUnicode(iconData.icon);
   cellElement.dataset.seaTooltip = iconData.tooltip;
   
-  // SIMPLIFIED: Set up click event (no need for cleanup since icons persist)
+  // Set up click AND touch event listeners (if not already done)
   if (!cellElement.dataset.seaIconListener) {
+    // Mouse click handler
     cellElement.addEventListener('click', (e) => this.handleSeaIconClick(e), true);
+    
+    // ADDED: Touch handlers for mobile devices
+    cellElement.addEventListener('touchstart', (e) => {
+      // Store touch start info to detect taps vs swipes
+      cellElement._seaIconTouchStart = {
+        time: Date.now(),
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY
+      };
+    }, true);
+    
+    cellElement.addEventListener('touchend', (e) => {
+      // Only handle if we have touch start data
+      if (!cellElement._seaIconTouchStart) return;
+      
+      const touchDuration = Date.now() - cellElement._seaIconTouchStart.time;
+      const touchEndX = e.changedTouches[0].clientX;
+      const touchEndY = e.changedTouches[0].clientY;
+      const moveDistance = Math.sqrt(
+        Math.pow(touchEndX - cellElement._seaIconTouchStart.x, 2) + 
+        Math.pow(touchEndY - cellElement._seaIconTouchStart.y, 2)
+      );
+      
+      // Consider it a tap if duration < 500ms and movement < 10px
+      const isTap = touchDuration < 500 && moveDistance < 10;
+      
+      if (isTap) {
+        // Handle as sea icon click
+        this.handleSeaIconClick(e);
+      }
+      
+      // Clean up touch start data
+      delete cellElement._seaIconTouchStart;
+    }, true);
+    
     cellElement.dataset.seaIconListener = 'true';
   }
 }
@@ -351,19 +387,29 @@ isDeepSeaCell(cellElement) {
   /**
    * Handle sea icon click events
    */
- handleSeaIconClick(e) {
+handleSeaIconClick(e) {
   // Only handle clicks on the pseudo-element area (center of cell)
   const rect = e.currentTarget.getBoundingClientRect();
   const centerX = rect.left + rect.width / 2;
   const centerY = rect.top + rect.height / 2;
-  const clickX = e.clientX;
-  const clickY = e.clientY;
   
-  // Check if click is near center (where icon is)
+  // Handle both mouse and touch events
+  let clickX, clickY;
+  if (e.type === 'touchend' && e.changedTouches && e.changedTouches.length > 0) {
+    // Touch event
+    clickX = e.changedTouches[0].clientX;
+    clickY = e.changedTouches[0].clientY;
+  } else {
+    // Mouse event
+    clickX = e.clientX;
+    clickY = e.clientY;
+  }
+  
+  // Check if click/touch is near center (where icon is)
   const distance = Math.sqrt(Math.pow(clickX - centerX, 2) + Math.pow(clickY - centerY, 2));
   if (distance > 25) return; // Click too far from icon
   
-  // FIXED: Prevent the click from propagating AND mark it as handled
+  // Prevent the click from propagating
   e.preventDefault();
   e.stopPropagation();
   e.stopImmediatePropagation();
@@ -371,79 +417,92 @@ isDeepSeaCell(cellElement) {
   const tooltip = e.currentTarget.dataset.seaTooltip;
   if (!tooltip) return;
   
-  // FIXED: Add a flag to indicate this was a sea icon click
+  // Mark this as a sea icon click
   e._seaIconClick = true;
   
-  this.showTooltip(tooltip, e.currentTarget);
+  // FIXED: Toggle logic - check if this tooltip is already showing for this cell
+  const isCurrentlyShowing = this.activeTooltip && 
+                            this.activeTooltip.textContent === tooltip &&
+                            this.activeTooltip.classList.contains('visible');
   
-  console.log('Sea icon clicked - showing tooltip:', tooltip);
+  if (isCurrentlyShowing) {
+    // Same icon clicked again - hide the tooltip
+    console.log('Same sea icon clicked - hiding tooltip');
+    this.hideTooltip();
+  } else {
+    // Different icon or no tooltip showing - show this tooltip
+    console.log('Sea icon clicked - showing tooltip:', tooltip);
+    this.showTooltip(tooltip, e.currentTarget);
+  }
 }
-
+  
   /**
    * Show tooltip for sea icon
    */
   showTooltip(message, cellElement) {
-    const tooltipContainer = document.getElementById('sea-icon-tooltip');
-    if (!tooltipContainer) return;
-    
-    // Hide any existing tooltip
-    this.hideTooltip();
-    
-    // Set tooltip content
-    tooltipContainer.textContent = message;
-    
-    // Position tooltip above the cell
-    const rect = cellElement.getBoundingClientRect();
-    let left = rect.left + rect.width / 2;
-    let top = rect.top - 10;
-    
-    // Adjust for screen edges
-    const padding = 10;
-    const tooltipWidth = 220; // max-width from CSS
-    
-    if (left + tooltipWidth / 2 > window.innerWidth - padding) {
-      left = window.innerWidth - tooltipWidth / 2 - padding;
-    }
-    if (left - tooltipWidth / 2 < padding) {
-      left = tooltipWidth / 2 + padding;
-    }
-    
-    tooltipContainer.style.left = `${left}px`;
-    tooltipContainer.style.top = `${top}px`;
-    tooltipContainer.style.transform = 'translateX(-50%) translateY(-100%)';
-    
-    // Show tooltip
-    tooltipContainer.style.display = 'block';
-    requestAnimationFrame(() => {
-      tooltipContainer.classList.add('visible');
-    });
-    
-    // Store reference
-    this.activeTooltip = tooltipContainer;
-    
-    // Hide after 8 seconds
-    this.tooltipTimeout = setTimeout(() => {
-      this.hideTooltip();
-    }, 8000);
-    
-    console.log('Tooltip shown:', message);
+  const tooltipContainer = document.getElementById('sea-icon-tooltip');
+  if (!tooltipContainer) return;
+  
+  // Hide any existing tooltip first
+  this.hideTooltip();
+  
+  // Set tooltip content
+  tooltipContainer.textContent = message;
+  
+  // Position tooltip above the cell
+  const rect = cellElement.getBoundingClientRect();
+  let left = rect.left + rect.width / 2;
+  let top = rect.top - 10;
+  
+  // Adjust for screen edges
+  const padding = 10;
+  const tooltipWidth = 220; // max-width from CSS
+  
+  if (left + tooltipWidth / 2 > window.innerWidth - padding) {
+    left = window.innerWidth - tooltipWidth / 2 - padding;
   }
+  if (left - tooltipWidth / 2 < padding) {
+    left = tooltipWidth / 2 + padding;
+  }
+  
+  tooltipContainer.style.left = `${left}px`;
+  tooltipContainer.style.top = `${top}px`;
+  tooltipContainer.style.transform = 'translateX(-50%) translateY(-100%)';
+  
+  // Show tooltip
+  tooltipContainer.style.display = 'block';
+  requestAnimationFrame(() => {
+    tooltipContainer.classList.add('visible');
+  });
+  
+  // Store reference with the cell element for toggle detection
+  this.activeTooltip = tooltipContainer;
+  this.activeTooltipCell = cellElement; // Track which cell is showing tooltip
+  
+  // Hide after 8 seconds
+  this.tooltipTimeout = setTimeout(() => {
+    this.hideTooltip();
+  }, 8000);
+  
+  console.log('Tooltip shown:', message);
+}
 
   /**
    * Hide tooltip
    */
-  hideTooltip() {
-    if (this.activeTooltip) {
-      this.activeTooltip.classList.remove('visible');
-      this.activeTooltip.style.display = 'none';
-      this.activeTooltip = null;
-    }
-    
-    if (this.tooltipTimeout) {
-      clearTimeout(this.tooltipTimeout);
-      this.tooltipTimeout = null;
-    }
+hideTooltip() {
+  if (this.activeTooltip) {
+    this.activeTooltip.classList.remove('visible');
+    this.activeTooltip.style.display = 'none';
+    this.activeTooltip = null;
+    this.activeTooltipCell = null; // Clear cell reference
   }
+  
+  if (this.tooltipTimeout) {
+    clearTimeout(this.tooltipTimeout);
+    this.tooltipTimeout = null;
+  }
+}
 
   /**
    * Get Unicode character for Font Awesome icon
@@ -864,7 +923,11 @@ getIconUnicode(iconClass) {
     });
   }
 
- _setupEventListeners() {
+ /**
+ * COMPLETE: _setupEventListeners method for IslandRenderer
+ * Includes all functionality with sea icon tooltip fixes and scroll optimizations
+ */
+_setupEventListeners() {
   // Track scroll events to pause updates during scrolling
   document.addEventListener('gridScrollStarted', (e) => {
     this._scrollInProgress = true;
@@ -947,7 +1010,10 @@ getIconUnicode(iconClass) {
   immediateEvents.forEach(eventName => {
     document.addEventListener(eventName, () => {
       // Don't update during scrolling
-      if (this._scrollInProgress) return;
+      if (this._scrollInProgress) {
+        console.log(`Skipping ${eventName} update during scroll`);
+        return;
+      }
       
       // Update on next animation frame
       requestAnimationFrame(() => {
@@ -967,7 +1033,10 @@ getIconUnicode(iconClass) {
   delayedEvents.forEach(eventName => {
     document.addEventListener(eventName, () => {
       // Don't update during scrolling
-      if (this._scrollInProgress) return;
+      if (this._scrollInProgress) {
+        console.log(`Skipping ${eventName} update during scroll`);
+        return;
+      }
       
       // Clear existing timeout to debounce multiple events
       if (updateTimeoutId) {
@@ -991,7 +1060,10 @@ getIconUnicode(iconClass) {
   
   // Handle explicit update requests
   document.addEventListener('updateIslandStyling', () => {
-    if (this._scrollInProgress) return;
+    if (this._scrollInProgress) {
+      console.log('Skipping island styling update during scroll');
+      return;
+    }
     
     requestAnimationFrame(() => {
       this._calculateStyles();
@@ -1037,22 +1109,52 @@ getIconUnicode(iconClass) {
     }, 200);
   });
 
+  // ENHANCED: Click handler with sea icon toggle support
   document.addEventListener('click', (e) => {
-    // FIXED: Don't hide tooltip if this was a sea icon click
+    // Don't hide tooltip during scrolling
+    if (this._scrollInProgress) return;
+    
+    // Don't hide tooltip if this was a sea icon click
     if (e._seaIconClick) {
       return;
     }
     
-    // FIXED: More robust check for sea icon clicks
+    // Check if click was on a sea icon cell or its pseudo-element
     const isSeaIconClick = e.target.closest('.has-sea-icon') || 
                           e.target.classList.contains('has-sea-icon');
     
     if (!isSeaIconClick) {
       this.hideTooltip();
     }
-  }, true); // FIXED: Use capture phase to handle before other listeners
+  }, true); // Use capture phase to handle before other listeners
+  
+  // ADDED: Touch handler for hiding tooltips on touch devices
+  document.addEventListener('touchend', (e) => {
+    // Don't hide tooltip during scrolling
+    if (this._scrollInProgress) return;
+    
+    // Don't hide tooltip if this was a sea icon touch
+    if (e._seaIconClick) {
+      return;
+    }
+    
+    // Check if touch was on a sea icon cell
+    const touchTarget = document.elementFromPoint(
+      e.changedTouches[0].clientX, 
+      e.changedTouches[0].clientY
+    );
+    
+    const isSeaIconTouch = touchTarget && (
+      touchTarget.closest('.has-sea-icon') || 
+      touchTarget.classList.contains('has-sea-icon')
+    );
+    
+    if (!isSeaIconTouch) {
+      this.hideTooltip();
+    }
+  }, true); // Use capture phase to handle before other listeners
         
-  console.log('IslandRenderer: Clean event listeners set up');
+  console.log('IslandRenderer: Complete event listeners set up with sea icon tooltip fixes');
 }
   
   /**
