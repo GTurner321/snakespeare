@@ -135,7 +135,7 @@ class PathGenerator {
     // Always treat it as a single string
     if (typeof phrase === 'string') {
       // Filter out non-alphanumeric characters when splitting the string
-      const filtered = upperphrase.split('')
+      const filtered = upperPhrase.split('')
         .filter(char => includePattern.test(char));
       
       return filtered;
