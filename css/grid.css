@@ -15,6 +15,7 @@
    7. Animation and Touch Handling
    8. Erosion and Animation Effects
    9. Trackpad Control Styles
+   10. Shakespeare response
    ========================================================================== */
 
 /* ==========================================================================
@@ -1220,3 +1221,360 @@ body {
     z-index: 9;
 }
 
+/* ==========================================================================
+   10. Shakespeare Response Components
+   Interactive Shakespeare response boxes with quiz functionality
+   ========================================================================== */
+
+/* Modal overlay for Shakespeare response */
+.shakespeare-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  opacity: 1;
+  transition: opacity 1s ease;
+}
+
+.shakespeare-modal-overlay.fade-out {
+  opacity: 0;
+}
+
+/* Container for Shakespeare image and speech bubble */
+.shakespeare-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 85%;
+  margin: 0 auto;
+}
+
+/* Shakespeare image */
+.shakespeare-image {
+  width: 200px;
+  height: auto;
+  filter: drop-shadow(3px 3px 5px rgba(0, 0, 0, 0.3));
+  margin-top: 20px;
+}
+
+/* Post-it note style speech bubble - response box */
+.speech-bubble {
+  position: relative;
+  background: #fffacd; /* Light yellow post-it color */
+  border: none; /* Remove border as requested */
+  border-radius: 8px;
+  padding: 25px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-width: 420px; /* Reduced from 500px for better centering */
+  width: 100%;
+  text-align: center;
+}
+
+/* Triangle pointer for speech bubble - pointing down */
+.speech-bubble:after {
+  content: '';
+  position: absolute;
+  bottom: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 15px 15px 0;
+  border-style: solid;
+  border-color: #fffacd transparent;
+  display: block;
+  width: 0;
+}
+
+/* Response text styling */
+.response-text {
+  margin: 0 0 20px 0;
+  font-family: 'Trebuchet MS', Arial, sans-serif;
+  font-size: 22px;
+  line-height: 1.5;
+  color: #555; /* Dark grey as requested */
+}
+
+/* Question container */
+.question-container {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 2px solid #ddd;
+}
+
+/* Question text */
+.question-text {
+  margin: 0 0 20px 0;
+  font-family: 'Trebuchet MS', Arial, sans-serif;
+  font-size: 19px;
+  font-style: italic;
+  color: #666;
+  line-height: 1.4;
+}
+
+/* Button container */
+.button-container {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin-top: 15px;
+}
+
+/* Choice buttons */
+.choice-button {
+  padding: 12px 30px;
+  border: none;
+  border-radius: 25px;
+  font-family: 'Trebuchet MS', Arial, sans-serif;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  min-width: 80px;
+}
+
+.yes-button {
+  background: linear-gradient(135deg, #4CAF50, #45a049);
+  color: white;
+}
+
+.yes-button:hover {
+  background: linear-gradient(135deg, #45a049, #3d8b40);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+.no-button {
+  background: linear-gradient(135deg, #f44336, #da190b);
+  color: white;
+}
+
+.no-button:hover {
+  background: linear-gradient(135deg, #da190b, #c62828);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+.choice-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Info/Context Box Container */
+.info-box-container {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  z-index: 1900;
+  padding: 20px;
+  opacity: 1;
+  transition: opacity 1s ease, transform 0.5s ease;
+}
+
+.info-box-container.fade-out {
+  opacity: 0;
+  transform: translateY(100%);
+}
+
+/* Info/Context Box - speech bubble style */
+.info-box {
+  position: relative;
+  background: #fffacd; /* Match post-it color */
+  border: none; /* Remove border to match response box */
+  border-radius: 8px;
+  padding: 20px 25px;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.15);
+  max-width: 580px; /* Reduced from 700px for better centering */
+  width: 100%;
+  text-align: center;
+}
+
+/* Triangle pointer for info box - pointing up */
+.info-box:before {
+  content: '';
+  position: absolute;
+  top: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 0 15px 15px;
+  border-style: solid;
+  border-color: transparent transparent #fffacd;
+  display: block;
+  width: 0;
+}
+
+/* Close button - simplified dark grey X */
+.info-box-close {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  width: 24px;
+  height: 24px;
+  background: none; /* No circle background */
+  color: #555; /* Dark grey */
+  border: none;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: color 0.2s ease;
+  z-index: 10;
+  font-weight: bold;
+}
+
+.info-box-close:hover {
+  color: #333; /* Darker grey on hover */
+}
+
+.info-box-close:active {
+  color: #000; /* Black when pressed */
+}
+
+/* Feedback message */
+.feedback-message {
+  margin: 0 0 15px 0;
+  font-family: 'Trebuchet MS', Arial, sans-serif;
+  font-size: 20px;
+  font-weight: bold;
+  line-height: 1.4;
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.feedback-message.correct {
+  color: #2e7d32;
+  background-color: #e8f5e8;
+  border: 2px solid #4caf50;
+}
+
+.feedback-message.incorrect {
+  color: #c62828;
+  background-color: #fde7e7;
+  border: 2px solid #f44336;
+}
+
+/* Info text */
+.info-text {
+  margin: 0;
+  font-family: 'Trebuchet MS', Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #555; /* Dark grey to match response text */
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .shakespeare-container {
+    max-width: 90%;
+  }
+  
+  .shakespeare-image {
+    width: 150px;
+  }
+  
+  .speech-bubble {
+    padding: 20px;
+    max-width: 350px;
+  }
+  
+  .response-text {
+    font-size: 19px;
+  }
+  
+  .question-text {
+    font-size: 17px;
+  }
+  
+  .choice-button {
+    padding: 10px 20px;
+    font-size: 15px;
+    min-width: 70px;
+  }
+  
+  .button-container {
+    gap: 15px;
+  }
+  
+  .info-box {
+    padding: 15px 20px;
+    max-width: 90%;
+  }
+  
+  .feedback-message {
+    font-size: 18px;
+  }
+  
+  .info-text {
+    font-size: 15px;
+  }
+}
+
+/* Small screens */
+@media (max-width: 480px) {
+  .shakespeare-container {
+    max-width: 95%;
+  }
+  
+  .shakespeare-image {
+    width: 120px;
+  }
+  
+  .speech-bubble {
+    padding: 15px;
+    max-width: 280px;
+  }
+  
+  .response-text {
+    font-size: 17px;
+  }
+  
+  .question-text {
+    font-size: 15px;
+  }
+  
+  .choice-button {
+    padding: 8px 16px;
+    font-size: 14px;
+    min-width: 60px;
+  }
+  
+  .button-container {
+    gap: 12px;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .choice-button {
+    width: 120px;
+  }
+  
+  .info-box {
+    padding: 12px 15px;
+  }
+  
+  .feedback-message {
+    font-size: 16px;
+  }
+  
+  .info-text {
+    font-size: 14px;
+  }
+  
+  .info-box-close {
+    width: 20px;
+    height: 20px;
+    font-size: 16px;
+  }
+}
