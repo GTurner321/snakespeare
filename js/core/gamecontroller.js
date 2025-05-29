@@ -2002,16 +2002,16 @@ async loadPhraseData(csvUrl) {
     });
     
     // In gamecontroller.js, update the filtering logic in loadPhraseData:
-    // Filter phrases to only those with IDs between 3001-3050
+    // Filter phrases to only those with IDs between 3001-3100
     const shakespearePhrases = allPhrases.filter(phrase => {
       // Parse the id as an integer
       const id = parseInt(phrase.id, 10);
       
       // Debug: Log each ID check
-      console.log(`Checking phrase ID: ${phrase.id}, parsed as: ${id}, valid ID: ${!isNaN(id)}, in range: ${id >= 3001 && id <= 3050}`);
+      console.log(`Checking phrase ID: ${phrase.id}, parsed as: ${id}, valid ID: ${!isNaN(id)}, in range: ${id >= 3001 && id <= 3100}`);
       
       // Make sure id is a valid number and within range
-      return !isNaN(id) && id >= 3001 && id <= 3050;
+      return !isNaN(id) && id >= 3001 && id <= 3100;
     });
     
     console.log(`Loaded ${shakespearePhrases.length} Shakespeare phrases from CSV`);
@@ -2024,7 +2024,7 @@ async loadPhraseData(csvUrl) {
     // Rest of the code remains the same...
     // If no phrases in range, fall back to all phrases
     if (shakespearePhrases.length === 0) {
-      console.warn('No phrases found in ID range 3001-3050, using all phrases');
+      console.warn('No phrases found in ID range 3001-3100, using all phrases');
       this.phrases = allPhrases;
     } else {
       this.phrases = shakespearePhrases;
