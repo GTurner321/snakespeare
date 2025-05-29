@@ -74,10 +74,10 @@ class PathGenerator {
   
   /**
    * Generate a path for the given letter sequence
-   * @param {Array|String} letterList - Array of letters or string to be positioned on the grid
+   * @param {Array|String} phrase - Array of letters or string to be positioned on the grid
    * @return {Array|null} Array of {x, y, letter} objects representing the path, or null if incomplete
    */
-  generatePath(letterList) {
+  generatePath(phrase) {
     // Reset state for new path generation
     this.visited = new Set();
     this.path = [];
@@ -89,7 +89,7 @@ class PathGenerator {
     this.layer3Cells = [];
     
     // Parse letter list to ensure it's in the right format (skipping spaces)
-    const letters = this.parseLetterList(letterList);
+    const letters = this.parseletterlist(phrase);
     
     // Start at coordinate (0,0)
     let currentX = 0;
@@ -123,24 +123,26 @@ class PathGenerator {
   
   /**
    * Parse letter list to ensure it's an array of characters, skipping spaces and punctuation
-   * @param {Array|String} letterList - Input letter list
+   * @param {Array|String} phrase - Input letter list
    * @return {Array} Array of letters without spaces or punctuation
    */
-  parseLetterList(letterList) {
+  parseletterlist(phrase) {
     // Define a regex pattern for characters to include (letters and numbers only)
+    const upperPhrase = phrase.toUpperCase();
+    
     const includePattern = /[a-zA-Z0-9]/;
     
     // Always treat it as a single string
-    if (typeof letterList === 'string') {
+    if (typeof phrase === 'string') {
       // Filter out non-alphanumeric characters when splitting the string
-      const filtered = letterList.split('')
+      const filtered = upperphrase.split('')
         .filter(char => includePattern.test(char));
       
       return filtered;
     }
     // If it's already an array
-    else if (Array.isArray(letterList)) {
-      return letterList.filter(char => includePattern.test(char));
+    else if (Array.isArray(phrase)) {
+      return phrase.map(char => char.toUpperCase()).filter(char => includePattern.test(char));
     }
     // Default fallback
     return "TESTPHRASE".split('');
