@@ -314,33 +314,33 @@ checkHintLetterConflict(selectedLetters) {
     revealedLetters.map(l => `${l.letter}(${l.pathIndex})`).join(', '));
   
   // Map revealed letters to their expected positions in the phrase
-  const letterlistArray = this.currentPhrase.letterlist.split('');
+  const phraseArray = this.currentPhrase.phrase.split('');
   const alphaPositions = [];
   let alphaIndex = 0;
   
   // Find positions of all alphanumeric characters in the phrase
-  for (let i = 0; i < letterlistArray.length; i++) {
-    if (/[a-zA-Z0-9]/.test(letterlistArray[i])) {
+  for (let i = 0; i < phraseArray.length; i++) {
+    if (/[a-zA-Z0-9]/.test(phraseArray[i])) {
       alphaPositions[alphaIndex] = i;
       alphaIndex++;
     }
   }
   
   // Create an array representing the phrase with hint letters
-  const hintArray = this.createBlankTemplate(this.currentPhrase.letterlist).split('');
+  const hintArray = this.createBlankTemplate(this.currentPhrase.phrase).split('');
   
   // Fill in hint positions
   for (const revealedLetter of revealedLetters) {
     if (revealedLetter.pathIndex >= 0 && revealedLetter.pathIndex < alphaPositions.length) {
       const phrasePos = alphaPositions[revealedLetter.pathIndex];
       if (phrasePos !== undefined) {
-        hintArray[phrasePos] = letterlistArray[phrasePos].toUpperCase();
+        hintArray[phrasePos] = phraseArray[phrasePos].toUpperCase();
       }
     }
   }
   
   // Create an array representing selected letters
-  const selectedArray = this.createBlankTemplate(this.currentPhrase.letterlist).split('');
+  const selectedArray = this.createBlankTemplate(this.currentPhrase.phrase).split('');
   
   // Fill in selected positions (excluding start cell which is already accounted for)
   // Important: start with position 1 since position 0 is the start cell
@@ -460,8 +460,8 @@ isCorrectPhrase() {
     return false;
   }
   
-  // Get the expected phrase text - use letterlist which includes spaces and punctuation
-  const expectedText = this.currentPhrase.letterlist;
+  // Get the expected phrase text - use phrase which includes spaces and punctuation
+  const expectedText = this.currentPhrase.phrase;
   
   // Compare ignoring case - we just need the text to match
   const isEqual = currentDisplayText.toUpperCase() === expectedText.toUpperCase();
@@ -478,11 +478,11 @@ isCorrectPhrase() {
 parseExpectedLetters() {
   if (!this.currentPhrase) return [];
   
-  // Use letterlist as the source of expected letters
-  const letterList = this.currentPhrase.letterlist;
+  // Use phrase as the source of expected letters
+  const phrase = this.currentPhrase.phrase;
   
   // Filter out only alphanumeric characters
-  return letterList.split('')
+  return phrase.split('')
     .filter(char => /[a-zA-Z0-9]/i.test(char))
     .map(char => char.toUpperCase());
 }
@@ -616,14 +616,14 @@ updatePhraseWithHints() {
   const revealedLetters = this.gridRenderer.getRevealedLetters();
   
   // Map path indices to positions in the phrase
-  const letterlistArray = this.currentPhrase.letterlist.split('');
+  const phraseArray = this.currentPhrase.phrase.split('');
   const alphaPositions = [];
   let alphaIndex = 0;
   
   // Find positions of ONLY alphanumeric characters (NOT apostrophes)
-  for (let i = 0; i < letterlistArray.length; i++) {
+  for (let i = 0; i < phraseArray.length; i++) {
     // Only alphanumeric characters count as letters that need to be filled
-    if (/[a-zA-Z0-9]/.test(letterlistArray[i])) {
+    if (/[a-zA-Z0-9]/.test(phraseArray[i])) {
       alphaPositions[alphaIndex] = i;
       alphaIndex++;
     }
@@ -641,13 +641,13 @@ updatePhraseWithHints() {
       if (revealedLetter.pathIndex >= 0 && revealedLetter.pathIndex < alphaPositions.length) {
         const phrasePos = alphaPositions[revealedLetter.pathIndex];
         if (phrasePos !== undefined) {
-          templateArray[phrasePos] = letterlistArray[phrasePos].toUpperCase();
+          templateArray[phrasePos] = phraseArray[phrasePos].toUpperCase();
           
           // Store this hint letter
           hintLetters.push({
             position: phrasePos,
             pathIndex: revealedLetter.pathIndex,
-            letter: letterlistArray[phrasePos].toUpperCase()
+            letter: phraseArray[phrasePos].toUpperCase()
           });
         }
       }
@@ -888,13 +888,13 @@ updatePhraseFromSelections(selectedLetters) {
   // If we have a phrase and template
   if (this.phraseTemplate) {
     // Create a mapping from path indices to phrase positions
-    const letterlistArray = this.currentPhrase.letterlist.split('');
+    const phraseArray = this.currentPhrase.phrase.split('');
     const alphaPositions = [];
     let alphaIndex = 0;
     
     // CRITICAL FIX: Include apostrophes in valid character mapping
-    for (let i = 0; i < letterlistArray.length; i++) {
-      if (/[a-zA-Z0-9']/.test(letterlistArray[i])) {
+    for (let i = 0; i < phraseArray.length; i++) {
+      if (/[a-zA-Z0-9']/.test(phraseArray[i])) {
         alphaPositions[alphaIndex] = i;
         alphaIndex++;
       }
@@ -994,7 +994,7 @@ isWordCompleted(wordIndex) {
   
   // Build array of expected letters and their positions
   for (let i = wordBoundary.start; i <= wordBoundary.end; i++) {
-    const char = this.currentPhrase.letterlist[i];
+    const char = this.currentPhrase.phrase[i];
     if (/[a-zA-Z0-9]/.test(char)) {
       expectedLetters.push(char.toUpperCase());
       letterPositions.push(i);
@@ -1113,9 +1113,9 @@ checkPhraseCompleted() {
   const selectedLetters = this.gridRenderer.getSelectedLetters();
   const validSelectedLetters = selectedLetters.filter(cell => cell.letter.trim() !== '');
   
-  // FIXED: Count ONLY alphanumeric characters in the letterlist (NOT apostrophes)
-  const letterListArray = this.currentPhrase.letterlist.split('');
-  const letterPositions = letterListArray.filter(char => /[a-zA-Z0-9]/.test(char)).length;
+  // FIXED: Count ONLY alphanumeric characters in the phrase (NOT apostrophes)
+  const phraseArray = this.currentPhrase.phrase.split('');
+  const letterPositions = phraseArray.filter(char => /[a-zA-Z0-9]/.test(char)).length;
   
   // Subtract 1 from the total count to account for the start cell which is excluded
   const targetLetterCount = letterPositions - 1;
@@ -1193,7 +1193,7 @@ flashCompletedWord(wordIndex) {
   console.log(`Flashing snake pieces for CORRECTLY completed word "${wordBoundary.word}"`);
   
   // Get the expected word (without apostrophes or punctuation)
-  const expectedWord = this.currentPhrase.letterlist
+  const expectedWord = this.currentPhrase.phrase
     .substring(wordBoundary.start, wordBoundary.end + 1)
     .replace(/[^a-zA-Z0-9]/g, '') // Remove all non-alphanumeric characters
     .toUpperCase();
@@ -1211,11 +1211,11 @@ flashCompletedWord(wordIndex) {
   const correctPathIndices = [];
   
   // Map each alphanumeric character in the entire phrase to its path index
-  const letterlistArray = this.currentPhrase.letterlist.split('');
+  const phraseArray = this.currentPhrase.phrase.split('');
   let pathIndex = 0;
   
-  for (let i = 0; i < letterlistArray.length; i++) {
-    const char = letterlistArray[i];
+  for (let i = 0; i < phraseArray.length; i++) {
+    const char = phraseArray[i];
     
     // If this is an alphanumeric character
     if (/[a-zA-Z0-9]/.test(char)) {
@@ -1795,12 +1795,12 @@ async loadPhrase(phraseData) {
   }
   
   // Parse letter list from phrase data 
-  const letterList = phraseData.letterlist;
+  const phrase = phraseData.phrase;
   
-  console.log(`Loading phrase: "${letterList}" with letterlist: "${letterList}"`);
+  console.log(`Loading phrase: "${phrase}" with phrase: "${phrase}"`);
   
-  // Create the phrase template with underscores using letterlist
-  this.phraseTemplate = this.createPhraseTemplate(letterList);
+  // Create the phrase template with underscores using phrase
+  this.phraseTemplate = this.createPhraseTemplate(phrase);
 
   this.highestHintLevelUsed = 0;
   if (this.gridRenderer) {
@@ -1823,7 +1823,7 @@ async loadPhrase(phraseData) {
     console.log(`Path generation attempt #${attempts} of ${MAX_ATTEMPTS}`);
     
     // Generate path using path generator (will filter out non-alphanumerics)
-    this.currentPath = this.pathGenerator.generatePath(letterList);
+    this.currentPath = this.pathGenerator.generatePath(phrase);
     
     // Check if path is null (incomplete) before setting
     if (this.currentPath === null) {
@@ -1957,7 +1957,6 @@ async loadSampleData() {
   const samplePhrase = {
     id: 1,
     phrase: "TIME FLIES LIKE AN ARROW",
-    letterlist: "TIME FLIES LIKE AN ARROW", // Now with spaces
     lettercount: 23,
     wordcount: 5,
     meaning: "Time passes quickly",
@@ -2089,20 +2088,20 @@ parseCSV(csvData) {
 parseWordBoundaries() {
   console.log('Parsing word boundaries (FIXED VERSION)');
   
-  if (!this.currentPhrase || !this.currentPhrase.letterlist) {
+  if (!this.currentPhrase || !this.currentPhrase.phrase) {
     console.log('No current phrase to parse');
     return;
   }
   
-  const letterList = this.currentPhrase.letterlist;
+  const phrase = this.currentPhrase.phrase;
   this.wordBoundaries = [];
   
   let currentWordStart = null;
   let inWord = false;
   
-  // Parse through the letterlist character by character
-  for (let i = 0; i < letterList.length; i++) {
-    const char = letterList[i];
+  // Parse through the phrase character by character
+  for (let i = 0; i < phrase.length; i++) {
+    const char = phrase[i];
     
     // CRITICAL FIX: Alphanumeric characters AND apostrophes are considered part of words
     // Only spaces and other punctuation (except apostrophes) end words
@@ -2118,7 +2117,7 @@ parseWordBoundaries() {
         this.wordBoundaries.push({
           start: currentWordStart,
           end: i - 1,
-          word: letterList.substring(currentWordStart, i)
+          word: phrase.substring(currentWordStart, i)
         });
       }
       inWord = false;
@@ -2129,8 +2128,8 @@ parseWordBoundaries() {
   if (inWord) {
     this.wordBoundaries.push({
       start: currentWordStart,
-      end: letterList.length - 1,
-      word: letterList.substring(currentWordStart)
+      end: phrase.length - 1,
+      word: phrase.substring(currentWordStart)
     });
   }
   
