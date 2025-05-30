@@ -304,18 +304,6 @@ hideInfoBox() {
     console.log('Info box hidden, interaction complete');
   }, this.options.fadeDuration);
 }
-  
-  /**
-   * Hide the response modal
-   */
-  hideResponse() {
-    // Don't hide the modal overlay immediately - only hide the speech bubble content
-    this.bubbleContainer.style.opacity = '0';
-    this.shakespeareImage.style.opacity = '0.3'; // Make Shakespeare semi-transparent but still visible
-    
-    // Don't actually hide the modal until info box is closed
-    console.log('Shakespeare response hidden but image remains visible');
-  }
 
 /**
  * Hide the info box - FIXED VERSION
