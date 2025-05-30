@@ -1226,7 +1226,7 @@ body {
    Interactive Shakespeare response boxes with quiz functionality
    ========================================================================== */
 
-/* Modal overlay for Shakespeare response */
+/* Modal overlay for Shakespeare response - MOVED HIGHER */
 .shakespeare-modal-overlay {
   position: fixed;
   top: 0;
@@ -1236,13 +1236,13 @@ body {
   background-color: rgba(0, 0, 0, 0.7);
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start; /* Changed from center to flex-start */
   z-index: 2000;
   opacity: 1;
   transition: opacity 1s ease;
-  /* Raised higher - moved up from center */
-  padding-top: 80px;
-  padding-bottom: 120px;
+  /* Moved higher up on page */
+  padding-top: 40px; /* Reduced from 80px */
+  padding-bottom: 20px; /* Reduced from 120px */
 }
 
 .shakespeare-modal-overlay.fade-out {
@@ -1256,6 +1256,7 @@ body {
   align-items: center;
   max-width: 85%;
   margin: 0 auto;
+  transition: transform 0.8s ease; /* Smooth transition for upward movement */
 }
 
 /* Shakespeare image */
@@ -1264,24 +1265,25 @@ body {
   height: auto;
   filter: drop-shadow(3px 3px 5px rgba(0, 0, 0, 0.3));
   margin-top: 20px;
-  transition: opacity 1s ease, transform 0.5s ease;
+  transition: opacity 1s ease, transform 0.8s ease;
+  z-index: 2100; /* Ensure image stays above info box */
 }
 
-/* Shakespeare image moves up when info box appears */
-.info-box-container:not([style*="display: none"]) ~ .shakespeare-modal-overlay .shakespeare-image {
-  transform: translateY(-100px);
+/* Shakespeare container moves up when info box appears - IMPROVED */
+.info-box-container:not([style*="display: none"]) ~ .shakespeare-modal-overlay .shakespeare-container {
+  transform: translateY(-120px); /* Move entire container up */
 }
 
 /* Post-it note style speech bubble - response box */
 .speech-bubble {
   position: relative;
   background: #fffacd; /* Light yellow post-it color */
-  border: none; /* Remove border as requested */
+  border: none;
   border-radius: 8px;
   padding: 25px;
   margin-bottom: 30px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  max-width: 420px; /* Reduced from 500px for better centering */
+  max-width: 420px;
   width: 100%;
   text-align: center;
   transition: opacity 1s ease;
@@ -1305,25 +1307,24 @@ body {
 .response-text {
   margin: 0 0 20px 0;
   font-family: 'Trebuchet MS', Arial, sans-serif;
-  font-size: 18px; /* Unified size */
+  font-size: 18px;
   line-height: 1.5;
-  color: #555; /* Dark grey as requested */
+  color: #555;
 }
 
-/* Question container - REMOVED BORDER */
+/* Question container */
 .question-container {
   margin-top: 20px;
   padding-top: 20px;
-  /* border-top: 2px solid #ddd; REMOVED */
 }
 
 /* Question text - UNIFIED FONT SIZE */
 .question-text {
   margin: 0 0 20px 0;
   font-family: 'Trebuchet MS', Arial, sans-serif;
-  font-size: 18px; /* Unified size - same as response text */
-  color: #555; /* Changed from #666 to match other text */
-  line-height: 1.5; /* Consistent line height */
+  font-size: 18px;
+  color: #555;
+  line-height: 1.5;
 }
 
 /* Button container */
@@ -1375,15 +1376,15 @@ body {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-/* Info/Context Box Container - MOVED UP */
+/* Info/Context Box Container - POSITIONED TO AVOID OVERLAP */
 .info-box-container {
   position: fixed;
-  bottom: 60px; /* Moved up from 0 */
+  bottom: 20px; /* Positioned at bottom */
   left: 0;
   width: 100%;
   display: flex;
   justify-content: center;
-  z-index: 1900;
+  z-index: 1900; /* Lower than Shakespeare image */
   padding: 20px;
   opacity: 1;
   transition: opacity 1s ease, transform 0.5s ease;
@@ -1397,12 +1398,12 @@ body {
 /* Info/Context Box - speech bubble style */
 .info-box {
   position: relative;
-  background: #fffacd; /* Match post-it color */
-  border: none; /* Remove border to match response box */
+  background: #fffacd;
+  border: none;
   border-radius: 8px;
   padding: 20px 25px;
   box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.15);
-  max-width: 580px; /* Reduced from 700px for better centering */
+  max-width: 580px;
   width: 100%;
   text-align: center;
 }
@@ -1428,8 +1429,8 @@ body {
   right: 12px;
   width: 24px;
   height: 24px;
-  background: none; /* No circle background */
-  color: #555; /* Dark grey */
+  background: none;
+  color: #555;
   border: none;
   font-size: 20px;
   line-height: 1;
@@ -1444,37 +1445,35 @@ body {
 }
 
 .info-box-close:hover {
-  color: #333; /* Darker grey on hover */
+  color: #333;
 }
 
 .info-box-close:active {
-  color: #000; /* Black when pressed */
+  color: #000;
 }
 
 /* Feedback message - UNIFIED FONT SIZE */
 .feedback-message {
   margin: 0 0 15px 0;
   font-family: 'Trebuchet MS', Arial, sans-serif;
-  font-size: 18px; /* Unified size - same as other text */
-  font-weight: normal; /* Changed from bold */
-  line-height: 1.5; /* Consistent line height */
-  color: #555; /* Dark grey to match other text */
-  /* Remove all box styling */
-  padding: 0; /* Remove padding */
-  border-radius: 0; /* Remove border radius */
-  background-color: transparent; /* Remove background */
-  border: none; /* Remove border */
+  font-size: 18px;
+  font-weight: normal;
+  line-height: 1.5;
+  color: #555;
+  padding: 0;
+  border-radius: 0;
+  background-color: transparent;
+  border: none;
 }
 
-/* Remove the different colored feedback states */
 .feedback-message.correct {
-  color: #555; /* Same dark grey as other text */
+  color: #555;
   background-color: transparent;
   border: none;
 }
 
 .feedback-message.incorrect {
-  color: #555; /* Same dark grey as other text */
+  color: #555;
   background-color: transparent;
   border: none;
 }
@@ -1483,16 +1482,16 @@ body {
 .info-text {
   margin: 0;
   font-family: 'Trebuchet MS', Arial, sans-serif;
-  font-size: 18px; /* Unified size - same as other text */
-  line-height: 1.5; /* Consistent line height */
-  color: #555; /* Dark grey to match response text */
+  font-size: 18px;
+  line-height: 1.5;
+  color: #555;
 }
 
 /* Mobile responsive adjustments */
 @media (max-width: 768px) {
   .shakespeare-modal-overlay {
-    padding-top: 60px;
-    padding-bottom: 100px;
+    padding-top: 30px; /* Reduced */
+    padding-bottom: 15px; /* Reduced */
   }
   
   .shakespeare-container {
@@ -1503,8 +1502,8 @@ body {
     width: 150px;
   }
   
-  .info-box-container:not([style*="display: none"]) ~ .shakespeare-modal-overlay .shakespeare-image {
-    transform: translateY(-75px);
+  .info-box-container:not([style*="display: none"]) ~ .shakespeare-modal-overlay .shakespeare-container {
+    transform: translateY(-100px); /* Adjusted for mobile */
   }
   
   .speech-bubble {
@@ -1513,11 +1512,11 @@ body {
   }
   
   .response-text {
-    font-size: 16px; /* Unified mobile size */
+    font-size: 16px;
   }
   
   .question-text {
-    font-size: 16px; /* Unified mobile size */
+    font-size: 16px;
   }
   
   .choice-button {
@@ -1531,7 +1530,7 @@ body {
   }
   
   .info-box-container {
-    bottom: 40px;
+    bottom: 15px; /* Reduced */
   }
   
   .info-box {
@@ -1540,20 +1539,20 @@ body {
   }
   
   .feedback-message {
-    font-size: 16px; /* Unified mobile size */
+    font-size: 16px;
     font-weight: normal;
   }
   
   .info-text {
-    font-size: 16px; /* Unified mobile size */
+    font-size: 16px;
   }
 }
 
 /* Small screens */
 @media (max-width: 480px) {
   .shakespeare-modal-overlay {
-    padding-top: 40px;
-    padding-bottom: 80px;
+    padding-top: 20px; /* Further reduced */
+    padding-bottom: 10px; /* Further reduced */
   }
   
   .shakespeare-container {
@@ -1564,8 +1563,8 @@ body {
     width: 120px;
   }
   
-  .info-box-container:not([style*="display: none"]) ~ .shakespeare-modal-overlay .shakespeare-image {
-    transform: translateY(-60px);
+  .info-box-container:not([style*="display: none"]) ~ .shakespeare-modal-overlay .shakespeare-container {
+    transform: translateY(-80px); /* Adjusted for small screens */
   }
   
   .speech-bubble {
@@ -1574,11 +1573,11 @@ body {
   }
   
   .response-text {
-    font-size: 15px; /* Unified small screen size */
+    font-size: 15px;
   }
   
   .question-text {
-    font-size: 15px; /* Unified small screen size */
+    font-size: 15px;
   }
   
   .choice-button {
@@ -1598,7 +1597,7 @@ body {
   }
   
   .info-box-container {
-    bottom: 20px;
+    bottom: 10px; /* Further reduced */
   }
   
   .info-box {
@@ -1606,12 +1605,12 @@ body {
   }
   
   .feedback-message {
-    font-size: 15px; /* Unified small screen size */
+    font-size: 15px;
     font-weight: normal;
   }
   
   .info-text {
-    font-size: 15px; /* Unified small screen size */
+    font-size: 15px;
   }
   
   .info-box-close {
