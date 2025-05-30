@@ -2090,7 +2090,7 @@ createCellElement(x, y) {
     // Skip cells with letters
     if (!cell.letter || cell.letter.trim() === '') {
       // Skip beach/seashore cells (they have sea-adjacent class)
-      if (!cellElement.classList.contains('sea-adjacent')) {
+      if (!this.isSeashoreCell(x, y)) {
         // This is a deep sea cell - ensure it has a sea icon decision
         this.ensureSeaIconDecision(x, y);
         
@@ -2709,7 +2709,7 @@ ensureSeaIconDecision(x, y) {
   }
   
   // Make the decision only once
-  const iconChance = 0.05; // 5% chance
+  const iconChance = 0.03; // 3% chance
   const shouldHaveIcon = Math.random() < iconChance;
   
   if (shouldHaveIcon && window.islandRenderer) {
