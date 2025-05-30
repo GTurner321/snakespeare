@@ -1,7 +1,7 @@
 /**
  * Fixed Triangular Arrow Controller
  * Creates 4 triangular buttons arranged in a square formation with an X pattern
- * Properly handles touch, click, and long press events
+ * Properly handles touch, click, and long press events INCLUDING long mouse clicks
  */
 
 class ArrowButtons {
@@ -23,10 +23,14 @@ class ArrowButtons {
     this.currentDirection = null;
     this.isLongPressing = false;
     this.animationFrameId = null;
+    this.longPressTimer = null;
     
     // Movement state
     this._isScrolling = false;
     this._lastMovementTime = 0;
+    
+    // Track input type to handle mouse vs touch differently
+    this.currentInputType = null;
     
     // Create the controller
     this.createController();
@@ -442,20 +446,58 @@ class ArrowButtons {
   setupEventListeners() {
     // Add event listeners to each triangle
     this.triangles.forEach(triangle => {
-      // Mouse events
-      triangle.addEventListener('mousedown', (e) => this.handlePressStart(e));
-      triangle.addEventListener('mouseup', (e) => this.handlePressEnd(e));
-      triangle.addEventListener('mouseleave', (e) => this.handlePressEnd(e));
+      // Mouse events - handle long click properly
+      triangle.addEventListener('mousedown', (e) => {
+        this.currentInputType = 'mouse';
+        this.handlePressStart(e);
+      });
+      
+      triangle.addEventListener('mouseup', (e) => {
+        if (this.currentInputType === 'mouse') {
+          this.handlePressEnd(e);
+        }
+      });
+      
+      // Only end on mouseleave if we're not in a long press
+      // This prevents accidental endings during long clicks
+      triangle.addEventListener('mouseleave', (e) => {
+        if (this.currentInputType === 'mouse' && !this.isLongPressing) {
+          this.handlePressEnd(e);
+        }
+      });
       
       // Touch events
-      triangle.addEventListener('touchstart', (e) => this.handlePressStart(e));
-      triangle.addEventListener('touchend', (e) => this.handlePressEnd(e));
-      triangle.addEventListener('touchcancel', (e) => this.handlePressEnd(e));
+      triangle.addEventListener('touchstart', (e) => {
+        this.currentInputType = 'touch';
+        this.handlePressStart(e);
+      });
+      
+      triangle.addEventListener('touchend', (e) => {
+        if (this.currentInputType === 'touch') {
+          this.handlePressEnd(e);
+        }
+      });
+      
+      triangle.addEventListener('touchcancel', (e) => {
+        if (this.currentInputType === 'touch') {
+          this.handlePressEnd(e);
+        }
+      });
     });
     
     // Global mouse up to catch releases outside the element
+    // This is crucial for long click functionality
     document.addEventListener('mouseup', (e) => {
-      if (this.isPressed) {
+      if (this.isPressed && this.currentInputType === 'mouse') {
+        console.log('Global mouseup detected - ending press');
+        this.handlePressEnd(e);
+      }
+    });
+    
+    // Also listen for mouse leave on document for edge cases
+    document.addEventListener('mouseleave', (e) => {
+      if (this.isPressed && this.currentInputType === 'mouse') {
+        console.log('Mouse left document - ending press');
         this.handlePressEnd(e);
       }
     });
@@ -494,6 +536,8 @@ class ArrowButtons {
     
     if (triangle.classList.contains('disabled')) return;
     
+    console.log(`Press start: ${direction} (${this.currentInputType})`);
+    
     // Set press state
     this.isPressed = true;
     this.pressStartTime = Date.now();
@@ -504,8 +548,9 @@ class ArrowButtons {
     triangle.classList.add('active');
     
     // Set up long press detection
-    setTimeout(() => {
+    this.longPressTimeout = setTimeout(() => {
       if (this.isPressed && this.currentDirection === direction) {
+        console.log(`Long press timeout reached for ${direction}`);
         this.startLongPress();
       }
     }, this.options.tapThreshold);
@@ -517,8 +562,16 @@ class ArrowButtons {
   handlePressEnd(e) {
     if (!this.isPressed) return;
     
+    console.log(`Press end: ${this.currentDirection} (${this.currentInputType})`);
+    
     const pressDuration = Date.now() - this.pressStartTime;
     const direction = this.currentDirection;
+    
+    // Clear the long press timeout
+    if (this.longPressTimeout) {
+      clearTimeout(this.longPressTimeout);
+      this.longPressTimeout = null;
+    }
     
     // Clear visual states
     this.triangles.forEach(t => {
@@ -527,9 +580,11 @@ class ArrowButtons {
     
     // Stop long press if active
     if (this.isLongPressing) {
+      console.log('Stopping long press');
       this.stopLongPress();
     } else if (pressDuration < this.options.tapThreshold) {
       // This was a tap - do single move
+      console.log(`Short press detected (${pressDuration}ms) - single move`);
       this.handleSingleMove(direction);
     }
     
@@ -537,82 +592,91 @@ class ArrowButtons {
     this.isPressed = false;
     this.currentDirection = null;
     this.isLongPressing = false;
+    this.currentInputType = null;
   }
   
-/**
- * Start long press continuous movement
- * Simplified for reliable timing and response
- */
-startLongPress() {
-  if (!this.isPressed || this.isLongPressing) return;
-  
-  console.log(`Starting long press for direction: ${this.currentDirection}`);
-  
-  this.isLongPressing = true;
-  this._isScrolling = true;
-  this._lastMovementTime = Date.now();
-  
-  // Add visual feedback
-  const triangle = this.triangles.find(t => t.dataset.direction === this.currentDirection);
-  if (triangle) {
-    triangle.classList.remove('active');
-    triangle.classList.add('long-pressing');
+  /**
+   * Start long press continuous movement
+   * Simplified for reliable timing and response
+   */
+  startLongPress() {
+    if (!this.isPressed || this.isLongPressing) return;
+    
+    console.log(`Starting long press for direction: ${this.currentDirection}`);
+    
+    this.isLongPressing = true;
+    this._isScrolling = true;
+    this._lastMovementTime = Date.now();
+    
+    // Add visual feedback
+    const triangle = this.triangles.find(t => t.dataset.direction === this.currentDirection);
+    if (triangle) {
+      triangle.classList.remove('active');
+      triangle.classList.add('long-pressing');
+    }
+    
+    // Perform initial scroll immediately for more responsive feel
+    this.gridRenderer.scroll(this.currentDirection, false);
+    
+    // Start continuous movement with a reliable timer
+    this.longPressTimer = setInterval(() => {
+      this.performScrollMove();
+    }, this.options.movementRate); // Use existing rate (typically 400ms)
   }
-  
-  // Perform initial scroll immediately for more responsive feel
-  this.gridRenderer.scroll(this.currentDirection, false);
-  
-  // Start continuous movement with a reliable timer
-  this.longPressTimer = setInterval(() => {
-    this.performScrollMove();
-  }, this.options.movementRate); // Use existing rate (typically 400ms)
-}
 
-/**
- * Perform a single scroll move
- * Simple and reliable method for continuous scrolling
- */
-performScrollMove() {
-  if (!this.isLongPressing || !this.isPressed) {
-    return;
+  /**
+   * Perform a single scroll move
+   * Simple and reliable method for continuous scrolling
+   */
+  performScrollMove() {
+    if (!this.isLongPressing || !this.isPressed) {
+      console.log('Stopping scroll move - not long pressing or not pressed');
+      return;
+    }
+    
+    if (this._isScrolling) {
+      // Skip if still scrolling
+      return;
+    }
+    
+    this._isScrolling = true;
+    
+    // Perform the grid scroll
+    this.gridRenderer.scroll(this.currentDirection, false);
+    
+    // Update states
+    this.updateScrollStates();
   }
-  
-  if (this._isScrolling) {
-    // Skip if still scrolling
-    return;
-  }
-  
-  this._isScrolling = true;
-  
-  // Perform the grid scroll
-  this.gridRenderer.scroll(this.currentDirection, false);
-  
-  // Update states
-  this.updateScrollStates();
-}
 
-/**
- * Stop long press movement
- * Simple cleanup for reliable stopping
- */
-stopLongPress() {
-  this.isLongPressing = false;
-  
-  // Clear the interval timer
-  if (this.longPressTimer) {
-    clearInterval(this.longPressTimer);
-    this.longPressTimer = null;
+  /**
+   * Stop long press movement
+   * Simple cleanup for reliable stopping
+   */
+  stopLongPress() {
+    console.log('Stopping long press');
+    this.isLongPressing = false;
+    
+    // Clear the interval timer
+    if (this.longPressTimer) {
+      clearInterval(this.longPressTimer);
+      this.longPressTimer = null;
+    }
+    
+    // Clear any animation frame
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+    
+    // Clear timeout if it exists
+    if (this.longPressTimeout) {
+      clearTimeout(this.longPressTimeout);
+      this.longPressTimeout = null;
+    }
+    
+    this._isScrolling = false;
+    this._lastMovementTime = 0;
   }
-  
-  // Clear any animation frame
-  if (this.animationFrameId) {
-    cancelAnimationFrame(this.animationFrameId);
-    this.animationFrameId = null;
-  }
-  
-  this._isScrolling = false;
-  this._lastMovementTime = 0;
-}
   
   /**
    * Handle single grid square movement (tap)
