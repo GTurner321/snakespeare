@@ -284,8 +284,8 @@ showFeedback(isCorrect) {
   const combinedInfo = this.currentPhrase.combined || 'No additional information available.';
   this.infoText.textContent = combinedInfo;
   
-  this.modalOverlay.style.display = 'none';
-  this.modalOverlay.classList.add('fade-out');
+  // DON'T hide the modal overlay - just hide the speech bubble
+  this.bubbleContainer.style.opacity = '0';
   
   this.infoBoxContainer.style.display = 'flex';
   this.infoBoxContainer.classList.remove('fade-out');
@@ -300,18 +300,22 @@ hideInfoBox() {
   this.infoBoxContainer.classList.add('fade-out');
   setTimeout(() => {
     this.infoBoxContainer.style.display = 'none';
+    // NOW hide the entire modal overlay including Shakespeare
+    this.modalOverlay.style.display = 'none';
+    this.modalOverlay.classList.add('fade-out');
+    // Reset speech bubble opacity for next time
     this.bubbleContainer.style.opacity = '1';
     console.log('Info box hidden, interaction complete');
   }, this.options.fadeDuration);
 }
 
 /**
- * Hide the info box - FIXED VERSION
+ * Hide the response speech bubble but keep Shakespeare visible - FIXED VERSION
  */
 hideResponse() {
+  // Only hide the speech bubble, not the entire modal
   this.bubbleContainer.style.opacity = '0';
-  this.modalOverlay.style.display = 'none';
-  console.log('Shakespeare response hidden completely');
+  console.log('Shakespeare speech bubble hidden, image remains visible');
 }
   
   /**
