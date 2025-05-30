@@ -1261,6 +1261,7 @@ body {
   height: auto;
   filter: drop-shadow(3px 3px 5px rgba(0, 0, 0, 0.3));
   margin-top: 20px;
+  transition: opacity 1s ease;
 }
 
 /* Post-it note style speech bubble - response box */
@@ -1275,6 +1276,7 @@ body {
   max-width: 420px; /* Reduced from 500px for better centering */
   width: 100%;
   text-align: center;
+  transition: opacity 1s ease;
 }
 
 /* Triangle pointer for speech bubble - pointing down */
@@ -1312,8 +1314,7 @@ body {
   margin: 0 0 20px 0;
   font-family: 'Trebuchet MS', Arial, sans-serif;
   font-size: 19px;
-  font-style: italic;
-  color: #666;
+  color: #555; /* Changed from #666 to match other text */
   line-height: 1.4;
 }
 
@@ -1442,27 +1443,32 @@ body {
   color: #000; /* Black when pressed */
 }
 
-/* Feedback message */
+/* Feedback message - unified styling with other text */
 .feedback-message {
   margin: 0 0 15px 0;
   font-family: 'Trebuchet MS', Arial, sans-serif;
   font-size: 20px;
-  font-weight: bold;
+  font-weight: normal; /* Changed from bold */
   line-height: 1.4;
-  padding: 12px;
-  border-radius: 8px;
+  color: #555; /* Dark grey to match other text */
+  /* Remove all box styling */
+  padding: 0; /* Remove padding */
+  border-radius: 0; /* Remove border radius */
+  background-color: transparent; /* Remove background */
+  border: none; /* Remove border */
 }
 
+/* Remove the different colored feedback states */
 .feedback-message.correct {
-  color: #2e7d32;
-  background-color: #e8f5e8;
-  border: 2px solid #4caf50;
+  color: #555; /* Same dark grey as other text */
+  background-color: transparent;
+  border: none;
 }
 
 .feedback-message.incorrect {
-  color: #c62828;
-  background-color: #fde7e7;
-  border: 2px solid #f44336;
+  color: #555; /* Same dark grey as other text */
+  background-color: transparent;
+  border: none;
 }
 
 /* Info text */
@@ -1514,6 +1520,7 @@ body {
   
   .feedback-message {
     font-size: 18px;
+    font-weight: normal;
   }
   
   .info-text {
@@ -1566,6 +1573,7 @@ body {
   
   .feedback-message {
     font-size: 16px;
+    font-weight: normal;
   }
   
   .info-text {
