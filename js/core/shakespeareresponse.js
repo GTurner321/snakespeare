@@ -284,22 +284,32 @@ showFeedback(isCorrect) {
   /**
    * Hide the response modal
    */
-  hideResponse() {
-    this.modalOverlay.classList.add('fade-out');
-    setTimeout(() => {
-      this.modalOverlay.style.display = 'none';
-    }, this.options.fadeDuration);
-  }
+hideResponse() {
+  // Don't hide the modal overlay immediately - only hide the speech bubble content
+  this.bubbleContainer.style.opacity = '0';
+  this.shakespeareImage.style.opacity = '0.3'; // Make Shakespeare semi-transparent but still visible
+  
+  // Don't actually hide the modal until info box is closed
+  console.log('Shakespeare response hidden but image remains visible');
+}
   
   /**
    * Hide the info box
    */
-  hideInfoBox() {
-    this.infoBoxContainer.classList.add('fade-out');
+hideInfoBox() {
+  this.infoBoxContainer.classList.add('fade-out');
+  setTimeout(() => {
+    this.infoBoxContainer.style.display = 'none';
+    // NOW hide the Shakespeare modal completely
+    this.modalOverlay.classList.add('fade-out');
     setTimeout(() => {
-      this.infoBoxContainer.style.display = 'none';
+      this.modalOverlay.style.display = 'none';
+      // Reset for next time
+      this.bubbleContainer.style.opacity = '1';
+      this.shakespeareImage.style.opacity = '1';
     }, this.options.fadeDuration);
-  }
+  }, this.options.fadeDuration);
+}
   
   /**
    * Show response and start the interactive sequence if available
