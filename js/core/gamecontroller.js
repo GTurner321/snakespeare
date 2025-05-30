@@ -313,6 +313,12 @@ checkHintLetterConflict(selectedLetters) {
   console.log('Checking hint letter conflict with revealed letters:', 
     revealedLetters.map(l => `${l.letter}(${l.pathIndex})`).join(', '));
   
+  // FIXED: Use 'phrase' instead of 'letterlist'
+  if (!this.currentPhrase.phrase) {
+    console.error('Current phrase is missing phrase property');
+    return false;
+  }
+  
   // Map revealed letters to their expected positions in the phrase
   const phraseArray = this.currentPhrase.phrase.split('');
   const alphaPositions = [];
@@ -476,9 +482,12 @@ isCorrectPhrase() {
  * @return {Array} Array of expected letters
  */
 parseExpectedLetters() {
-  if (!this.currentPhrase) return [];
+  if (!this.currentPhrase || !this.currentPhrase.phrase) {
+    console.warn('No current phrase available for parsing expected letters');
+    return [];
+  }
   
-  // Use phrase as the source of expected letters
+  // FIXED: Use 'phrase' as the source of expected letters
   const phrase = this.currentPhrase.phrase;
   
   // Filter out only alphanumeric characters
@@ -614,6 +623,12 @@ updatePhraseWithHints() {
   
   // Get revealed hint letters
   const revealedLetters = this.gridRenderer.getRevealedLetters();
+  
+  // FIXED: Use 'phrase' instead of 'letterlist'
+  if (!this.currentPhrase.phrase) {
+    console.error('Current phrase is missing phrase property');
+    return;
+  }
   
   // Map path indices to positions in the phrase
   const phraseArray = this.currentPhrase.phrase.split('');
@@ -1107,7 +1122,10 @@ isHintLetterMatched(pathIndex) {
  * Only count alphanumeric characters, not apostrophes
  */
 checkPhraseCompleted() {
-  if (!this.currentPhrase) return false;
+  if (!this.currentPhrase || !this.currentPhrase.phrase) {
+    console.warn('No current phrase available for completion check');
+    return false;
+  }
   
   // Get selected letters (which already excludes the start cell)
   const selectedLetters = this.gridRenderer.getSelectedLetters();
