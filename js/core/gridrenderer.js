@@ -1569,10 +1569,13 @@ preGenerateHintIndices() {
   this.level2HintIndices = [];
   this.level3HintIndices = [];
   
-  if (!this.path || this.path.length === 0) {
-    console.warn('No path available for hint generation');
+  // CRITICAL FIX: Check if path exists and has content
+  if (!this.path || !Array.isArray(this.path) || this.path.length === 0) {
+    console.warn('No path available for hint generation - path is empty or undefined');
     return;
   }
+  
+  console.log(`Pre-generating hint indices for path with ${this.path.length} positions`);
   
   // Step 1: Create list of eligible indices (excluding start cell, vowels, and short words)
   const eligibleIndices = this.getEligibleHintIndices();
@@ -1655,7 +1658,7 @@ preGenerateHintIndices() {
   console.log('Level 2 (6n-2 + 6n):', this.level2HintIndices, `(${this.level2HintIndices.length} hints)`);
   console.log('Level 3 (6n-2 + 6n + 6n-4):', this.level3HintIndices, `(${this.level3HintIndices.length} hints)`);
 }
-
+  
 /**
  * New method to get eligible hint indices
  * Excludes: start cell (index 0), vowels, and letters from 1-2 letter words
@@ -1664,6 +1667,12 @@ preGenerateHintIndices() {
 getEligibleHintIndices() {
   const eligibleIndices = [];
   const vowels = new Set(['A', 'E', 'I', 'O', 'U']);
+  
+  // CRITICAL: Check if path exists
+  if (!this.path || !Array.isArray(this.path) || this.path.length === 0) {
+    console.warn('No path available for eligible hint indices');
+    return eligibleIndices;
+  }
   
   // Get word boundaries from GameController if available
   const wordBoundaries = this.getWordBoundaries();
@@ -1691,6 +1700,13 @@ getEligibleHintIndices() {
   // Go through each path position (starting from index 1, excluding start cell)
   for (let i = 1; i < this.path.length; i++) {
     const pathCell = this.path[i];
+    
+    // SAFETY CHECK: Make sure path cell exists and has a letter
+    if (!pathCell || !pathCell.letter) {
+      console.warn(`Path cell at index ${i} is missing or has no letter`);
+      continue;
+    }
+    
     const letter = pathCell.letter.toUpperCase();
     
     // Skip if this index is from a short word
@@ -1712,7 +1728,7 @@ getEligibleHintIndices() {
   
   return eligibleIndices;
 }
-
+  
 /**
  * Get word boundaries from GameController
  * @return {Array|null} Word boundaries array or null if not available
@@ -1724,12 +1740,12 @@ getWordBoundaries() {
   }
   
   // Alternative: check if there's a phrase and try to parse words
-  if (window.gameController && window.gameController.currentPhrase) {
+  if (window.gameController && window.gameController.currentPhrase && window.gameController.currentPhrase.phrase) {
     console.log('Word boundaries not found, attempting to parse from current phrase');
-    return this.parseWordBoundariesFromPhrase(window.gameController.currentPhrase.letterlist);
+    return this.parseWordBoundariesFromPhrase(window.gameController.currentPhrase.phrase);
   }
   
-  console.warn('Could not access word boundaries for hint filtering');
+  console.warn('Could not access word boundaries for hint filtering - no phrase available');
   return null;
 }
 
@@ -1742,15 +1758,22 @@ getPathIndicesForWordBoundary(boundary) {
   const indices = [];
   
   if (!window.gameController || !window.gameController.currentPhrase) {
+    console.warn('No game controller or current phrase available');
     return indices;
   }
   
-  const letterList = window.gameController.currentPhrase.letterlist;
+  // FIXED: Use 'phrase' instead of 'letterlist'
+  const phraseText = window.gameController.currentPhrase.phrase;
+  if (!phraseText) {
+    console.warn('No phrase text available');
+    return indices;
+  }
+  
   let pathIndex = 0; // This will track our position in the path
   
   // Go through each character in the phrase
-  for (let phrasePos = 0; phrasePos < letterList.length; phrasePos++) {
-    const char = letterList[phrasePos];
+  for (let phrasePos = 0; phrasePos < phraseText.length; phrasePos++) {
+    const char = phraseText[phrasePos];
     
     // If this is an alphanumeric character, it corresponds to a path position
     if (/[a-zA-Z0-9]/.test(char)) {
@@ -1770,13 +1793,18 @@ getPathIndicesForWordBoundary(boundary) {
  * @param {string} letterList - The phrase string
  * @return {Array} Array of word boundary objects
  */
-parseWordBoundariesFromPhrase(letterList) {
+parseWordBoundariesFromPhrase(phraseText) {
+  if (!phraseText) {
+    console.warn('No phrase text provided for parsing word boundaries');
+    return [];
+  }
+  
   const boundaries = [];
   let currentWordStart = null;
   let inWord = false;
   
-  for (let i = 0; i < letterList.length; i++) {
-    const char = letterList[i];
+  for (let i = 0; i < phraseText.length; i++) {
+    const char = phraseText[i];
     const isWordChar = /[a-zA-Z0-9']/.test(char);
     
     if (isWordChar && !inWord) {
@@ -1787,7 +1815,7 @@ parseWordBoundariesFromPhrase(letterList) {
         boundaries.push({
           start: currentWordStart,
           end: i - 1,
-          word: letterList.substring(currentWordStart, i)
+          word: phraseText.substring(currentWordStart, i)
         });
       }
       inWord = false;
@@ -1798,8 +1826,8 @@ parseWordBoundariesFromPhrase(letterList) {
   if (inWord) {
     boundaries.push({
       start: currentWordStart,
-      end: letterList.length - 1,
-      word: letterList.substring(currentWordStart)
+      end: phraseText.length - 1,
+      word: phraseText.substring(currentWordStart)
     });
   }
   
