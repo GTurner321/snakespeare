@@ -131,186 +131,60 @@ class ShakespeareResponse {
     
     console.log('Enhanced ShakespeareResponse component initialized');
   }
-  
-/**
- * Updated methods for ShakespeareResponse class with randomized phrases
- */
 
-// Add this method to the ShakespeareResponse class
-getRandomQuestionPhrase() {
-  const phrases = [
-    "Yet dost thou reckon these words sprang from my quill?",
-    "Still! Did I, in sooth, give breath to this utterance?",
-    "Howbeit, from mine own hand, came this verse—or not?",
-    "Dost thou believe these words were writ by mine own hand?",
-    "Perchance, came this speech from mine ink, or another's?",
-    "Wouldst thou claim this verse as mine own crafting?",
-    "Say then, thinkest thou I did father this phrase?"
-  ];
-  return phrases[Math.floor(Math.random() * phrases.length)];
-}
-
-// Add this method to the ShakespeareResponse class
-getRandomCorrectPhrase() {
-  const phrases = [
-    "Thou hast spoken true!",
-    "Aye, thy wit hath struck the mark!",
-    "Rightly thou hast judged!",
-    "Thy wisdom doth shine—'tis correct!",
-    "Well said! Thy judgment serveth thee well.",
-    "Thou hast nailed it with great precision!",
-    "By my troth, thou art most astute!",
-    "Verily, thy mind doth shine bright."
-  ];
-  return phrases[Math.floor(Math.random() * phrases.length)];
-}
-
-// Add this method to the ShakespeareResponse class
-getRandomIncorrectPhrase() {
-  const phrases = [
-    "Alack, thy guess falleth wide of the mark.",
-    "Forsooth, thy wit hath failed thee this time.",
-    "Misfortune! Thy choice was ill made.",
-    "O, a misstep! That path leadeth not to truth.",
-    "Fie! Thou art deceived, for this choice rings false.",
-    "Woe! That was a false scent thou didst follow.",
-    "Fortune frowns—thy pick was in error.",
-    "Nay, that be not the truth thou seek'st.",
-    "That choice leadeth thee astray, dear player.",
-    "O, misfortune! Thou art mistaken.",
-    "Alas, thy answer strays from wisdom's path."
-  ];
-  return phrases[Math.floor(Math.random() * phrases.length)];
-}
-
-// Replace the constructor section where questionText is set:
-// FIND THIS LINE IN CONSTRUCTOR:
-// this.questionText.textContent = '... but did I write this?';
-// REPLACE WITH:
-this.questionText.textContent = this.getRandomQuestionPhrase();
-
-// Replace the showFeedback method:
-showFeedback(isCorrect) {
-  // Set feedback message with random phrases
-  if (isCorrect) {
-    this.feedbackMessage.textContent = this.getRandomCorrectPhrase();
-    this.feedbackMessage.className = 'feedback-message correct';
-  } else {
-    this.feedbackMessage.textContent = this.getRandomIncorrectPhrase();
-    this.feedbackMessage.className = 'feedback-message incorrect';
+  /**
+   * Get random question phrase for Shakespeare quiz
+   */
+  getRandomQuestionPhrase() {
+    const phrases = [
+      "Yet dost thou reckon these words sprang from my quill?",
+      "Still! Did I, in sooth, give breath to this utterance?",
+      "Howbeit, from mine own hand, came this verse—or not?",
+      "Dost thou believe these words were writ by mine own hand?",
+      "Perchance, came this speech from mine ink, or another's?",
+      "Wouldst thou claim this verse as mine own crafting?",
+      "Say then, thinkest thou I did father this phrase?"
+    ];
+    return phrases[Math.floor(Math.random() * phrases.length)];
   }
-  
-  // Get combined info from current phrase
-  const combinedInfo = this.currentPhrase.combined || 'No additional information available.';
-  this.infoText.textContent = combinedInfo;
-  
-  // Show the info box
-  this.infoBoxContainer.style.display = 'flex';
-  this.infoBoxContainer.classList.remove('fade-out');
-  
-  console.log(`Showing ${isCorrect ? 'correct' : 'incorrect'} feedback`);
-}
-  
+
   /**
-   * Handle user's answer to the Shakespeare question
+   * Get random correct response phrase
    */
-  handleAnswer(userAnsweredYes) {
-    console.log(`User answered: ${userAnsweredYes ? 'YES' : 'NO'}`);
-    
-    // Get current phrase data from game controller
-    const gameController = window.gameController;
-    if (!gameController || !gameController.currentPhrase) {
-      console.error('Game controller or current phrase not found');
-      return;
-    }
-    
-    this.currentPhrase = gameController.currentPhrase;
-    
-    // Determine if the answer is correct
-    const isShakespeare = this.isFromShakespeare();
-    const isCorrect = (userAnsweredYes && isShakespeare) || (!userAnsweredYes && !isShakespeare);
-    
-    console.log(`Shakespeare: ${isShakespeare}, User said yes: ${userAnsweredYes}, Correct: ${isCorrect}`);
-    
-    // Hide the response modal
-    this.hideResponse();
-    
-    // Show the feedback after a brief delay
-    setTimeout(() => {
-      this.showFeedback(isCorrect);
-    }, 500);
+  getRandomCorrectPhrase() {
+    const phrases = [
+      "Thou hast spoken true!",
+      "Aye, thy wit hath struck the mark!",
+      "Rightly thou hast judged!",
+      "Thy wisdom doth shine—'tis correct!",
+      "Well said! Thy judgment serveth thee well.",
+      "Thou hast nailed it with great precision!",
+      "By my troth, thou art most astute!",
+      "Verily, thy mind doth shine bright."
+    ];
+    return phrases[Math.floor(Math.random() * phrases.length)];
   }
-  
+
   /**
-   * Check if current phrase is from Shakespeare based on author column
+   * Get random incorrect response phrase
    */
-  isFromShakespeare() {
-    if (!this.currentPhrase || !this.currentPhrase.author) {
-      console.warn('No author information available');
-      return false;
-    }
-    
-    const author = this.currentPhrase.author.trim().toLowerCase();
-    const isShakespeare = author === 'william shakespeare';
-    
-    console.log(`Author: "${this.currentPhrase.author}", Is Shakespeare: ${isShakespeare}`);
-    return isShakespeare;
+  getRandomIncorrectPhrase() {
+    const phrases = [
+      "Alack, thy guess falleth wide of the mark.",
+      "Forsooth, thy wit hath failed thee this time.",
+      "Misfortune! Thy choice was ill made.",
+      "O, a misstep! That path leadeth not to truth.",
+      "Fie! Thou art deceived, for this choice rings false.",
+      "Woe! That was a false scent thou didst follow.",
+      "Fortune frowns—thy pick was in error.",
+      "Nay, that be not the truth thou seek'st.",
+      "That choice leadeth thee astray, dear player.",
+      "O, misfortune! Thou art mistaken.",
+      "Alas, thy answer strays from wisdom's path."
+    ];
+    return phrases[Math.floor(Math.random() * phrases.length)];
   }
-  
-  /**
-   * Show feedback message with combined info
-   */
-  showFeedback(isCorrect) {
-    // Set feedback message
-    if (isCorrect) {
-      this.feedbackMessage.textContent = 'Indeed, you are correct!';
-      this.feedbackMessage.className = 'feedback-message correct';
-    } else {
-      this.feedbackMessage.textContent = 'Alas, you have chosen poorly.';
-      this.feedbackMessage.className = 'feedback-message incorrect';
-    }
-    
-    // Get combined info from current phrase
-    const combinedInfo = this.currentPhrase.combined || 'No additional information available.';
-    this.infoText.textContent = combinedInfo;
-    
-    // Show the info box
-    this.infoBoxContainer.style.display = 'flex';
-    this.infoBoxContainer.classList.remove('fade-out');
-    
-    console.log(`Showing ${isCorrect ? 'correct' : 'incorrect'} feedback`);
-  }
-  
-  /**
-   * Hide the response modal
-   */
-hideResponse() {
-  // Don't hide the modal overlay immediately - only hide the speech bubble content
-  this.bubbleContainer.style.opacity = '0';
-  this.shakespeareImage.style.opacity = '0.3'; // Make Shakespeare semi-transparent but still visible
-  
-  // Don't actually hide the modal until info box is closed
-  console.log('Shakespeare response hidden but image remains visible');
-}
-  
-  /**
-   * Hide the info box
-   */
-hideInfoBox() {
-  this.infoBoxContainer.classList.add('fade-out');
-  setTimeout(() => {
-    this.infoBoxContainer.style.display = 'none';
-    // NOW hide the Shakespeare modal completely
-    this.modalOverlay.classList.add('fade-out');
-    setTimeout(() => {
-      this.modalOverlay.style.display = 'none';
-      // Reset for next time
-      this.bubbleContainer.style.opacity = '1';
-      this.shakespeareImage.style.opacity = '1';
-    }, this.options.fadeDuration);
-  }, this.options.fadeDuration);
-}
-  
+
   /**
    * Show response and start the interactive sequence if available
    */
@@ -329,16 +203,7 @@ hideInfoBox() {
       console.warn('No response found in current phrase');
     }
   }
-  
-  /**
-   * Add CSS styles - now simplified since main styles are in grid.css
-   */
-  addStyles() {
-    // Styles are now in the grid.css file under the Shakespeare Response section
-    // This method is kept for any dynamic style additions if needed in the future
-    console.log('Shakespeare component styles loaded from grid.css');
-  }
-  
+
   /**
    * Show Shakespeare response and start the question sequence
    */
@@ -357,7 +222,7 @@ hideInfoBox() {
     
     console.log('Showing Shakespeare response with delayed question');
   }
-  
+
   /**
    * Handle user's answer to the Shakespeare question
    */
@@ -387,7 +252,7 @@ hideInfoBox() {
       this.showFeedback(isCorrect);
     }, 500);
   }
-  
+
   /**
    * Check if current phrase is from Shakespeare based on author column
    */
@@ -403,17 +268,17 @@ hideInfoBox() {
     console.log(`Author: "${this.currentPhrase.author}", Is Shakespeare: ${isShakespeare}`);
     return isShakespeare;
   }
-  
+
   /**
    * Show feedback message with combined info
    */
   showFeedback(isCorrect) {
-    // Set feedback message
+    // Set feedback message with random phrases
     if (isCorrect) {
-      this.feedbackMessage.textContent = 'Indeed, you are correct!';
+      this.feedbackMessage.textContent = this.getRandomCorrectPhrase();
       this.feedbackMessage.className = 'feedback-message correct';
     } else {
-      this.feedbackMessage.textContent = 'Alas, you have chosen poorly.';
+      this.feedbackMessage.textContent = this.getRandomIncorrectPhrase();
       this.feedbackMessage.className = 'feedback-message incorrect';
     }
     
@@ -427,17 +292,19 @@ hideInfoBox() {
     
     console.log(`Showing ${isCorrect ? 'correct' : 'incorrect'} feedback`);
   }
-  
+
   /**
    * Hide the response modal
    */
   hideResponse() {
-    this.modalOverlay.classList.add('fade-out');
-    setTimeout(() => {
-      this.modalOverlay.style.display = 'none';
-    }, this.options.fadeDuration);
+    // Don't hide the modal overlay immediately - only hide the speech bubble content
+    this.bubbleContainer.style.opacity = '0';
+    this.shakespeareImage.style.opacity = '0.3'; // Make Shakespeare semi-transparent but still visible
+    
+    // Don't actually hide the modal until info box is closed
+    console.log('Shakespeare response hidden but image remains visible');
   }
-  
+
   /**
    * Hide the info box
    */
@@ -445,26 +312,24 @@ hideInfoBox() {
     this.infoBoxContainer.classList.add('fade-out');
     setTimeout(() => {
       this.infoBoxContainer.style.display = 'none';
+      // NOW hide the Shakespeare modal completely
+      this.modalOverlay.classList.add('fade-out');
+      setTimeout(() => {
+        this.modalOverlay.style.display = 'none';
+        // Reset for next time
+        this.bubbleContainer.style.opacity = '1';
+        this.shakespeareImage.style.opacity = '1';
+      }, this.options.fadeDuration);
     }, this.options.fadeDuration);
   }
-  
+
   /**
-   * Show response and start the interactive sequence if available
+   * Add CSS styles - now simplified since main styles are in grid.css
    */
-  showResponseIfAvailable() {
-    const gameController = window.gameController;
-    if (!gameController || !gameController.currentPhrase) {
-      console.error('Game controller or current phrase not found');
-      return;
-    }
-    
-    // Get the response from the current phrase
-    const response = gameController.currentPhrase.response;
-    if (response) {
-      this.showResponse(response);
-    } else {
-      console.warn('No response found in current phrase');
-    }
+  addStyles() {
+    // Styles are now in the grid.css file under the Shakespeare Response section
+    // This method is kept for any dynamic style additions if needed in the future
+    console.log('Shakespeare component styles loaded from grid.css');
   }
 }
 
