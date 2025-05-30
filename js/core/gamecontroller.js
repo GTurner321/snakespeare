@@ -1992,9 +1992,9 @@ async loadSampleData() {
   await this.loadPhrase(samplePhrase);
 }
   
-/**
- * Updated loadPhraseData method to be async and properly handle the async loadPhrase
- */
+// Add this debugging code to your loadPhraseData method
+// Replace the existing filtering section with this enhanced version:
+
 async loadPhraseData(csvUrl) {
   try {
     // Fetch CSV file
@@ -2013,33 +2013,64 @@ async loadPhraseData(csvUrl) {
     // Parse CSV using PapaParse
     const allPhrases = this.parseCSV(csvData);
     
-    // In loadPhraseData(), after parsing CSV:
-    console.log('First few phrases and their IDs:');
-    allPhrases.slice(0, 10).forEach(phrase => {
-      console.log(`Phrase: "${phrase.phrase}", ID: ${phrase.id}, Type: ${typeof phrase.id}`);
-    });
+    // ENHANCED DEBUGGING: Check what IDs we actually have
+    console.log(`Total phrases loaded: ${allPhrases.length}`);
     
-    // In gamecontroller.js, update the filtering logic in loadPhraseData:
+    // Get all unique IDs and sort them
+    const allIds = allPhrases.map(phrase => parseInt(phrase.id, 10))
+                           .filter(id => !isNaN(id))
+                           .sort((a, b) => a - b);
+    
+    console.log(`ID range in CSV: ${Math.min(...allIds)} to ${Math.max(...allIds)}`);
+    console.log(`Total valid numeric IDs: ${allIds.length}`);
+    
+    // Check specifically for IDs in our target range
+    const idsInRange = allIds.filter(id => id >= 3001 && id <= 3100);
+    console.log(`IDs in range 3001-3100: ${idsInRange.length}`);
+    console.log(`Actual IDs in range:`, idsInRange);
+    
+    // Check for gaps in the sequence
+    if (idsInRange.length > 0) {
+      const minId = Math.min(...idsInRange);
+      const maxId = Math.max(...idsInRange);
+      console.log(`ID range found: ${minId} to ${maxId}`);
+      
+      // Find missing IDs in the range
+      const missingIds = [];
+      for (let i = minId; i <= maxId; i++) {
+        if (!idsInRange.includes(i)) {
+          missingIds.push(i);
+        }
+      }
+      
+      if (missingIds.length > 0) {
+        console.log(`Missing IDs in sequence: ${missingIds.slice(0, 10).join(', ')}${missingIds.length > 10 ? '...' : ''}`);
+      }
+    }
+    
     // Filter phrases to only those with IDs between 3001-3100
     const shakespearePhrases = allPhrases.filter(phrase => {
-      // Parse the id as an integer
       const id = parseInt(phrase.id, 10);
-      
-      // Debug: Log each ID check
-      console.log(`Checking phrase ID: ${phrase.id}, parsed as: ${id}, valid ID: ${!isNaN(id)}, in range: ${id >= 3001 && id <= 3100}`);
-      
-      // Make sure id is a valid number and within range
       return !isNaN(id) && id >= 3001 && id <= 3100;
     });
     
-    console.log(`Loaded ${shakespearePhrases.length} Shakespeare phrases from CSV`);
+    console.log(`Filtered Shakespeare phrases: ${shakespearePhrases.length}`);
     
-    // Debug: Show which phrases were selected
-    shakespearePhrases.forEach(phrase => {
-      console.log(`Selected Shakespeare phrase ID ${phrase.id}: "${phrase.phrase}"`);
-    });
+    // Show first and last few phrases to verify the range
+    if (shakespearePhrases.length > 0) {
+      console.log('First 5 Shakespeare phrases:');
+      shakespearePhrases.slice(0, 5).forEach(phrase => {
+        console.log(`  ID ${phrase.id}: "${phrase.phrase}"`);
+      });
+      
+      if (shakespearePhrases.length > 5) {
+        console.log('Last 5 Shakespeare phrases:');
+        shakespearePhrases.slice(-5).forEach(phrase => {
+          console.log(`  ID ${phrase.id}: "${phrase.phrase}"`);
+        });
+      }
+    }
     
-    // Rest of the code remains the same...
     // If no phrases in range, fall back to all phrases
     if (shakespearePhrases.length === 0) {
       console.warn('No phrases found in ID range 3001-3100, using all phrases');
@@ -2053,8 +2084,8 @@ async loadPhraseData(csvUrl) {
       const randomIndex = Math.floor(Math.random() * this.phrases.length);
       const randomPhrase = this.phrases[randomIndex];
       
+      console.log(`Selected random phrase ${randomIndex + 1} of ${this.phrases.length}`);
       console.log('Loading random Shakespeare phrase ID:', randomPhrase.id);
-      // Use await here since loadPhrase is now async
       await this.loadPhrase(randomPhrase);
     } else {
       console.warn('No phrases found in CSV');
