@@ -269,30 +269,42 @@ class ShakespeareResponse {
     return isShakespeare;
   }
 
-  /**
-   * Show feedback message with combined info
-   */
-  showFeedback(isCorrect) {
-    // Set feedback message with random phrases
-    if (isCorrect) {
-      this.feedbackMessage.textContent = this.getRandomCorrectPhrase();
-      this.feedbackMessage.className = 'feedback-message correct';
-    } else {
-      this.feedbackMessage.textContent = this.getRandomIncorrectPhrase();
-      this.feedbackMessage.className = 'feedback-message incorrect';
-    }
-    
-    // Get combined info from current phrase
-    const combinedInfo = this.currentPhrase.combined || 'No additional information available.';
-    this.infoText.textContent = combinedInfo;
-    
-    // Show the info box
-    this.infoBoxContainer.style.display = 'flex';
-    this.infoBoxContainer.classList.remove('fade-out');
-    
-    console.log(`Showing ${isCorrect ? 'correct' : 'incorrect'} feedback`);
+/**
+ * Show feedback message with combined info - FIXED VERSION
+ */
+showFeedback(isCorrect) {
+  if (isCorrect) {
+    this.feedbackMessage.textContent = this.getRandomCorrectPhrase();
+    this.feedbackMessage.className = 'feedback-message correct';
+  } else {
+    this.feedbackMessage.textContent = this.getRandomIncorrectPhrase();
+    this.feedbackMessage.className = 'feedback-message incorrect';
   }
+  
+  const combinedInfo = this.currentPhrase.combined || 'No additional information available.';
+  this.infoText.textContent = combinedInfo;
+  
+  this.modalOverlay.style.display = 'none';
+  this.modalOverlay.classList.add('fade-out');
+  
+  this.infoBoxContainer.style.display = 'flex';
+  this.infoBoxContainer.classList.remove('fade-out');
+  
+  console.log(`Showing ${isCorrect ? 'correct' : 'incorrect'} feedback`);
+}
 
+/**
+ * Hide the info box - FIXED VERSION
+ */
+hideInfoBox() {
+  this.infoBoxContainer.classList.add('fade-out');
+  setTimeout(() => {
+    this.infoBoxContainer.style.display = 'none';
+    this.bubbleContainer.style.opacity = '1';
+    console.log('Info box hidden, interaction complete');
+  }, this.options.fadeDuration);
+}
+  
   /**
    * Hide the response modal
    */
@@ -305,24 +317,15 @@ class ShakespeareResponse {
     console.log('Shakespeare response hidden but image remains visible');
   }
 
-  /**
-   * Hide the info box
-   */
-  hideInfoBox() {
-    this.infoBoxContainer.classList.add('fade-out');
-    setTimeout(() => {
-      this.infoBoxContainer.style.display = 'none';
-      // NOW hide the Shakespeare modal completely
-      this.modalOverlay.classList.add('fade-out');
-      setTimeout(() => {
-        this.modalOverlay.style.display = 'none';
-        // Reset for next time
-        this.bubbleContainer.style.opacity = '1';
-        this.shakespeareImage.style.opacity = '1';
-      }, this.options.fadeDuration);
-    }, this.options.fadeDuration);
-  }
-
+/**
+ * Hide the info box - FIXED VERSION
+ */
+hideResponse() {
+  this.bubbleContainer.style.opacity = '0';
+  this.modalOverlay.style.display = 'none';
+  console.log('Shakespeare response hidden completely');
+}
+  
   /**
    * Add CSS styles - now simplified since main styles are in grid.css
    */
