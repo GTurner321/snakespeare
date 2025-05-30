@@ -52,7 +52,7 @@ class ShakespeareResponse {
     // Create question text
     this.questionText = document.createElement('p');
     this.questionText.className = 'question-text';
-    this.questionText.textContent = '... but did I write this?';
+    this.questionText.textContent = this.getRandomQuestionPhrase();
     this.questionContainer.appendChild(this.questionText);
     
     // Create button container
@@ -132,24 +132,84 @@ class ShakespeareResponse {
     console.log('Enhanced ShakespeareResponse component initialized');
   }
   
-  /**
-   * Show Shakespeare response and start the question sequence
-   */
-  showResponse(response) {
-    this.responseText.textContent = response;
-    this.modalOverlay.style.display = 'flex';
-    this.modalOverlay.classList.remove('fade-out');
-    
-    // Reset question visibility
-    this.questionContainer.style.opacity = '0';
-    
-    // Show question after delay
-    setTimeout(() => {
-      this.questionContainer.style.opacity = '1';
-    }, this.options.questionDelay);
-    
-    console.log('Showing Shakespeare response with delayed question');
+/**
+ * Updated methods for ShakespeareResponse class with randomized phrases
+ */
+
+// Add this method to the ShakespeareResponse class
+getRandomQuestionPhrase() {
+  const phrases = [
+    "Yet dost thou reckon these words sprang from my quill?",
+    "Still! Did I, in sooth, give breath to this utterance?",
+    "Howbeit, from mine own hand, came this verse—or not?",
+    "Dost thou believe these words were writ by mine own hand?",
+    "Perchance, came this speech from mine ink, or another's?",
+    "Wouldst thou claim this verse as mine own crafting?",
+    "Say then, thinkest thou I did father this phrase?"
+  ];
+  return phrases[Math.floor(Math.random() * phrases.length)];
+}
+
+// Add this method to the ShakespeareResponse class
+getRandomCorrectPhrase() {
+  const phrases = [
+    "Thou hast spoken true!",
+    "Aye, thy wit hath struck the mark!",
+    "Rightly thou hast judged!",
+    "Thy wisdom doth shine—'tis correct!",
+    "Well said! Thy judgment serveth thee well.",
+    "Thou hast nailed it with great precision!",
+    "By my troth, thou art most astute!",
+    "Verily, thy mind doth shine bright."
+  ];
+  return phrases[Math.floor(Math.random() * phrases.length)];
+}
+
+// Add this method to the ShakespeareResponse class
+getRandomIncorrectPhrase() {
+  const phrases = [
+    "Alack, thy guess falleth wide of the mark.",
+    "Forsooth, thy wit hath failed thee this time.",
+    "Misfortune! Thy choice was ill made.",
+    "O, a misstep! That path leadeth not to truth.",
+    "Fie! Thou art deceived, for this choice rings false.",
+    "Woe! That was a false scent thou didst follow.",
+    "Fortune frowns—thy pick was in error.",
+    "Nay, that be not the truth thou seek'st.",
+    "That choice leadeth thee astray, dear player.",
+    "O, misfortune! Thou art mistaken.",
+    "Alas, thy answer strays from wisdom's path."
+  ];
+  return phrases[Math.floor(Math.random() * phrases.length)];
+}
+
+// Replace the constructor section where questionText is set:
+// FIND THIS LINE IN CONSTRUCTOR:
+// this.questionText.textContent = '... but did I write this?';
+// REPLACE WITH:
+this.questionText.textContent = this.getRandomQuestionPhrase();
+
+// Replace the showFeedback method:
+showFeedback(isCorrect) {
+  // Set feedback message with random phrases
+  if (isCorrect) {
+    this.feedbackMessage.textContent = this.getRandomCorrectPhrase();
+    this.feedbackMessage.className = 'feedback-message correct';
+  } else {
+    this.feedbackMessage.textContent = this.getRandomIncorrectPhrase();
+    this.feedbackMessage.className = 'feedback-message incorrect';
   }
+  
+  // Get combined info from current phrase
+  const combinedInfo = this.currentPhrase.combined || 'No additional information available.';
+  this.infoText.textContent = combinedInfo;
+  
+  // Show the info box
+  this.infoBoxContainer.style.display = 'flex';
+  this.infoBoxContainer.classList.remove('fade-out');
+  
+  console.log(`Showing ${isCorrect ? 'correct' : 'incorrect'} feedback`);
+}
   
   /**
    * Handle user's answer to the Shakespeare question
