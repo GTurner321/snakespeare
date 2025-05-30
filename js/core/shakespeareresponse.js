@@ -63,14 +63,14 @@ class ShakespeareResponse {
     // Create YES button
     this.yesButton = document.createElement('button');
     this.yesButton.className = 'choice-button yes-button';
-    this.yesButton.textContent = 'YES';
+    this.yesButton.textContent = 'YEA';
     this.yesButton.addEventListener('click', () => this.handleAnswer(true));
     this.buttonContainer.appendChild(this.yesButton);
     
     // Create NO button
     this.noButton = document.createElement('button');
     this.noButton.className = 'choice-button no-button';
-    this.noButton.textContent = 'NO';
+    this.noButton.textContent = 'NAY';
     this.noButton.addEventListener('click', () => this.handleAnswer(false));
     this.buttonContainer.appendChild(this.noButton);
     
