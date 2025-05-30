@@ -1240,6 +1240,9 @@ body {
   z-index: 2000;
   opacity: 1;
   transition: opacity 1s ease;
+  /* Raised higher - moved up from center */
+  padding-top: 80px;
+  padding-bottom: 120px;
 }
 
 .shakespeare-modal-overlay.fade-out {
@@ -1261,7 +1264,12 @@ body {
   height: auto;
   filter: drop-shadow(3px 3px 5px rgba(0, 0, 0, 0.3));
   margin-top: 20px;
-  transition: opacity 1s ease;
+  transition: opacity 1s ease, transform 0.5s ease;
+}
+
+/* Shakespeare image moves up when info box appears */
+.info-box-container:not([style*="display: none"]) ~ .shakespeare-modal-overlay .shakespeare-image {
+  transform: translateY(-100px);
 }
 
 /* Post-it note style speech bubble - response box */
@@ -1293,29 +1301,29 @@ body {
   width: 0;
 }
 
-/* Response text styling */
+/* Response text styling - UNIFIED FONT SIZE */
 .response-text {
   margin: 0 0 20px 0;
   font-family: 'Trebuchet MS', Arial, sans-serif;
-  font-size: 22px;
+  font-size: 18px; /* Unified size */
   line-height: 1.5;
   color: #555; /* Dark grey as requested */
 }
 
-/* Question container */
+/* Question container - REMOVED BORDER */
 .question-container {
   margin-top: 20px;
   padding-top: 20px;
-  border-top: 2px solid #ddd;
+  /* border-top: 2px solid #ddd; REMOVED */
 }
 
-/* Question text */
+/* Question text - UNIFIED FONT SIZE */
 .question-text {
   margin: 0 0 20px 0;
   font-family: 'Trebuchet MS', Arial, sans-serif;
-  font-size: 19px;
+  font-size: 18px; /* Unified size - same as response text */
   color: #555; /* Changed from #666 to match other text */
-  line-height: 1.4;
+  line-height: 1.5; /* Consistent line height */
 }
 
 /* Button container */
@@ -1367,10 +1375,10 @@ body {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-/* Info/Context Box Container */
+/* Info/Context Box Container - MOVED UP */
 .info-box-container {
   position: fixed;
-  bottom: 0;
+  bottom: 60px; /* Moved up from 0 */
   left: 0;
   width: 100%;
   display: flex;
@@ -1443,13 +1451,13 @@ body {
   color: #000; /* Black when pressed */
 }
 
-/* Feedback message - unified styling with other text */
+/* Feedback message - UNIFIED FONT SIZE */
 .feedback-message {
   margin: 0 0 15px 0;
   font-family: 'Trebuchet MS', Arial, sans-serif;
-  font-size: 20px;
+  font-size: 18px; /* Unified size - same as other text */
   font-weight: normal; /* Changed from bold */
-  line-height: 1.4;
+  line-height: 1.5; /* Consistent line height */
   color: #555; /* Dark grey to match other text */
   /* Remove all box styling */
   padding: 0; /* Remove padding */
@@ -1471,17 +1479,22 @@ body {
   border: none;
 }
 
-/* Info text */
+/* Info text - UNIFIED FONT SIZE */
 .info-text {
   margin: 0;
   font-family: 'Trebuchet MS', Arial, sans-serif;
-  font-size: 16px;
-  line-height: 1.5;
+  font-size: 18px; /* Unified size - same as other text */
+  line-height: 1.5; /* Consistent line height */
   color: #555; /* Dark grey to match response text */
 }
 
 /* Mobile responsive adjustments */
 @media (max-width: 768px) {
+  .shakespeare-modal-overlay {
+    padding-top: 60px;
+    padding-bottom: 100px;
+  }
+  
   .shakespeare-container {
     max-width: 90%;
   }
@@ -1490,17 +1503,21 @@ body {
     width: 150px;
   }
   
+  .info-box-container:not([style*="display: none"]) ~ .shakespeare-modal-overlay .shakespeare-image {
+    transform: translateY(-75px);
+  }
+  
   .speech-bubble {
     padding: 20px;
     max-width: 350px;
   }
   
   .response-text {
-    font-size: 19px;
+    font-size: 16px; /* Unified mobile size */
   }
   
   .question-text {
-    font-size: 17px;
+    font-size: 16px; /* Unified mobile size */
   }
   
   .choice-button {
@@ -1513,23 +1530,32 @@ body {
     gap: 15px;
   }
   
+  .info-box-container {
+    bottom: 40px;
+  }
+  
   .info-box {
     padding: 15px 20px;
     max-width: 90%;
   }
   
   .feedback-message {
-    font-size: 18px;
+    font-size: 16px; /* Unified mobile size */
     font-weight: normal;
   }
   
   .info-text {
-    font-size: 15px;
+    font-size: 16px; /* Unified mobile size */
   }
 }
 
 /* Small screens */
 @media (max-width: 480px) {
+  .shakespeare-modal-overlay {
+    padding-top: 40px;
+    padding-bottom: 80px;
+  }
+  
   .shakespeare-container {
     max-width: 95%;
   }
@@ -1538,17 +1564,21 @@ body {
     width: 120px;
   }
   
+  .info-box-container:not([style*="display: none"]) ~ .shakespeare-modal-overlay .shakespeare-image {
+    transform: translateY(-60px);
+  }
+  
   .speech-bubble {
     padding: 15px;
     max-width: 280px;
   }
   
   .response-text {
-    font-size: 17px;
+    font-size: 15px; /* Unified small screen size */
   }
   
   .question-text {
-    font-size: 15px;
+    font-size: 15px; /* Unified small screen size */
   }
   
   .choice-button {
@@ -1567,17 +1597,21 @@ body {
     width: 120px;
   }
   
+  .info-box-container {
+    bottom: 20px;
+  }
+  
   .info-box {
     padding: 12px 15px;
   }
   
   .feedback-message {
-    font-size: 16px;
+    font-size: 15px; /* Unified small screen size */
     font-weight: normal;
   }
   
   .info-text {
-    font-size: 14px;
+    font-size: 15px; /* Unified small screen size */
   }
   
   .info-box-close {
