@@ -23,11 +23,11 @@ class ErosionController {
     this.erosionPhase = 0; // Tracks which phase of erosion we're in
     
     // Configuration
-    this.initialErosionPercentage = 0.05; // 5%
+    this.initialErosionPercentage = 0.07; // 7%
     this.initialErosionInterval = 15000; // 15 seconds
-    this.standardErosionPercentage = 0.10; // 10% 
+    this.standardErosionPercentage = 0.14; // 14% 
     this.standardErosionInterval = 10000; // 10 seconds
-    this.initialPhaseCount = 2; // Start with 2 slow erosion cycles
+    this.initialPhaseCount = 1; // Start with 1 slow erosion cycle
     
     // Set for tracking cells that are scheduled for erosion/flashing
     this.flashingCells = new Set();
