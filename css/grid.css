@@ -1222,7 +1222,7 @@ body {
 }
 
 /* ==========================================================================
-   10. Shakespeare Response Components
+   10. Shakespeare Response Components - FIXED Z-INDEX LAYERING
    Interactive Shakespeare response boxes with quiz functionality
    ========================================================================== */
 
@@ -1243,6 +1243,7 @@ body {
   /* Moved higher up on page */
   padding-top: 40px; /* Reduced from 80px */
   padding-bottom: 20px; /* Reduced from 120px */
+  pointer-events: none; /* FIXED: Allow clicks to pass through overlay */
 }
 
 .shakespeare-modal-overlay.fade-out {
@@ -1257,6 +1258,8 @@ body {
   max-width: 85%;
   margin: 0 auto;
   transition: transform 0.8s ease; /* Smooth transition for upward movement */
+  pointer-events: auto; /* FIXED: Re-enable pointer events for this container */
+  z-index: 2050; /* FIXED: Ensure proper layering */
 }
 
 /* Shakespeare image */
@@ -1266,7 +1269,8 @@ body {
   filter: drop-shadow(3px 3px 5px rgba(0, 0, 0, 0.3));
   margin-top: 20px;
   transition: opacity 1s ease, transform 0.8s ease;
-  z-index: 2100; /* Ensure image stays above info box */
+  z-index: 2060; /* FIXED: Reduced from 2100 to avoid blocking info box */
+  pointer-events: none; /* FIXED: Allow clicks to pass through image */
 }
 
 /* Shakespeare container moves up when info box appears - IMPROVED */
@@ -1287,6 +1291,7 @@ body {
   width: 100%;
   text-align: center;
   transition: opacity 1s ease;
+  pointer-events: auto; /* FIXED: Ensure speech bubble is clickable when visible */
 }
 
 /* Triangle pointer for speech bubble - pointing down */
@@ -1376,7 +1381,7 @@ body {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-/* Info/Context Box Container - POSITIONED TO AVOID OVERLAP */
+/* Info/Context Box Container - FIXED Z-INDEX AND POINTER EVENTS */
 .info-box-container {
   position: fixed;
   bottom: 20px; /* Positioned at bottom */
@@ -1384,10 +1389,11 @@ body {
   width: 100%;
   display: flex;
   justify-content: center;
-  z-index: 1900; /* Lower than Shakespeare image */
+  z-index: 2100; /* FIXED: Higher than Shakespeare image to ensure clickability */
   padding: 20px;
   opacity: 1;
   transition: opacity 1s ease, transform 0.5s ease;
+  pointer-events: auto; /* FIXED: Ensure this container is fully interactive */
 }
 
 .info-box-container.fade-out {
@@ -1406,6 +1412,7 @@ body {
   max-width: 580px;
   width: 100%;
   text-align: center;
+  pointer-events: auto; /* FIXED: Ensure info box is fully interactive */
 }
 
 /* Triangle pointer for info box - pointing up */
@@ -1422,7 +1429,7 @@ body {
   width: 0;
 }
 
-/* Close button - simplified dark grey X */
+/* Close button - FIXED TO ENSURE FULL CLICKABILITY */
 .info-box-close {
   position: absolute;
   top: 8px;
@@ -1440,8 +1447,9 @@ body {
   justify-content: center;
   padding: 0;
   transition: color 0.2s ease;
-  z-index: 10;
+  z-index: 2110; /* FIXED: Highest z-index to ensure close button is always clickable */
   font-weight: bold;
+  pointer-events: auto; /* FIXED: Explicitly enable pointer events */
 }
 
 .info-box-close:hover {
