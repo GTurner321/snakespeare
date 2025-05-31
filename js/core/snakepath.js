@@ -140,6 +140,15 @@ window.SnakePath = class SnakePath {
         opacity: 1 !important;
         display: block !important;
       }
+
+  .snake-piece.rotating-tail {
+    animation: smooth-rotate 2.4s linear infinite !important;
+  }
+  
+  @keyframes smooth-rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
     `;
     
     // Add to document
@@ -292,6 +301,26 @@ window.SnakePath = class SnakePath {
       default: return -1; // Invalid direction
     }
   }
+
+/**
+ * Start smooth rotation animation for the tail piece at start cell
+ */
+startTailRotation() {
+  const startPiece = document.querySelector('.grid-cell[data-grid-x="35"][data-grid-y="35"] .snake-piece');
+  if (startPiece) {
+    startPiece.classList.add('rotating-tail');
+    console.log('Started tail rotation animation');
+  }
+}
+
+/**
+ * Stop the tail rotation animation
+ */
+stopTailRotation() {
+  const rotatingPieces = document.querySelectorAll('.snake-piece.rotating-tail');
+  rotatingPieces.forEach(piece => piece.classList.remove('rotating-tail'));
+  console.log('Stopped tail rotation animation');
+}
   
   /**
    * Determine the piece type for a specific cell in the path
@@ -434,129 +463,148 @@ window.SnakePath = class SnakePath {
     return img;
   }
   
-  /**
-   * Update the full snake path visualization
-   * Fixed to properly handle deselections
-   */
-  updateSnakePath() {
-    // Skip updates if scrolling is in progress - will be handled on completion
-    if (this._scrollInProgress) {
+/**
+ * Update the full snake path visualization
+ * Enhanced with smooth tail rotation for single start cell selection
+ */
+updateSnakePath() {
+  // Skip updates if scrolling is in progress - will be handled on completion
+  if (this._scrollInProgress) {
+    return;
+  }
+  
+  // Get selected cells
+  const selectedCells = this.gridRenderer.selectedCells;
+  if (!selectedCells || selectedCells.length === 0) {
+    // Stop rotation and clear all snake pieces when no cells are selected
+    this.stopTailRotation();
+    this.clearSnakeImages();
+    return;
+  }
+  
+  // Handle rotation logic for single cell selection
+  if (selectedCells.length === 1) {
+    // Check if this is the start cell (35, 35)
+    const selectedCell = selectedCells[0];
+    const isStartCell = (selectedCell.x === 35 && selectedCell.y === 35);
+    
+    if (isStartCell) {
+      // Let the normal snake piece creation happen first
+      // Then start rotation after a brief delay
+      setTimeout(() => {
+        this.startTailRotation();
+      }, 100);
+    }
+  } else if (selectedCells.length >= 2) {
+    // Stop rotation when second cell is selected
+    this.stopTailRotation();
+  }
+  
+  // Create a map of currently selected cell coordinates for quick lookup
+  const selectedCellMap = new Map();
+  selectedCells.forEach(cell => {
+    selectedCellMap.set(`${cell.x},${cell.y}`, true);
+  });
+  
+  // FIRST PASS: Remove snake pieces from cells that are no longer selected
+  const allSnakePieces = document.querySelectorAll('.snake-piece');
+  allSnakePieces.forEach(piece => {
+    const cell = piece.closest('.grid-cell');
+    if (cell) {
+      const x = parseInt(cell.dataset.gridX, 10);
+      const y = parseInt(cell.dataset.gridY, 10);
+      
+      // If this cell is valid and no longer selected, remove the snake piece
+      if (!isNaN(x) && !isNaN(y) && !selectedCellMap.has(`${x},${y}`)) {
+        piece.remove();
+      }
+    }
+  });
+  
+  // SECOND PASS: Track existing snake pieces on selected cells
+  const existingPieces = new Map();
+  document.querySelectorAll('.snake-piece').forEach(piece => {
+    const cell = piece.closest('.grid-cell');
+    if (cell) {
+      const x = parseInt(cell.dataset.gridX, 10);
+      const y = parseInt(cell.dataset.gridY, 10);
+      if (!isNaN(x) && !isNaN(y)) {
+        existingPieces.set(`${x},${y}`, {
+          element: piece,
+          type: piece.getAttribute('data-piece-type')
+        });
+      }
+    }
+  });
+  
+  // Track which cells need updates
+  const cellsToUpdate = new Set();
+  
+  // For each selected cell, determine if it needs a new piece
+  selectedCells.forEach((cell, index) => {
+    // Find the corresponding DOM element
+    const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
+    
+    if (!cellElement) {
       return;
     }
     
-    // Get selected cells
-    const selectedCells = this.gridRenderer.selectedCells;
-    if (!selectedCells || selectedCells.length === 0) {
-      // Clear all snake pieces when no cells are selected
-      this.clearSnakeImages();
-      return;
+    // Determine if this is the last cell
+    const isLastCell = index === selectedCells.length - 1;
+    
+    // Get the configuration for this piece
+    const pieceConfig = this.determinePiece(index, selectedCells, isLastCell);
+    
+    // Check if we already have the correct piece for this cell
+    const existingPiece = existingPieces.get(`${cell.x},${cell.y}`);
+    if (existingPiece && existingPiece.type === pieceConfig.piece) {
+      // Piece already exists and is correct - nothing to do
+      // Remove from the map to mark as processed
+      existingPieces.delete(`${cell.x},${cell.y}`);
+    } else {
+      // Need to update this cell
+      cellsToUpdate.add(`${cell.x},${cell.y}`);
+      
+      // CRITICAL: Force position relative
+      cellElement.style.position = 'relative';
+      
+      // Remove any existing piece from this cell
+      const existingElements = cellElement.querySelectorAll('.snake-piece');
+      existingElements.forEach(el => el.remove());
+      
+      // Create and add the new image to the cell
+      const pieceImage = this.createPieceImage(pieceConfig);
+      cellElement.appendChild(pieceImage);
     }
+  });
+  
+  // Handle the special case for start cell (first cell)
+  if (selectedCells.length > 0) {
+    const startCell = selectedCells[0];
+    const startCellElement = document.querySelector(`.grid-cell[data-grid-x="${startCell.x}"][data-grid-y="${startCell.y}"]`);
     
-    // Create a map of currently selected cell coordinates for quick lookup
-    const selectedCellMap = new Map();
-    selectedCells.forEach(cell => {
-      selectedCellMap.set(`${cell.x},${cell.y}`, true);
-    });
-    
-    // FIRST PASS: Remove snake pieces from cells that are no longer selected
-    const allSnakePieces = document.querySelectorAll('.snake-piece');
-    allSnakePieces.forEach(piece => {
-      const cell = piece.closest('.grid-cell');
-      if (cell) {
-        const x = parseInt(cell.dataset.gridX, 10);
-        const y = parseInt(cell.dataset.gridY, 10);
+    if (startCellElement && !cellsToUpdate.has(`${startCell.x},${startCell.y}`)) {
+      if (!startCellElement.classList.contains('selected-cell')) {
+        // Force position relative
+        startCellElement.style.position = 'relative';
         
-        // If this cell is valid and no longer selected, remove the snake piece
-        if (!isNaN(x) && !isNaN(y) && !selectedCellMap.has(`${x},${y}`)) {
-          piece.remove();
-        }
-      }
-    });
-    
-    // SECOND PASS: Track existing snake pieces on selected cells
-    const existingPieces = new Map();
-    document.querySelectorAll('.snake-piece').forEach(piece => {
-      const cell = piece.closest('.grid-cell');
-      if (cell) {
-        const x = parseInt(cell.dataset.gridX, 10);
-        const y = parseInt(cell.dataset.gridY, 10);
-        if (!isNaN(x) && !isNaN(y)) {
-          existingPieces.set(`${x},${y}`, {
-            element: piece,
-            type: piece.getAttribute('data-piece-type')
-          });
-        }
-      }
-    });
-    
-    // Track which cells need updates
-    const cellsToUpdate = new Set();
-    
-    // For each selected cell, determine if it needs a new piece
-    selectedCells.forEach((cell, index) => {
-      // Find the corresponding DOM element
-      const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
-      
-      if (!cellElement) {
-        return;
-      }
-      
-      // Determine if this is the last cell
-      const isLastCell = index === selectedCells.length - 1;
-      
-      // Get the configuration for this piece
-      const pieceConfig = this.determinePiece(index, selectedCells, isLastCell);
-      
-      // Check if we already have the correct piece for this cell
-      const existingPiece = existingPieces.get(`${cell.x},${cell.y}`);
-      if (existingPiece && existingPiece.type === pieceConfig.piece) {
-        // Piece already exists and is correct - nothing to do
-        // Remove from the map to mark as processed
-        existingPieces.delete(`${cell.x},${cell.y}`);
-      } else {
-        // Need to update this cell
-        cellsToUpdate.add(`${cell.x},${cell.y}`);
+        // Check if it already has the correct piece
+        const existingStartPiece = existingPieces.get(`${startCell.x},${startCell.y}`);
+        const pieceConfig = this.determinePiece(0, selectedCells, false);
         
-        // CRITICAL: Force position relative
-        cellElement.style.position = 'relative';
-        
-        // Remove any existing piece from this cell
-        const existingElements = cellElement.querySelectorAll('.snake-piece');
-        existingElements.forEach(el => el.remove());
-        
-        // Create and add the new image to the cell
-        const pieceImage = this.createPieceImage(pieceConfig);
-        cellElement.appendChild(pieceImage);
-      }
-    });
-    
-    // Handle the special case for start cell (first cell)
-    if (selectedCells.length > 0) {
-      const startCell = selectedCells[0];
-      const startCellElement = document.querySelector(`.grid-cell[data-grid-x="${startCell.x}"][data-grid-y="${startCell.y}"]`);
-      
-      if (startCellElement && !cellsToUpdate.has(`${startCell.x},${startCell.y}`)) {
-        if (!startCellElement.classList.contains('selected-cell')) {
-          // Force position relative
-          startCellElement.style.position = 'relative';
+        if (!existingStartPiece || existingStartPiece.type !== pieceConfig.piece) {
+          // Clear any existing pieces
+          const existingPieces = startCellElement.querySelectorAll('.snake-piece');
+          existingPieces.forEach(piece => piece.remove());
           
-          // Check if it already has the correct piece
-          const existingStartPiece = existingPieces.get(`${startCell.x},${startCell.y}`);
-          const pieceConfig = this.determinePiece(0, selectedCells, false);
-          
-          if (!existingStartPiece || existingStartPiece.type !== pieceConfig.piece) {
-            // Clear any existing pieces
-            const existingPieces = startCellElement.querySelectorAll('.snake-piece');
-            existingPieces.forEach(piece => piece.remove());
-            
-            // Add the tail piece
-            const pieceImage = this.createPieceImage(pieceConfig);
-            startCellElement.appendChild(pieceImage);
-          }
+          // Add the tail piece
+          const pieceImage = this.createPieceImage(pieceConfig);
+          startCellElement.appendChild(pieceImage);
         }
       }
     }
   }
+}
 
 /**
  * Improved flashSnakePiecesInCells method for reliable flashing of all snake pieces
