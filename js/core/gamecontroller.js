@@ -174,8 +174,8 @@ constructor(options = {}) {
 }
   
 /**
- * Modified setupMenuHandlers for GameController.js
- * Removes island reduction buttons from the menu
+ * Complete setupMenuHandlers method for GameController
+ * Replace your existing setupMenuHandlers method with this complete version
  */
 setupMenuHandlers() {
   console.log('Setting up menu handlers');
@@ -192,10 +192,10 @@ setupMenuHandlers() {
   // Step 2: Clear existing menu content
   menuDropdown.innerHTML = '';
   
-  // Step 3: Create menu items - UPDATED to remove island reduction levels
+  // Step 3: Create menu items - UPDATED to replace Reset Selections with Pause Erosion
   const menuItems = [
     { id: 'new-phrase-button', text: 'New Phrase', action: () => this.loadRandomPhrase() },
-    { id: 'reset-selections-button', text: 'Reset Selections', action: () => this.resetSelections() },
+    { id: 'pause-erosion-button', text: 'Pause Erosion', action: () => this.toggleErosionPause() }, // CHANGED FROM RESET SELECTIONS
     { id: 'separator-1', text: 'divider', type: 'separator' },
     { id: 'hint-level-1-button', text: 'Hint Level 1', action: () => this.setHintLevel(1), hintLevel: 1 },
     { id: 'hint-level-2-button', text: 'Hint Level 2', action: () => this.setHintLevel(2), hintLevel: 2 },
@@ -223,6 +223,11 @@ setupMenuHandlers() {
       button.classList.add('hint-button');
     }
     
+    // Add special class for erosion button
+    if (item.id === 'pause-erosion-button') {
+      button.classList.add('erosion-button');
+    }
+    
     button.textContent = item.text;
     
     button.addEventListener('click', () => {
@@ -241,8 +246,13 @@ setupMenuHandlers() {
       // Update button styles
       if (item.hintLevel) {
         this.updateHintButtonStyles();
-      } else {
-        // Close the menu for non-hint buttons
+      } 
+      // For erosion button, don't close menu automatically (toggleErosionPause handles it)
+      else if (item.id === 'pause-erosion-button') {
+        // Menu closing is handled in toggleErosionPause method
+      }
+      else {
+        // Close the menu for other buttons
         menuDropdown.classList.remove('active');
         menuToggle.classList.remove('active');
       }
@@ -285,6 +295,45 @@ setupMenuHandlers() {
   }
   
   console.log('Menu handlers setup complete');
+}
+
+/**
+ * NEW METHOD: Toggle erosion pause/unpause state
+ * Add this method after setupMenuHandlers
+ */
+toggleErosionPause() {
+  if (!this.erosionController) {
+    console.warn('Erosion controller not available');
+    return;
+  }
+  
+  const button = document.getElementById('pause-erosion-button');
+  if (!button) {
+    console.error('Pause erosion button not found');
+    return;
+  }
+  
+  if (this.erosionController.isPaused()) {
+    // Currently paused, so unpause
+    this.erosionController.unpauseErosion();
+    button.textContent = 'Pause Erosion';
+    button.classList.remove('erosion-paused');
+    console.log('Erosion unpaused via menu button');
+  } else {
+    // Currently running, so pause
+    this.erosionController.pauseErosion();
+    button.textContent = 'Unpause Erosion';
+    button.classList.add('erosion-paused');
+    console.log('Erosion paused via menu button');
+  }
+  
+  // Close menu after action
+  const menuDropdown = document.getElementById('menu-dropdown');
+  const menuToggle = document.getElementById('menu-toggle');
+  if (menuDropdown && menuToggle) {
+    menuDropdown.classList.remove('active');
+    menuToggle.classList.remove('active');
+  }
 }
   
 /**
