@@ -1625,9 +1625,12 @@ showIncorrectMessage() {
  * Replace your existing initShakespeareComponent method with this version
  */
 initShakespeareComponent() {
+  console.log('🎭 Initializing Shakespeare component...');
+  
   // Import the ShakespeareResponse module
   import('./shakespeareresponse.js')
     .then(module => {
+      console.log('✅ Shakespeare module loaded successfully');
       const ShakespeareResponse = module.default;
       
       // Create instance with the correct GitHub URL
@@ -1636,59 +1639,118 @@ initShakespeareComponent() {
         imagePath: 'https://raw.githubusercontent.com/GTurner321/snakespeare/main/assets/shakespeare.png'
       });
       
-      console.log('Shakespeare component initialized with GitHub image URL');
+      console.log('✅ Shakespeare component initialized:', this.shakespeareComponent);
+      console.log('🔍 showWelcomeModal method available:', typeof this.shakespeareComponent.showWelcomeModal);
       
       // Make game controller accessible to the Shakespeare component
       window.gameController = this;
       
       // ENHANCED: Show welcome modal after all components are ready
+      console.log('🎭 Setting up welcome modal trigger...');
       this.setupWelcomeModalTrigger();
     })
     .catch(error => {
-      console.error('Failed to load Shakespeare component:', error);
+      console.error('❌ Failed to load Shakespeare component:', error);
+      console.error('Error details:', error.stack);
     });
 }
-
+  
 /**
- * NEW: Setup welcome modal trigger after game initialization
+ * Enhanced setupWelcomeModalTrigger with comprehensive debugging
+ * Replace your existing setupWelcomeModalTrigger method with this version
  */
 setupWelcomeModalTrigger() {
-  // Wait for the grid to be fully initialized before showing welcome
+  console.log('🎭 Setting up welcome modal trigger...');
+  
+  // Track readiness states
   let gridReady = false;
   let phrasesLoaded = false;
+  let shakespeareReady = false;
+  
+  // Check if Shakespeare component already exists
+  if (this.shakespeareComponent) {
+    console.log('✅ Shakespeare component already exists');
+    shakespeareReady = true;
+  } else {
+    console.log('❌ Shakespeare component not yet initialized');
+  }
   
   const checkReadyState = () => {
+    console.log('🔍 Checking ready state:', {
+      gridReady,
+      phrasesLoaded,
+      shakespeareReady: !!this.shakespeareComponent,
+      shakespeareComponent: this.shakespeareComponent
+    });
+    
     if (gridReady && phrasesLoaded && this.shakespeareComponent) {
-      console.log('Game fully initialized, showing welcome modal...');
+      console.log('🎉 All components ready! Showing welcome modal...');
       
       // Small delay to ensure everything is rendered
       setTimeout(() => {
-        this.shakespeareComponent.showWelcomeModal();
+        if (this.shakespeareComponent && this.shakespeareComponent.showWelcomeModal) {
+          console.log('🎭 Calling showWelcomeModal...');
+          this.shakespeareComponent.showWelcomeModal();
+        } else {
+          console.error('❌ Shakespeare component or showWelcomeModal method not available');
+          console.log('shakespeareComponent:', this.shakespeareComponent);
+        }
       }, 500);
+    } else {
+      console.log('⏳ Still waiting for components:', {
+        needsGrid: !gridReady,
+        needsPhrases: !phrasesLoaded,
+        needsShakespeare: !this.shakespeareComponent
+      });
     }
   };
   
   // Listen for grid initialization
-  document.addEventListener('gridRendererInitialized', () => {
-    console.log('Grid renderer ready for welcome modal');
+  document.addEventListener('gridRendererInitialized', (e) => {
+    console.log('✅ Grid renderer ready for welcome modal');
     gridReady = true;
     checkReadyState();
   });
   
   // Listen for phrases being loaded
-  document.addEventListener('phrasesLoaded', () => {
-    console.log('Phrases loaded, ready for welcome modal');
+  document.addEventListener('phrasesLoaded', (e) => {
+    console.log('✅ Phrases loaded, ready for welcome modal', e.detail);
     phrasesLoaded = true;
     checkReadyState();
   });
   
+  // Check if events already fired (in case we're setting up late)
+  setTimeout(() => {
+    if (!gridReady) {
+      console.log('🔍 Checking if grid renderer already exists...');
+      if (this.gridRenderer) {
+        console.log('✅ Grid renderer found - marking as ready');
+        gridReady = true;
+        checkReadyState();
+      }
+    }
+    
+    if (!phrasesLoaded) {
+      console.log('🔍 Checking if phrases already loaded...');
+      if (this.phrases && this.phrases.length > 0) {
+        console.log('✅ Phrases found - marking as loaded');
+        phrasesLoaded = true;
+        checkReadyState();
+      }
+    }
+  }, 100);
+  
   // Fallback: show welcome modal after a maximum wait time
   setTimeout(() => {
     if (this.shakespeareComponent && !gridReady) {
-      console.log('Fallback: Showing welcome modal after timeout');
+      console.log('⚠️ Fallback: Showing welcome modal after timeout');
       this.shakespeareComponent.showWelcomeModal();
+    } else if (!this.shakespeareComponent) {
+      console.error('❌ Fallback failed: Shakespeare component not available after timeout');
     }
-  }, 3000);
+  }, 5000); // Increased timeout to 5 seconds
+  
+  console.log('🎭 Welcome modal trigger setup complete');
 }
   
 /**
