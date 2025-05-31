@@ -36,6 +36,8 @@ class ErosionController {
     this.finalWarningActive = false;
     this.finalWarningTimer = null;
     
+    this.pausedErosion = false;
+    
     // Listen for grid completion to stop erosion
     document.addEventListener('gridCompletionChanged', (e) => {
       if (e.detail.completed && e.detail.isCorrect) {
@@ -99,11 +101,82 @@ class ErosionController {
       detail: { controller: this }
     }));
   }
+
+/**
+ * Pause the erosion process
+ */
+pauseErosion() {
+  if (!this.erosionActive || this.pausedErosion) {
+    console.log('Erosion not active or already paused');
+    return;
+  }
+  
+  this.pausedErosion = true;
+  
+  // Clear current timer
+  if (this.erosionTimer) {
+    clearTimeout(this.erosionTimer);
+    this.erosionTimer = null;
+  }
+  
+  // Clear any final warning timer
+  if (this.finalWarningTimer) {
+    clearTimeout(this.finalWarningTimer);
+    this.finalWarningTimer = null;
+  }
+  
+  // Stop any flashing cells and clear flashing state
+  this.clearFlashingCells();
+  
+  console.log('Erosion paused - all timers cleared and flashing stopped');
+  
+  // Dispatch event that erosion was paused
+  document.dispatchEvent(new CustomEvent('erosionPaused', { 
+    detail: { controller: this }
+  }));
+}
+
+/**
+ * Unpause the erosion process and resume from beginning of cycle
+ */
+unpauseErosion() {
+  if (!this.erosionActive || !this.pausedErosion) {
+    console.log('Erosion not active or not paused');
+    return;
+  }
+  
+  this.pausedErosion = false;
+  this.finalWarningActive = false; // Reset final warning state
+  
+  // Resume erosion cycle from beginning (fresh start)
+  this.scheduleNextErosion();
+  
+  console.log('Erosion unpaused - resuming cycle from beginning');
+  
+  // Dispatch event that erosion was unpaused
+  document.dispatchEvent(new CustomEvent('erosionUnpaused', { 
+    detail: { controller: this }
+  }));
+}
+
+/**
+ * Check if erosion is currently paused
+ * @return {boolean} True if erosion is paused
+ */
+isPaused() {
+  return this.pausedErosion;
+}
   
   /**
    * Schedule the next erosion event
    */
   scheduleNextErosion() {
+    
+      if (!this.erosionActive || this.pausedErosion) {
+    console.log('Erosion paused - not scheduling next erosion');
+    return;
+  }
+    
     if (!this.erosionActive) return;
     
     // Determine erosion parameters based on phase
@@ -127,6 +200,12 @@ class ErosionController {
    * Perform one cycle of erosion by selecting and removing erodable cells
    */
   performErosion() {
+
+      if (!this.erosionActive || this.pausedErosion) {
+    console.log('Erosion paused - skipping erosion cycle');
+    return;
+  }
+    
     if (!this.erosionActive || !this.gridRenderer) return;
     
     this.erosionCounter++;
