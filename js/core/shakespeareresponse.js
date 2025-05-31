@@ -1,6 +1,6 @@
 /**
- * Enhanced Shakespeare Response Component with Interactive Quiz
- * Shows Shakespeare image, response, interactive question, and feedback
+ * Enhanced Shakespeare Response Component with Welcome Modal
+ * Shows Shakespeare image, response, interactive question, feedback, and welcome modal
  */
 
 class ShakespeareResponse {
@@ -118,7 +118,10 @@ class ShakespeareResponse {
     this.modalOverlay.style.display = 'none';
     this.infoBoxContainer.style.display = 'none';
     
-    // Add CSS styles (now loads from grid.css)
+    // NEW: Create welcome modal components
+    this.createWelcomeModal();
+    
+    // Add CSS styles
     this.addStyles();
     
     // Subscribe to the gridCompletionChanged event
@@ -129,7 +132,201 @@ class ShakespeareResponse {
       }
     });
     
-    console.log('Enhanced ShakespeareResponse component initialized');
+    console.log('Enhanced ShakespeareResponse component initialized with welcome modal');
+  }
+
+  /**
+   * NEW: Create welcome modal components
+   */
+  createWelcomeModal() {
+    // Create welcome modal overlay
+    this.welcomeOverlay = document.createElement('div');
+    this.welcomeOverlay.className = 'shakespeare-modal-overlay welcome-modal-overlay';
+    document.body.appendChild(this.welcomeOverlay);
+    
+    // Create container for Shakespeare in welcome modal
+    this.welcomeContainer = document.createElement('div');
+    this.welcomeContainer.className = 'shakespeare-container welcome-shakespeare-container';
+    this.welcomeOverlay.appendChild(this.welcomeContainer);
+    
+    // Create larger speech bubble for welcome content
+    this.welcomeBubble = document.createElement('div');
+    this.welcomeBubble.className = 'speech-bubble welcome-speech-bubble';
+    this.welcomeContainer.appendChild(this.welcomeBubble);
+    
+    // Create title container for SNAKESPEARE
+    this.createGameTitle();
+    
+    // Create instructions container
+    this.createInstructions();
+    
+    // Create Shakespeare image for welcome modal (positioned lower)
+    this.welcomeShakespeareImage = document.createElement('img');
+    this.welcomeShakespeareImage.className = 'shakespeare-image welcome-shakespeare-image';
+    this.welcomeShakespeareImage.src = this.options.imagePath;
+    this.welcomeShakespeareImage.alt = 'Shakespeare';
+    this.welcomeShakespeareImage.onerror = () => {
+      console.error(`Failed to load Shakespeare image from: ${this.options.imagePath}`);
+      this.welcomeShakespeareImage.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><text x="10" y="50" font-family="Arial" font-size="12">Image not found</text></svg>';
+    };
+    this.welcomeContainer.appendChild(this.welcomeShakespeareImage);
+    
+    // Hide welcome modal initially
+    this.welcomeOverlay.style.display = 'none';
+  }
+
+  /**
+   * NEW: Create game title using cell-style elements
+   */
+  createGameTitle() {
+    this.titleContainer = document.createElement('div');
+    this.titleContainer.className = 'game-title-container';
+    this.welcomeBubble.appendChild(this.titleContainer);
+    
+    const title = 'SNAKESPEARE';
+    const titleGrid = document.createElement('div');
+    titleGrid.className = 'title-grid';
+    
+    // Create individual cells for each letter
+    for (let i = 0; i < title.length; i++) {
+      const letter = title[i];
+      const cellElement = document.createElement('div');
+      cellElement.className = 'title-cell';
+      
+      // Add snake icon to the first 'S'
+      if (i === 0) {
+        const snakeIcon = document.createElement('i');
+        snakeIcon.className = 'fa-solid fa-staff-snake title-snake-icon';
+        cellElement.appendChild(snakeIcon);
+      }
+      
+      // Add letter
+      const letterSpan = document.createElement('span');
+      letterSpan.textContent = letter;
+      letterSpan.className = 'title-letter';
+      cellElement.appendChild(letterSpan);
+      
+      titleGrid.appendChild(cellElement);
+    }
+    
+    this.titleContainer.appendChild(titleGrid);
+  }
+
+  /**
+   * NEW: Create instructions section
+   */
+  createInstructions() {
+    this.instructionsContainer = document.createElement('div');
+    this.instructionsContainer.className = 'instructions-container';
+    this.welcomeBubble.appendChild(this.instructionsContainer);
+    
+    const instructions = [
+      "Begin thy quest where the emerald square doth lie, and seek a hidden phrase 'mongst neighboring tiles.",
+      "Shouldst thou falter, find counsel within the menu.",
+      "Unveil the phrase ere the surging sea o'ertake the isle.",
+      "Come, let us assay the measure of thy wit."
+    ];
+    
+    const instructionsList = document.createElement('ul');
+    instructionsList.className = 'instructions-list';
+    
+    instructions.forEach(instruction => {
+      const listItem = document.createElement('li');
+      listItem.textContent = instruction;
+      listItem.className = 'instruction-item';
+      instructionsList.appendChild(listItem);
+    });
+    
+    this.instructionsContainer.appendChild(instructionsList);
+    
+    // Create ENTER button
+    this.createEnterButton();
+    
+    // Create farewell message (initially hidden)
+    this.createFarewellMessage();
+  }
+
+  /**
+   * NEW: Create ENTER button
+   */
+  createEnterButton() {
+    this.enterButtonContainer = document.createElement('div');
+    this.enterButtonContainer.className = 'enter-button-container';
+    this.instructionsContainer.appendChild(this.enterButtonContainer);
+    
+    this.enterButton = document.createElement('button');
+    this.enterButton.className = 'choice-button yes-button enter-button';
+    this.enterButton.textContent = 'ENTER';
+    this.enterButton.addEventListener('click', () => this.handleEnterClick());
+    this.enterButtonContainer.appendChild(this.enterButton);
+  }
+
+  /**
+   * NEW: Create farewell message
+   */
+  createFarewellMessage() {
+    this.farewellContainer = document.createElement('div');
+    this.farewellContainer.className = 'farewell-container';
+    this.farewellContainer.style.opacity = '0';
+    this.farewellContainer.style.transition = 'opacity 0.5s ease-in-out';
+    this.instructionsContainer.appendChild(this.farewellContainer);
+    
+    this.farewellMessage = document.createElement('p');
+    this.farewellMessage.className = 'farewell-message';
+    this.farewellMessage.textContent = 'Fortune attend thee!';
+    this.farewellContainer.appendChild(this.farewellMessage);
+  }
+
+  /**
+   * NEW: Handle ENTER button click
+   */
+  handleEnterClick() {
+    console.log('ENTER button clicked - starting welcome sequence');
+    
+    // Fade out the button
+    this.enterButtonContainer.style.opacity = '0';
+    this.enterButtonContainer.style.transition = 'opacity 0.5s ease-in-out';
+    
+    // After button fades out, show farewell message
+    setTimeout(() => {
+      this.enterButtonContainer.style.display = 'none';
+      this.farewellContainer.style.opacity = '1';
+      
+      // After 2.5 seconds, hide the entire welcome modal
+      setTimeout(() => {
+        this.hideWelcomeModal();
+      }, 2500);
+    }, 500);
+  }
+
+  /**
+   * NEW: Show welcome modal
+   */
+  showWelcomeModal() {
+    console.log('Showing welcome modal');
+    this.welcomeOverlay.style.display = 'flex';
+    this.welcomeOverlay.classList.remove('fade-out');
+    
+    // Reset state for potential re-showing
+    this.enterButtonContainer.style.display = 'block';
+    this.enterButtonContainer.style.opacity = '1';
+    this.farewellContainer.style.opacity = '0';
+  }
+
+  /**
+   * NEW: Hide welcome modal
+   */
+  hideWelcomeModal() {
+    console.log('Hiding welcome modal');
+    this.welcomeOverlay.classList.add('fade-out');
+    
+    setTimeout(() => {
+      this.welcomeOverlay.style.display = 'none';
+      console.log('Welcome modal hidden, game ready to start');
+      
+      // Dispatch event that welcome is complete
+      document.dispatchEvent(new CustomEvent('welcomeModalComplete'));
+    }, this.options.fadeDuration);
   }
 
   /**
@@ -269,60 +466,60 @@ class ShakespeareResponse {
     return isShakespeare;
   }
 
-/**
- * Show feedback message with combined info - FIXED VERSION
- */
-showFeedback(isCorrect) {
-  if (isCorrect) {
-    this.feedbackMessage.textContent = this.getRandomCorrectPhrase();
-    this.feedbackMessage.className = 'feedback-message correct';
-  } else {
-    this.feedbackMessage.textContent = this.getRandomIncorrectPhrase();
-    this.feedbackMessage.className = 'feedback-message incorrect';
+  /**
+   * Show feedback message with combined info - FIXED VERSION
+   */
+  showFeedback(isCorrect) {
+    if (isCorrect) {
+      this.feedbackMessage.textContent = this.getRandomCorrectPhrase();
+      this.feedbackMessage.className = 'feedback-message correct';
+    } else {
+      this.feedbackMessage.textContent = this.getRandomIncorrectPhrase();
+      this.feedbackMessage.className = 'feedback-message incorrect';
+    }
+    
+    const combinedInfo = this.currentPhrase.combined || 'No additional information available.';
+    this.infoText.textContent = combinedInfo;
+    
+    // DON'T hide the modal overlay - just hide the speech bubble
+    this.bubbleContainer.style.opacity = '0';
+    
+    this.infoBoxContainer.style.display = 'flex';
+    this.infoBoxContainer.classList.remove('fade-out');
+    
+    console.log(`Showing ${isCorrect ? 'correct' : 'incorrect'} feedback`);
+  }
+
+  /**
+   * Hide the info box - FIXED VERSION
+   */
+  hideInfoBox() {
+    this.infoBoxContainer.classList.add('fade-out');
+    setTimeout(() => {
+      this.infoBoxContainer.style.display = 'none';
+      // NOW hide the entire modal overlay including Shakespeare
+      this.modalOverlay.style.display = 'none';
+      this.modalOverlay.classList.add('fade-out');
+      // Reset speech bubble opacity for next time
+      this.bubbleContainer.style.opacity = '1';
+      console.log('Info box hidden, interaction complete');
+    }, this.options.fadeDuration);
+  }
+
+  /**
+   * Hide the response speech bubble but keep Shakespeare visible - FIXED VERSION
+   */
+  hideResponse() {
+    // Only hide the speech bubble, not the entire modal
+    this.bubbleContainer.style.opacity = '0';
+    console.log('Shakespeare speech bubble hidden, image remains visible');
   }
   
-  const combinedInfo = this.currentPhrase.combined || 'No additional information available.';
-  this.infoText.textContent = combinedInfo;
-  
-  // DON'T hide the modal overlay - just hide the speech bubble
-  this.bubbleContainer.style.opacity = '0';
-  
-  this.infoBoxContainer.style.display = 'flex';
-  this.infoBoxContainer.classList.remove('fade-out');
-  
-  console.log(`Showing ${isCorrect ? 'correct' : 'incorrect'} feedback`);
-}
-
-/**
- * Hide the info box - FIXED VERSION
- */
-hideInfoBox() {
-  this.infoBoxContainer.classList.add('fade-out');
-  setTimeout(() => {
-    this.infoBoxContainer.style.display = 'none';
-    // NOW hide the entire modal overlay including Shakespeare
-    this.modalOverlay.style.display = 'none';
-    this.modalOverlay.classList.add('fade-out');
-    // Reset speech bubble opacity for next time
-    this.bubbleContainer.style.opacity = '1';
-    console.log('Info box hidden, interaction complete');
-  }, this.options.fadeDuration);
-}
-
-/**
- * Hide the response speech bubble but keep Shakespeare visible - FIXED VERSION
- */
-hideResponse() {
-  // Only hide the speech bubble, not the entire modal
-  this.bubbleContainer.style.opacity = '0';
-  console.log('Shakespeare speech bubble hidden, image remains visible');
-}
-  
   /**
-   * Add CSS styles - now simplified since main styles are in grid.css
+   * Add CSS styles - simplified since styles are now in grid.css
    */
   addStyles() {
-    // Styles are now in the grid.css file under the Shakespeare Response section
+    // Styles are now in the grid.css file under section 10
     // This method is kept for any dynamic style additions if needed in the future
     console.log('Shakespeare component styles loaded from grid.css');
   }
