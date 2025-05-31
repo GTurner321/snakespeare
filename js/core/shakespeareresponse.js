@@ -8,7 +8,7 @@ class ShakespeareResponse {
     this.options = {
       containerId: options.containerId || 'game-container',
       imagePath: options.imagePath || 'https://raw.githubusercontent.com/GTurner321/snakespeare/main/assets/shakespeare.png',
-      fadeDuration: options.fadeDuration || 1000,
+      fadeDuration: options.fadeDuration || 2000,
       questionDelay: options.questionDelay || 4000, // 4 seconds before question appears
       ...options
     };
