@@ -1,9 +1,11 @@
 /**
- * CLEAN SNAKE PATH SOLUTION
+ * ENHANCED SNAKE PATH SOLUTION WITH PREDICTIVE RENDERING
  * 
- * This file provides a completely fixed replacement for snakepath.js
- * It correctly handles the piece orientation by focusing on each cell's entry and exit directions
- * All console.log statements have been removed for clarity
+ * This file provides an enhanced replacement for snakepath.js with:
+ * - Predictive piece calculation for left/straight/right moves
+ * - Simultaneous rendering to eliminate blink effects
+ * - Smooth tail rotation for single start cell selection
+ * - Turn restriction logic (no consecutive same turns)
  * 
  * Instructions:
  * 1. Save this as js/core/snakepath.js, replacing the existing file
@@ -102,6 +104,9 @@ window.SnakePath = class SnakePath {
       3: { piece: 'tail_rl', description: 'Tail going to left (right to left)' }
     };
     
+    // NEW: Predictive calculation cache
+    this.predictiveCache = new Map();
+    
     // Make this instance available globally for direct access
     window.snakePath = this;
     
@@ -117,6 +122,7 @@ window.SnakePath = class SnakePath {
   
   /**
    * Inject critical CSS styles to ensure snake pieces appear correctly
+   * ENHANCED: Added smooth transitions for simultaneous rendering
    */
   injectCriticalStyles() {
     // Check if we've already injected styles
@@ -139,16 +145,21 @@ window.SnakePath = class SnakePath {
         pointer-events: none !important;
         opacity: 1 !important;
         display: block !important;
+        transition: opacity 0.15s ease !important;
       }
 
-  .snake-piece.rotating-tail {
-    animation: smooth-rotate 2.4s linear infinite !important;
-  }
-  
-  @keyframes smooth-rotate {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
+      .snake-piece.rotating-tail {
+        animation: smooth-rotate 2.4s linear infinite !important;
+      }
+      
+      @keyframes smooth-rotate {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      
+      .snake-piece.updating {
+        opacity: 0 !important;
+      }
     `;
     
     // Add to document
@@ -213,11 +224,12 @@ window.SnakePath = class SnakePath {
     // Listen for deselection events
     document.addEventListener('selectionsCleared', () => {
       if (!this._scrollInProgress) {
+        this.stopTailRotation();
         setTimeout(() => this.updateSnakePath(), 100);
       }
     });
     
-    // ADD THIS NEW CODE: Listen for grid scroll events
+    // Listen for grid scroll events
     document.addEventListener('gridScrolled', (e) => {
       // Mark that scrolling is in progress
       this._scrollInProgress = true;
@@ -254,9 +266,11 @@ window.SnakePath = class SnakePath {
   
   /**
    * Clear all snake images from the grid
+   * ENHANCED: Also stops rotation and clears predictive cache
    */
   clearSnakeImages() {
-    this.stopTailRotation(); // Add this line
+    this.stopTailRotation();
+    this.predictiveCache.clear();
     const snakeImages = document.querySelectorAll('.snake-piece');
     snakeImages.forEach(image => image.remove());
   }
@@ -303,25 +317,341 @@ window.SnakePath = class SnakePath {
     }
   }
 
-/**
- * Start smooth rotation animation for the tail piece at start cell
- */
-startTailRotation() {
-  const startPiece = document.querySelector('.grid-cell[data-grid-x="35"][data-grid-y="35"] .snake-piece');
-  if (startPiece) {
-    startPiece.classList.add('rotating-tail');
-    console.log('Started tail rotation animation');
+  /**
+   * Start smooth rotation animation for the tail piece at start cell
+   */
+  startTailRotation() {
+    const startPiece = document.querySelector('.grid-cell[data-grid-x="35"][data-grid-y="35"] .snake-piece');
+    if (startPiece) {
+      startPiece.classList.add('rotating-tail');
+      console.log('Started tail rotation animation');
+    }
   }
-}
 
-/**
- * Stop the tail rotation animation
- */
-stopTailRotation() {
-  const rotatingPieces = document.querySelectorAll('.snake-piece.rotating-tail');
-  rotatingPieces.forEach(piece => piece.classList.remove('rotating-tail'));
-  console.log('Stopped tail rotation animation');
-}
+  /**
+   * Stop the tail rotation animation
+   */
+  stopTailRotation() {
+    const rotatingPieces = document.querySelectorAll('.snake-piece.rotating-tail');
+    rotatingPieces.forEach(piece => piece.classList.remove('rotating-tail'));
+    console.log('Stopped tail rotation animation');
+  }
+
+  /**
+   * NEW: Get turn type between two directions
+   * @param {number} fromDirection - Previous direction
+   * @param {number} toDirection - Current direction  
+   * @return {string} 'left', 'right', or 'straight'
+   */
+  getTurnType(fromDirection, toDirection) {
+    const turnMap = {
+      // From top (0)
+      '0,3': 'left',   // top to left
+      '0,0': 'straight', // top to top (impossible but for completeness)
+      '0,1': 'right',  // top to right
+      
+      // From right (1)  
+      '1,0': 'left',   // right to top
+      '1,1': 'straight',
+      '1,2': 'right',  // right to bottom
+      
+      // From bottom (2)
+      '2,1': 'left',   // bottom to right  
+      '2,2': 'straight',
+      '2,3': 'right',  // bottom to left
+      
+      // From left (3)
+      '3,2': 'left',   // left to bottom
+      '3,3': 'straight', 
+      '3,0': 'right'   // left to top
+    };
+    
+    return turnMap[`${fromDirection},${toDirection}`] || 'straight';
+  }
+
+  /**
+   * NEW: Get possible moves based on current direction and previous turn
+   * Prevents consecutive same turns (except straight)
+   * @param {number} currentDirection - Current movement direction
+   * @param {string} previousTurn - Previous turn type ('left', 'right', 'straight', or null)
+   * @return {Array} Array of possible move objects
+   */
+  getPossibleMoves(currentDirection, previousTurn) {
+    const allMoves = [
+      { name: 'left', turn: 'left' },
+      { name: 'straight', turn: 'straight' }, 
+      { name: 'right', turn: 'right' }
+    ];
+    
+    // Filter out consecutive same turns (except straight)
+    return allMoves.filter(move => {
+      if (previousTurn === null) return true; // First move, all allowed
+      if (move.turn === 'straight') return true; // Straight always allowed
+      if (previousTurn === 'straight') return true; // After straight, all allowed
+      
+      // Prevent consecutive left or consecutive right
+      return move.turn !== previousTurn;
+    });
+  }
+
+  /**
+   * NEW: Calculate new direction based on current direction and turn type
+   * @param {number} currentDirection - Current direction (0=top, 1=right, 2=bottom, 3=left)
+   * @param {string} turnType - 'left', 'straight', or 'right'
+   * @return {number} New direction
+   */
+  getNewDirection(currentDirection, turnType) {
+    if (turnType === 'straight') return currentDirection;
+    
+    if (turnType === 'left') {
+      // Turn left: 0→3, 1→0, 2→1, 3→2
+      return (currentDirection + 3) % 4;
+    }
+    
+    if (turnType === 'right') {
+      // Turn right: 0→1, 1→2, 2→3, 3→0  
+      return (currentDirection + 1) % 4;
+    }
+    
+    return currentDirection;
+  }
+
+  /**
+   * NEW: Get hypothetical next cell position based on direction
+   * @param {Object} fromCell - Current cell {x, y}
+   * @param {number} direction - Direction to move (0=top, 1=right, 2=bottom, 3=left)
+   * @return {Object} New cell position {x, y}
+   */
+  getHypotheticalNextCell(fromCell, direction) {
+    const directionOffsets = [
+      { x: 0, y: -1 }, // top
+      { x: 1, y: 0 },  // right  
+      { x: 0, y: 1 },  // bottom
+      { x: -1, y: 0 }  // left
+    ];
+    
+    const offset = directionOffsets[direction];
+    if (!offset) return null;
+    
+    return {
+      x: fromCell.x + offset.x,
+      y: fromCell.y + offset.y
+    };
+  }
+
+  /**
+   * NEW: Calculate all possible next pieces for the current path
+   * Based on left, straight, right moves with no consecutive same turns
+   * @param {Array} cells - Current selected cells
+   * @return {Object} Predicted pieces for each possible move
+   */
+  calculatePredictivePieces(cells) {
+    if (cells.length < 2) return {}; // Need at least 2 cells to predict
+    
+    const predictions = {};
+    const lastCell = cells[cells.length - 1];
+    const secondLastCell = cells[cells.length - 2];
+    const thirdLastCell = cells.length >= 3 ? cells[cells.length - 3] : null;
+    
+    // Calculate the current direction of movement
+    const currentDirection = this.getDirection(secondLastCell, lastCell);
+    if (currentDirection === -1) return {};
+    
+    // Calculate what the previous turn was (if any)
+    let previousTurn = null;
+    if (thirdLastCell) {
+      const previousDirection = this.getDirection(thirdLastCell, secondLastCell);
+      if (previousDirection !== -1) {
+        previousTurn = this.getTurnType(previousDirection, currentDirection);
+      }
+    }
+    
+    // Calculate possible moves: left, straight, right
+    const possibleMoves = this.getPossibleMoves(currentDirection, previousTurn);
+    
+    // For each possible move, predict what pieces would be needed
+    possibleMoves.forEach(move => {
+      const newDirection = this.getNewDirection(currentDirection, move.turn);
+      const hypotheticalNewCell = this.getHypotheticalNextCell(lastCell, newDirection);
+      
+      if (hypotheticalNewCell) {
+        // Create hypothetical path with new cell
+        const hypotheticalPath = [...cells, hypotheticalNewCell];
+        
+        // Calculate what the second-to-last piece would become
+        const secondLastPieceConfig = this.determinePiece(
+          hypotheticalPath.length - 2, 
+          hypotheticalPath, 
+          false
+        );
+        
+        // Calculate what the new head piece would be
+        const newHeadPieceConfig = this.determinePiece(
+          hypotheticalPath.length - 1, 
+          hypotheticalPath, 
+          true
+        );
+        
+        predictions[move.name] = {
+          secondLastPiece: secondLastPieceConfig,
+          newHeadPiece: newHeadPieceConfig,
+          newCell: hypotheticalNewCell,
+          direction: newDirection
+        };
+      }
+    });
+    
+    return predictions;
+  }
+
+  /**
+   * NEW: Check if the last two cells need updating
+   * @param {Array} selectedCells - All selected cells
+   * @param {number} secondLastIndex - Index of second-to-last cell
+   * @param {number} lastIndex - Index of last cell  
+   * @return {boolean} True if last two cells need simultaneous update
+   */
+  checkIfLastTwoCellsNeedUpdate(selectedCells, secondLastIndex, lastIndex) {
+    // Check if second-to-last cell needs to change from head to body
+    const secondLastCell = selectedCells[secondLastIndex];
+    const secondLastElement = document.querySelector(`.grid-cell[data-grid-x="${secondLastCell.x}"][data-grid-y="${secondLastCell.y}"]`);
+    
+    if (!secondLastElement) return true;
+    
+    const existingPiece = secondLastElement.querySelector('.snake-piece');
+    if (!existingPiece) return true;
+    
+    // Calculate what the second-to-last piece should be now (no longer head)
+    const correctPieceConfig = this.determinePiece(secondLastIndex, selectedCells, false);
+    const existingPieceType = existingPiece.getAttribute('data-piece-type');
+    
+    // If the piece type needs to change, we need the simultaneous update
+    return existingPieceType !== correctPieceConfig.piece;
+  }
+
+  /**
+   * NEW: Update the last two cells simultaneously to prevent blink effect
+   * @param {Array} selectedCells - All selected cells
+   * @param {number} secondLastIndex - Index of second-to-last cell
+   * @param {number} lastIndex - Index of last cell
+   */
+  updateLastTwoCellsSimultaneously(selectedCells, secondLastIndex, lastIndex) {
+    const secondLastCell = selectedCells[secondLastIndex];
+    const lastCell = selectedCells[lastIndex];
+    
+    const secondLastElement = document.querySelector(`.grid-cell[data-grid-x="${secondLastCell.x}"][data-grid-y="${secondLastCell.y}"]`);
+    const lastElement = document.querySelector(`.grid-cell[data-grid-x="${lastCell.x}"][data-grid-y="${lastCell.y}"]`);
+    
+    if (!secondLastElement || !lastElement) return;
+    
+    // Phase 1: Hide both pieces simultaneously
+    const secondLastPieces = secondLastElement.querySelectorAll('.snake-piece');
+    const lastPieces = lastElement.querySelectorAll('.snake-piece');
+    
+    [...secondLastPieces, ...lastPieces].forEach(piece => {
+      piece.style.opacity = '0';
+    });
+    
+    // Phase 2: Update both pieces in single animation frame
+    requestAnimationFrame(() => {
+      // Remove old pieces
+      secondLastPieces.forEach(piece => piece.remove());
+      lastPieces.forEach(piece => piece.remove());
+      
+      // Force position relative
+      secondLastElement.style.position = 'relative';
+      lastElement.style.position = 'relative';
+      
+      // Calculate and create new pieces
+      const secondLastConfig = this.determinePiece(secondLastIndex, selectedCells, false);
+      const lastConfig = this.determinePiece(lastIndex, selectedCells, true);
+      
+      const secondLastImage = this.createPieceImage(secondLastConfig);
+      const lastImage = this.createPieceImage(lastConfig);
+      
+      // Add both pieces
+      secondLastElement.appendChild(secondLastImage);
+      lastElement.appendChild(lastImage);
+      
+      // Make both visible simultaneously
+      secondLastImage.style.opacity = '1';
+      lastImage.style.opacity = '1';
+    });
+  }
+
+  /**
+   * NEW: Update remaining cells (excluding last two)
+   * @param {Array} selectedCells - All selected cells
+   * @param {number} excludeFromIndex - Don't update cells from this index onwards
+   */
+  updateRemainingCells(selectedCells, excludeFromIndex) {
+    for (let i = 0; i < excludeFromIndex; i++) {
+      const cell = selectedCells[i];
+      const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
+      
+      if (cellElement) {
+        const isLastCell = i === selectedCells.length - 1;
+        const pieceConfig = this.determinePiece(i, selectedCells, isLastCell);
+        
+        const existingPiece = cellElement.querySelector('.snake-piece');
+        const existingPieceType = existingPiece ? existingPiece.getAttribute('data-piece-type') : null;
+        
+        if (!existingPiece || existingPieceType !== pieceConfig.piece) {
+          cellElement.style.position = 'relative';
+          
+          if (existingPiece) existingPiece.remove();
+          
+          const pieceImage = this.createPieceImage(pieceConfig);
+          cellElement.appendChild(pieceImage);
+        }
+      }
+    }
+  }
+
+  /**
+   * NEW: Normal update for all cells (fallback method)
+   * @param {Array} selectedCells - All selected cells
+   */
+  updateAllCellsNormally(selectedCells) {
+    // Track existing snake pieces on selected cells
+    const existingPieces = new Map();
+    document.querySelectorAll('.snake-piece').forEach(piece => {
+      const cell = piece.closest('.grid-cell');
+      if (cell) {
+        const x = parseInt(cell.dataset.gridX, 10);
+        const y = parseInt(cell.dataset.gridY, 10);
+        if (!isNaN(x) && !isNaN(y)) {
+          existingPieces.set(`${x},${y}`, {
+            element: piece,
+            type: piece.getAttribute('data-piece-type')
+          });
+        }
+      }
+    });
+    
+    // For each selected cell, determine if it needs a new piece
+    selectedCells.forEach((cell, index) => {
+      const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
+      
+      if (!cellElement) return;
+      
+      const isLastCell = index === selectedCells.length - 1;
+      const pieceConfig = this.determinePiece(index, selectedCells, isLastCell);
+      
+      const existingPiece = existingPieces.get(`${cell.x},${cell.y}`);
+      if (existingPiece && existingPiece.type === pieceConfig.piece) {
+        existingPieces.delete(`${cell.x},${cell.y}`);
+      } else {
+        cellElement.style.position = 'relative';
+        
+        const existingElements = cellElement.querySelectorAll('.snake-piece');
+        existingElements.forEach(el => el.remove());
+        
+        const pieceImage = this.createPieceImage(pieceConfig);
+        cellElement.appendChild(pieceImage);
+      }
+    });
+  }
   
   /**
    * Determine the piece type for a specific cell in the path
@@ -463,274 +793,300 @@ stopTailRotation() {
     
     return img;
   }
-  
-/**
- * Update the full snake path visualization
- * Enhanced with smooth tail rotation for single start cell selection
- */
-updateSnakePath() {
-  // Skip updates if scrolling is in progress - will be handled on completion
-  if (this._scrollInProgress) {
-    return;
-  }
-  
-  // Get selected cells
-  const selectedCells = this.gridRenderer.selectedCells;
-  if (!selectedCells || selectedCells.length === 0) {
-    // Stop rotation and clear all snake pieces when no cells are selected
-    this.stopTailRotation();
-    this.clearSnakeImages();
-    return;
-  }
-  
-  // Handle rotation logic for single cell selection
-  if (selectedCells.length === 1) {
-    // Check if this is the start cell (35, 35)
-    const selectedCell = selectedCells[0];
-    const isStartCell = (selectedCell.x === 35 && selectedCell.y === 35);
-    
-    if (isStartCell) {
-      // Let the normal snake piece creation happen first
-      // Then start rotation after a brief delay
-      setTimeout(() => {
-        this.startTailRotation();
-      }, 100);
-    }
-  } else if (selectedCells.length >= 2) {
-    // Stop rotation when second cell is selected
-    this.stopTailRotation();
-  }
-  
-  // Create a map of currently selected cell coordinates for quick lookup
-  const selectedCellMap = new Map();
-  selectedCells.forEach(cell => {
-    selectedCellMap.set(`${cell.x},${cell.y}`, true);
-  });
-  
-  // FIRST PASS: Remove snake pieces from cells that are no longer selected
-  const allSnakePieces = document.querySelectorAll('.snake-piece');
-  allSnakePieces.forEach(piece => {
-    const cell = piece.closest('.grid-cell');
-    if (cell) {
-      const x = parseInt(cell.dataset.gridX, 10);
-      const y = parseInt(cell.dataset.gridY, 10);
-      
-      // If this cell is valid and no longer selected, remove the snake piece
-      if (!isNaN(x) && !isNaN(y) && !selectedCellMap.has(`${x},${y}`)) {
-        piece.remove();
-      }
-    }
-  });
-  
-  // SECOND PASS: Track existing snake pieces on selected cells
-  const existingPieces = new Map();
-  document.querySelectorAll('.snake-piece').forEach(piece => {
-    const cell = piece.closest('.grid-cell');
-    if (cell) {
-      const x = parseInt(cell.dataset.gridX, 10);
-      const y = parseInt(cell.dataset.gridY, 10);
-      if (!isNaN(x) && !isNaN(y)) {
-        existingPieces.set(`${x},${y}`, {
-          element: piece,
-          type: piece.getAttribute('data-piece-type')
-        });
-      }
-    }
-  });
-  
-  // Track which cells need updates
-  const cellsToUpdate = new Set();
-  
-  // For each selected cell, determine if it needs a new piece
-  selectedCells.forEach((cell, index) => {
-    // Find the corresponding DOM element
-    const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
-    
-    if (!cellElement) {
+
+  /**
+   * ENHANCED: Update the full snake path visualization with predictive rendering
+   * Main entry point with predictive caching and simultaneous rendering
+   */
+  updateSnakePath() {
+    // Skip updates if scrolling is in progress
+    if (this._scrollInProgress) {
       return;
     }
     
-    // Determine if this is the last cell
-    const isLastCell = index === selectedCells.length - 1;
-    
-    // Get the configuration for this piece
-    const pieceConfig = this.determinePiece(index, selectedCells, isLastCell);
-    
-    // Check if we already have the correct piece for this cell
-    const existingPiece = existingPieces.get(`${cell.x},${cell.y}`);
-    if (existingPiece && existingPiece.type === pieceConfig.piece) {
-      // Piece already exists and is correct - nothing to do
-      // Remove from the map to mark as processed
-      existingPieces.delete(`${cell.x},${cell.y}`);
-    } else {
-      // Need to update this cell
-      cellsToUpdate.add(`${cell.x},${cell.y}`);
-      
-      // CRITICAL: Force position relative
-      cellElement.style.position = 'relative';
-      
-      // Remove any existing piece from this cell
-      const existingElements = cellElement.querySelectorAll('.snake-piece');
-      existingElements.forEach(el => el.remove());
-      
-      // Create and add the new image to the cell
-      const pieceImage = this.createPieceImage(pieceConfig);
-      cellElement.appendChild(pieceImage);
+    // Get selected cells
+    const selectedCells = this.gridRenderer.selectedCells;
+    if (!selectedCells || selectedCells.length === 0) {
+      this.stopTailRotation();
+      this.clearSnakeImages();
+      return;
     }
-  });
-  
-  // Handle the special case for start cell (first cell)
-  if (selectedCells.length > 0) {
-    const startCell = selectedCells[0];
-    const startCellElement = document.querySelector(`.grid-cell[data-grid-x="${startCell.x}"][data-grid-y="${startCell.y}"]`);
     
-    if (startCellElement && !cellsToUpdate.has(`${startCell.x},${startCell.y}`)) {
-      if (!startCellElement.classList.contains('selected-cell')) {
-        // Force position relative
-        startCellElement.style.position = 'relative';
-        
-        // Check if it already has the correct piece
-        const existingStartPiece = existingPieces.get(`${startCell.x},${startCell.y}`);
-        const pieceConfig = this.determinePiece(0, selectedCells, false);
-        
-        if (!existingStartPiece || existingStartPiece.type !== pieceConfig.piece) {
-          // Clear any existing pieces
-          const existingPieces = startCellElement.querySelectorAll('.snake-piece');
-          existingPieces.forEach(piece => piece.remove());
-          
-          // Add the tail piece
-          const pieceImage = this.createPieceImage(pieceConfig);
-          startCellElement.appendChild(pieceImage);
-        }
+    // Handle rotation logic for single cell selection
+    if (selectedCells.length === 1) {
+      const selectedCell = selectedCells[0];
+      const isStartCell = (selectedCell.x === 35 && selectedCell.y === 35);
+      
+      if (isStartCell) {
+        setTimeout(() => {
+          this.startTailRotation();
+        }, 100);
       }
+    } else if (selectedCells.length >= 2) {
+      this.stopTailRotation();
     }
-  }
-}
-
-/**
- * Improved flashSnakePiecesInCells method for reliable flashing of all snake pieces
- * Enhanced to work with hint letters and apostrophes
- * @param {Array} cellsToFlash - Array of cells containing snake pieces to flash
- * @param {Object} options - Optional configuration { flashOnce: boolean }
- */
-flashSnakePiecesInCells(cellsToFlash, options = {}) {
-  if (!cellsToFlash || cellsToFlash.length === 0) return;
-  
-  console.log(`SnakePath: Flashing snake pieces in ${cellsToFlash.length} cells`);
-  
-  // TIMING FIX: Use consistent delay for all calls
-  const standardDelay = 300; // Increased from 100ms for better consistency
-  
-  setTimeout(() => {
-    // Create element collections for each approach
-    const directPieces = [];
-    const fallbackElements = [];
     
-    // APPROACH 1: Direct DOM lookups for each cell
-    cellsToFlash.forEach(cell => {
-      const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
-      if (cellElement) {
-        // Try multiple selector strategies
-        const snakePieces = cellElement.querySelectorAll('.snake-piece');
-        const partialClassPieces = cellElement.querySelectorAll('[class*="snake-"]');
-        const imgElements = cellElement.querySelectorAll('img[src*="piece"]');
+    // Calculate predictive pieces for next moves (for performance optimization)
+    const predictions = this.calculatePredictivePieces(selectedCells);
+    
+    // Store predictions in cache for potential future use
+    if (Object.keys(predictions).length > 0) {
+      this.predictiveCache.set('current', predictions);
+    }
+    
+    // Create a map of currently selected cell coordinates for quick lookup
+    const selectedCellMap = new Map();
+    selectedCells.forEach(cell => {
+      selectedCellMap.set(`${cell.x},${cell.y}`, true);
+    });
+    
+    // FIRST PASS: Remove snake pieces from cells that are no longer selected
+    const allSnakePieces = document.querySelectorAll('.snake-piece');
+    allSnakePieces.forEach(piece => {
+      const cell = piece.closest('.grid-cell');
+      if (cell) {
+        const x = parseInt(cell.dataset.gridX, 10);
+        const y = parseInt(cell.dataset.gridY, 10);
         
-        if (snakePieces.length > 0) {
-          snakePieces.forEach(p => directPieces.push(p));
-        } else if (partialClassPieces.length > 0) {
-          partialClassPieces.forEach(p => directPieces.push(p));
-        } else if (imgElements.length > 0) {
-          imgElements.forEach(p => directPieces.push(p));
-        } else {
-          // If we still can't find any snake pieces, save the cell element itself
-          // We'll create an overlay for it
-          fallbackElements.push(cellElement);
+        if (!isNaN(x) && !isNaN(y) && !selectedCellMap.has(`${x},${y}`)) {
+          piece.remove();
         }
       }
     });
     
-    console.log(`Found ${directPieces.length} direct snake pieces`);
-    
-    // APPROACH 2: If no pieces found with direct approach, try a different approach
-    if (directPieces.length === 0) {
-      console.log('No direct pieces found, trying alternative approaches');
+    // ENHANCED: Simultaneous update for last two cells when path grows
+    if (selectedCells.length >= 2) {
+      const lastIndex = selectedCells.length - 1;
+      const secondLastIndex = lastIndex - 1;
       
-      // Try to find all snake pieces in the document and filter by cell
-      const allSnakePieces = document.querySelectorAll('.snake-piece, [class*="snake-"], img[src*="piece"]');
-      allSnakePieces.forEach(piece => {
-        // Find the parent cell
-        const cell = piece.closest('.grid-cell');
-        if (cell) {
-          const x = parseInt(cell.dataset.gridX, 10);
-          const y = parseInt(cell.dataset.gridY, 10);
+      // Check if we need to update the last two cells
+      const needsLastTwoUpdate = this.checkIfLastTwoCellsNeedUpdate(selectedCells, secondLastIndex, lastIndex);
+      
+      if (needsLastTwoUpdate) {
+        this.updateLastTwoCellsSimultaneously(selectedCells, secondLastIndex, lastIndex);
+        
+        // Update all other cells normally (excluding the last two)
+        this.updateRemainingCells(selectedCells, selectedCells.length - 2);
+        return;
+      }
+    }
+    
+    // Normal update for all cells if no special last-two update needed
+    this.updateAllCellsNormally(selectedCells);
+  }
+
+  /**
+   * Improved flashSnakePiecesInCells method for reliable flashing of all snake pieces
+   * Enhanced to work with hint letters and apostrophes
+   * @param {Array} cellsToFlash - Array of cells containing snake pieces to flash
+   * @param {Object} options - Optional configuration { flashOnce: boolean }
+   */
+  flashSnakePiecesInCells(cellsToFlash, options = {}) {
+    if (!cellsToFlash || cellsToFlash.length === 0) return;
+    
+    console.log(`SnakePath: Flashing snake pieces in ${cellsToFlash.length} cells`);
+    
+    // Temporarily pause rotation during flashing
+    const wasRotating = document.querySelector('.snake-piece.rotating-tail') !== null;
+    if (wasRotating) {
+      this.stopTailRotation();
+    }
+    
+    // TIMING FIX: Use consistent delay for all calls
+    const standardDelay = 300; // Increased from 100ms for better consistency
+    
+    setTimeout(() => {
+      // Create element collections for each approach
+      const directPieces = [];
+      const fallbackElements = [];
+      
+      // APPROACH 1: Direct DOM lookups for each cell
+      cellsToFlash.forEach(cell => {
+        const cellElement = document.querySelector(`.grid-cell[data-grid-x="${cell.x}"][data-grid-y="${cell.y}"]`);
+        if (cellElement) {
+          // Try multiple selector strategies
+          const snakePieces = cellElement.querySelectorAll('.snake-piece');
+          const partialClassPieces = cellElement.querySelectorAll('[class*="snake-"]');
+          const imgElements = cellElement.querySelectorAll('img[src*="piece"]');
           
-          // Check if this cell is in our flash list
-          if (cellsToFlash.some(c => c.x === x && c.y === y)) {
-            directPieces.push(piece);
+          if (snakePieces.length > 0) {
+            snakePieces.forEach(p => directPieces.push(p));
+          } else if (partialClassPieces.length > 0) {
+            partialClassPieces.forEach(p => directPieces.push(p));
+          } else if (imgElements.length > 0) {
+            imgElements.forEach(p => directPieces.push(p));
+          } else {
+            // If we still can't find any snake pieces, save the cell element itself
+            // We'll create an overlay for it
+            fallbackElements.push(cellElement);
           }
         }
       });
       
-      console.log(`Found ${directPieces.length} pieces with alternative approach`);
-    }
-    
-    // Create the combined set of elements to flash
-    const allElements = [...directPieces];
-    
-    // For cells with no snake pieces, create overlay flash highlights
-    if (fallbackElements.length > 0) {
-      console.log(`Creating overlays for ${fallbackElements.length} cells`);
+      console.log(`Found ${directPieces.length} direct snake pieces`);
       
-      fallbackElements.forEach(cellElement => {
-        // Create an overlay div
-        const overlay = document.createElement('div');
-        overlay.className = 'word-completion-highlighter';
-        overlay.style.position = 'absolute';
-        overlay.style.top = '0';
-        overlay.style.left = '0';
-        overlay.style.width = '100%';
-        overlay.style.height = '100%';
-        overlay.style.backgroundColor = 'rgba(65, 185, 105, 0.5)';
-        overlay.style.borderRadius = '5px';
-        overlay.style.boxShadow = '0 0 15px rgba(65, 185, 105, 0.8)';
-        overlay.style.zIndex = '600';
-        overlay.style.pointerEvents = 'none';
+      // APPROACH 2: If no pieces found with direct approach, try a different approach
+      if (directPieces.length === 0) {
+        console.log('No direct pieces found, trying alternative approaches');
         
-        // Add to the cell
-        cellElement.appendChild(overlay);
+        // Try to find all snake pieces in the document and filter by cell
+        const allSnakePieces = document.querySelectorAll('.snake-piece, [class*="snake-"], img[src*="piece"]');
+        allSnakePieces.forEach(piece => {
+          // Find the parent cell
+          const cell = piece.closest('.grid-cell');
+          if (cell) {
+            const x = parseInt(cell.dataset.gridX, 10);
+            const y = parseInt(cell.dataset.gridY, 10);
+            
+            // Check if this cell is in our flash list
+            if (cellsToFlash.some(c => c.x === x && c.y === y)) {
+              directPieces.push(piece);
+            }
+          }
+        });
         
-        // Add to our elements to flash
-        allElements.push(overlay);
-      });
-    }
+        console.log(`Found ${directPieces.length} pieces with alternative approach`);
+      }
+      
+      // Create the combined set of elements to flash
+      const allElements = [...directPieces];
+      
+      // For cells with no snake pieces, create overlay flash highlights
+      if (fallbackElements.length > 0) {
+        console.log(`Creating overlays for ${fallbackElements.length} cells`);
+        
+        fallbackElements.forEach(cellElement => {
+          // Create an overlay div
+          const overlay = document.createElement('div');
+          overlay.className = 'word-completion-highlighter';
+          overlay.style.position = 'absolute';
+          overlay.style.top = '0';
+          overlay.style.left = '0';
+          overlay.style.width = '100%';
+          overlay.style.height = '100%';
+          overlay.style.backgroundColor = 'rgba(65, 185, 105, 0.5)';
+          overlay.style.borderRadius = '5px';
+          overlay.style.boxShadow = '0 0 15px rgba(65, 185, 105, 0.8)';
+          overlay.style.zIndex = '600';
+          overlay.style.pointerEvents = 'none';
+          
+          // Add to the cell
+          cellElement.appendChild(overlay);
+          
+          // Add to our elements to flash
+          allElements.push(overlay);
+        });
+      }
+      
+      // If we still have no elements, log and exit
+      if (allElements.length === 0) {
+        console.log('No elements found to flash after all attempts');
+        
+        // Restore rotation if it was active
+        if (wasRotating && cellsToFlash.length === 1) {
+          const flashCell = cellsToFlash[0];
+          if (flashCell.x === 35 && flashCell.y === 35) {
+            this.startTailRotation();
+          }
+        }
+        return;
+      }
+      
+      console.log(`Flashing ${allElements.length} elements`);
+      
+      // TIMING FIX: Configurable flash cycles and consistent timing
+      let flashCount = 0;
+      const maxFlashes = options.flashOnce ? 2 : 4; // Support single flash option
+      
+      const flashInterval = setInterval(() => {
+        // Toggle visibility
+        const isVisible = flashCount % 2 === 0;
+        
+        // TIMING FIX: Apply changes to ALL elements simultaneously
+        allElements.forEach(element => {
+          // Apply multiple visibility techniques for maximum reliability
+          if (isVisible) {
+            // Hide element
+            element.style.visibility = 'hidden';
+            element.style.opacity = '0';
+          } else {
+            // Show element
+            element.style.visibility = 'visible';
+            element.style.opacity = '1';
+          }
+        });
+        
+        flashCount++;
+        
+        // Stop after max flashes
+        if (flashCount >= maxFlashes) {
+          clearInterval(flashInterval);
+          
+          // TIMING FIX: Restore ALL elements simultaneously
+          allElements.forEach(element => {
+            element.style.visibility = 'visible';
+            element.style.opacity = '1';
+            
+            // Remove overlays
+            if (element.className === 'word-completion-highlighter') {
+              if (element.parentNode) {
+                element.parentNode.removeChild(element);
+              }
+            }
+          });
+          
+          console.log('Flash animation complete');
+          
+          // Restore rotation if it was active and we're flashing the start cell
+          if (wasRotating && cellsToFlash.length === 1) {
+            const flashCell = cellsToFlash[0];
+            if (flashCell.x === 35 && flashCell.y === 35) {
+              setTimeout(() => {
+                this.startTailRotation();
+              }, 500); // Small delay before restarting rotation
+            }
+          }
+        }
+      }, 250); // TIMING FIX: Consistent quarter second timing for all flashes
+      
+    }, standardDelay); // TIMING FIX: Consistent delay for all calls
+  }
     
-    // If we still have no elements, log and exit
-    if (allElements.length === 0) {
-      console.log('No elements found to flash after all attempts');
-      return;
-    }
+  /**
+   * Direct flash method that uses multiple techniques to ensure visibility toggling works
+   * @param {Array} elements - Elements to flash
+   */
+  directFlashElements(elements) {
+    if (!elements || elements.length === 0) return;
     
-    console.log(`Flashing ${allElements.length} elements`);
+    // Store original properties for restoration
+    const originalProperties = elements.map(el => ({
+      element: el,
+      visibility: el.style.visibility,
+      display: el.style.display,
+      opacity: el.style.opacity
+    }));
     
-    // TIMING FIX: Configurable flash cycles and consistent timing
+    // Flash counter
     let flashCount = 0;
-    const maxFlashes = options.flashOnce ? 2 : 4; // NEW: Support single flash option
+    const maxFlashes = 4; // 2 complete cycles
     
     const flashInterval = setInterval(() => {
       // Toggle visibility
       const isVisible = flashCount % 2 === 0;
       
-      // TIMING FIX: Apply changes to ALL elements simultaneously
-      allElements.forEach(element => {
-        // Apply multiple visibility techniques for maximum reliability
+      elements.forEach(el => {
+        // Try multiple approaches to ensure the element toggles properly
         if (isVisible) {
-          // Hide element
-          element.style.visibility = 'hidden';
-          element.style.opacity = '0';
+          // Hide using multiple properties
+          el.style.visibility = 'hidden';
+          // For the head piece which might have special styling:
+          el.style.opacity = '0';
         } else {
-          // Show element
-          element.style.visibility = 'visible';
-          element.style.opacity = '1';
+          // Show using multiple properties
+          el.style.visibility = 'visible';
+          // For the head piece which might have special styling:
+          el.style.opacity = '1';
         }
       });
       
@@ -740,89 +1096,25 @@ flashSnakePiecesInCells(cellsToFlash, options = {}) {
       if (flashCount >= maxFlashes) {
         clearInterval(flashInterval);
         
-        // TIMING FIX: Restore ALL elements simultaneously
-        allElements.forEach(element => {
-          element.style.visibility = 'visible';
-          element.style.opacity = '1';
-          
-          // Remove overlays
-          if (element.className === 'word-completion-highlighter') {
-            if (element.parentNode) {
-              element.parentNode.removeChild(element);
-            }
-          }
+        // Restore original properties
+        originalProperties.forEach(prop => {
+          prop.element.style.visibility = prop.visibility;
+          prop.element.style.display = prop.display;
+          prop.element.style.opacity = prop.opacity;
         });
         
         console.log('Flash animation complete');
       }
-    }, 250); // TIMING FIX: Consistent quarter second timing for all flashes
+    }, 250);
+  }
     
-  }, standardDelay); // TIMING FIX: Consistent delay for all calls
-}
-  
-/**
- * Direct flash method that uses multiple techniques to ensure visibility toggling works
- * @param {Array} elements - Elements to flash
- */
-directFlashElements(elements) {
-  if (!elements || elements.length === 0) return;
-  
-  // Store original properties for restoration
-  const originalProperties = elements.map(el => ({
-    element: el,
-    visibility: el.style.visibility,
-    display: el.style.display,
-    opacity: el.style.opacity
-  }));
-  
-  // Flash counter
-  let flashCount = 0;
-  const maxFlashes = 4; // 2 complete cycles
-  
-  const flashInterval = setInterval(() => {
-    // Toggle visibility
-    const isVisible = flashCount % 2 === 0;
-    
-    elements.forEach(el => {
-      // Try multiple approaches to ensure the element toggles properly
-      if (isVisible) {
-        // Hide using multiple properties
-        el.style.visibility = 'hidden';
-        // For the head piece which might have special styling:
-        el.style.opacity = '0';
-      } else {
-        // Show using multiple properties
-        el.style.visibility = 'visible';
-        // For the head piece which might have special styling:
-        el.style.opacity = '1';
-      }
-    });
-    
-    flashCount++;
-    
-    // Stop after max flashes
-    if (flashCount >= maxFlashes) {
-      clearInterval(flashInterval);
-      
-      // Restore original properties
-      originalProperties.forEach(prop => {
-        prop.element.style.visibility = prop.visibility;
-        prop.element.style.display = prop.display;
-        prop.element.style.opacity = prop.opacity;
-      });
-      
-      console.log('Flash animation complete');
-    }
-  }, 250);
-}
-  
   /**
    * Public method to force a snake path update
    * Can be called from other components
    */
   refreshSnakePath(forceFullRefresh = false) {
     if (forceFullRefresh) {
-      // Clear existing snake images for a full refresh
+      // Clear existing snake images and cache for a full refresh
       this.clearSnakeImages();
     }
     
@@ -832,7 +1124,7 @@ directFlashElements(elements) {
 
 // Auto-initialize when the page loads
 window.addEventListener('load', () => {
-// Check if we already have a snake path instance
+  // Check if we already have a snake path instance
   if (!window.snakePath && window.gameController && window.gameController.gridRenderer) {
     window.snakePath = new window.SnakePath(window.gameController.gridRenderer);
   }
