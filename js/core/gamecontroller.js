@@ -1620,7 +1620,10 @@ showIncorrectMessage() {
   }, 3000);
 }
   
-// New method to initialize ShakespeareResponse component with correct GitHub URL
+/**
+ * Enhanced initShakespeareComponent method with welcome modal support
+ * Replace your existing initShakespeareComponent method with this version
+ */
 initShakespeareComponent() {
   // Import the ShakespeareResponse module
   import('./shakespeareresponse.js')
@@ -1637,12 +1640,57 @@ initShakespeareComponent() {
       
       // Make game controller accessible to the Shakespeare component
       window.gameController = this;
+      
+      // ENHANCED: Show welcome modal after all components are ready
+      this.setupWelcomeModalTrigger();
     })
     .catch(error => {
       console.error('Failed to load Shakespeare component:', error);
     });
 }
 
+/**
+ * NEW: Setup welcome modal trigger after game initialization
+ */
+setupWelcomeModalTrigger() {
+  // Wait for the grid to be fully initialized before showing welcome
+  let gridReady = false;
+  let phrasesLoaded = false;
+  
+  const checkReadyState = () => {
+    if (gridReady && phrasesLoaded && this.shakespeareComponent) {
+      console.log('Game fully initialized, showing welcome modal...');
+      
+      // Small delay to ensure everything is rendered
+      setTimeout(() => {
+        this.shakespeareComponent.showWelcomeModal();
+      }, 500);
+    }
+  };
+  
+  // Listen for grid initialization
+  document.addEventListener('gridRendererInitialized', () => {
+    console.log('Grid renderer ready for welcome modal');
+    gridReady = true;
+    checkReadyState();
+  });
+  
+  // Listen for phrases being loaded
+  document.addEventListener('phrasesLoaded', () => {
+    console.log('Phrases loaded, ready for welcome modal');
+    phrasesLoaded = true;
+    checkReadyState();
+  });
+  
+  // Fallback: show welcome modal after a maximum wait time
+  setTimeout(() => {
+    if (this.shakespeareComponent && !gridReady) {
+      console.log('Fallback: Showing welcome modal after timeout');
+      this.shakespeareComponent.showWelcomeModal();
+    }
+  }, 3000);
+}
+  
 /**
  * Initialize the erosion controller
  * This should be called after PathGenerator and GridRenderer are initialized
@@ -2016,10 +2064,12 @@ handleResize() {
 }
   
 /**
- * Load sample data for testing
- * Updated to be async since it calls loadPhrase which is now async
+ * Updated loadSampleData method with event dispatch
+ * Replace your existing loadSampleData method with this version
  */
 async loadSampleData() {
+  console.log('Loading sample data for testing...');
+  
   // Sample phrase data for testing when CSV isn't available
   const samplePhrase = {
     id: 1,
@@ -2034,18 +2084,42 @@ async loadSampleData() {
     era: "Modern",
     author: "",
     phrasetags: "time,idiom",
-    usagetype: "Common"
+    usagetype: "Common",
+    response: "Ah, thou dost speak of time's swift passage! 'Tis a truth as old as the hills themselves.",
+    combined: "A timeless saying about the swift passage of time. This common expression reminds us that time seems to move quickly, much like an arrow shot from a bow travels swiftly to its target."
   };
   
-  // Use await here since loadPhrase is now async
+  // Set the sample phrase as our phrases array
+  this.phrases = [samplePhrase];
+  
+  console.log('Sample phrase prepared:', samplePhrase.phrase);
+  
+  // Use await here since loadPhrase is async
   await this.loadPhrase(samplePhrase);
+  
+  console.log('Sample data loaded successfully');
+  
+  // CRITICAL: Dispatch event that phrases have been loaded
+  document.dispatchEvent(new CustomEvent('phrasesLoaded', { 
+    detail: { 
+      phraseCount: 1,
+      gameController: this,
+      sampleData: true
+    }
+  }));
+  
+  console.log('Sample data phrases loaded event dispatched');
 }
   
-// Add this debugging code to your loadPhraseData method
-// Replace the existing filtering section with this enhanced version:
-
+/**
+ * Complete loadPhraseData method for GameController
+ * Enhanced with debugging, proper error handling, and event dispatching
+ * Replace your existing loadPhraseData method with this complete version
+ */
 async loadPhraseData(csvUrl) {
   try {
+    console.log('Starting phrase data loading from:', csvUrl);
+    
     // Fetch CSV file
     const response = await fetch(csvUrl);
     if (!response.ok) {
@@ -2059,11 +2133,18 @@ async loadPhraseData(csvUrl) {
       throw new Error('CSV file is empty');
     }
     
+    console.log(`CSV data loaded successfully. Size: ${csvData.length} characters`);
+    
     // Parse CSV using PapaParse
     const allPhrases = this.parseCSV(csvData);
     
     // ENHANCED DEBUGGING: Check what IDs we actually have
     console.log(`Total phrases loaded: ${allPhrases.length}`);
+    
+    // Validate that we have phrases
+    if (!allPhrases || allPhrases.length === 0) {
+      throw new Error('No phrases found in CSV data');
+    }
     
     // Get all unique IDs and sort them
     const allIds = allPhrases.map(phrase => parseInt(phrase.id, 10))
@@ -2073,7 +2154,7 @@ async loadPhraseData(csvUrl) {
     console.log(`ID range in CSV: ${Math.min(...allIds)} to ${Math.max(...allIds)}`);
     console.log(`Total valid numeric IDs: ${allIds.length}`);
     
-    // Check specifically for IDs in our target range
+    // Check specifically for IDs in our target range (Shakespeare phrases)
     const idsInRange = allIds.filter(id => id >= 3001 && id <= 3100);
     console.log(`IDs in range 3001-3100: ${idsInRange.length}`);
     console.log(`Actual IDs in range:`, idsInRange);
@@ -2097,7 +2178,7 @@ async loadPhraseData(csvUrl) {
       }
     }
     
-    // Filter phrases to only those with IDs between 3001-3100
+    // Filter phrases to only those with IDs between 3001-3100 (Shakespeare range)
     const shakespearePhrases = allPhrases.filter(phrase => {
       const id = parseInt(phrase.id, 10);
       return !isNaN(id) && id >= 3001 && id <= 3100;
@@ -2120,12 +2201,25 @@ async loadPhraseData(csvUrl) {
       }
     }
     
-    // If no phrases in range, fall back to all phrases
+    // Determine which phrase set to use
     if (shakespearePhrases.length === 0) {
       console.warn('No phrases found in ID range 3001-3100, using all phrases');
       this.phrases = allPhrases;
     } else {
       this.phrases = shakespearePhrases;
+    }
+    
+    // Validate phrase data structure
+    if (this.phrases.length > 0) {
+      const samplePhrase = this.phrases[0];
+      console.log('Sample phrase structure:', Object.keys(samplePhrase));
+      
+      // Check for required fields
+      const requiredFields = ['id', 'phrase'];
+      const missingFields = requiredFields.filter(field => !samplePhrase.hasOwnProperty(field));
+      if (missingFields.length > 0) {
+        console.warn('Missing required fields in phrase data:', missingFields);
+      }
     }
     
     // Load a random phrase
@@ -2135,16 +2229,53 @@ async loadPhraseData(csvUrl) {
       
       console.log(`Selected random phrase ${randomIndex + 1} of ${this.phrases.length}`);
       console.log('Loading random Shakespeare phrase ID:', randomPhrase.id);
+      console.log('Phrase text:', `"${randomPhrase.phrase}"`);
+      
+      // Load the selected phrase
       await this.loadPhrase(randomPhrase);
+      
+      console.log('Phrase loading completed successfully');
     } else {
-      console.warn('No phrases found in CSV');
-      this.loadSampleData();
+      console.warn('No phrases found in CSV, falling back to sample data');
+      await this.loadSampleData();
     }
     
+    // CRITICAL: Dispatch event that phrases have been loaded
+    document.dispatchEvent(new CustomEvent('phrasesLoaded', { 
+      detail: { 
+        phraseCount: this.phrases.length,
+        gameController: this,
+        csvUrl: csvUrl,
+        shakespearePhrases: shakespearePhrases.length > 0
+      }
+    }));
+    
+    console.log('Phrases loaded event dispatched');
+    
     return this.phrases;
+    
   } catch (error) {
     console.error('Error loading phrase data:', error);
-    this.loadSampleData();
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      csvUrl: csvUrl
+    });
+    
+    // Fall back to sample data on any error
+    console.log('Falling back to sample data due to error');
+    await this.loadSampleData();
+    
+    // Still dispatch the event even with sample data
+    document.dispatchEvent(new CustomEvent('phrasesLoaded', { 
+      detail: { 
+        phraseCount: 1,
+        gameController: this,
+        sampleData: true,
+        error: error.message
+      }
+    }));
+    
     return [];
   }
 }
