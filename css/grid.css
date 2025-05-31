@@ -11,7 +11,7 @@
    3. Scroll Areas (Replacing Arrow Buttons)
    4. Phrase Display
    5. Menu System (Replacing Refresh Buttons)
-   6. Menu Animations
+   6. Menu Animations & Erosion Pause
    7. Animation and Touch Handling
    8. Erosion and Animation Effects
    9. Trackpad Control Styles
@@ -1065,7 +1065,7 @@ body {
 }
 
 /* ==========================================================================
-   6. Menu Animations
+   6. Menu Animations & Erosion Pause
    ========================================================================== */
 
 /* Menu icon animation */
@@ -1079,6 +1079,35 @@ body {
 
 .menu-button.active .menu-icon span {
     opacity: 0;
+}
+
+/**
+ * Add this CSS to your existing stylesheet
+ * This provides visual feedback for the paused erosion state
+ */
+
+/* Styling for the erosion pause button when paused */
+.menu-item.erosion-paused {
+  background-color: rgba(76, 175, 80, 0.3) !important;
+  color: #2e7d32 !important;
+  font-weight: bold !important;
+  border: 1px solid #4caf50 !important;
+  box-shadow: inset 0 2px 4px rgba(76, 175, 80, 0.2) !important;
+}
+
+/* Hover effect for paused erosion button */
+.menu-item.erosion-paused:hover {
+  background-color: rgba(76, 175, 80, 0.4) !important;
+  color: #1b5e20 !important;
+}
+
+/* General erosion button styling (optional enhancement) */
+.menu-item.erosion-button {
+  transition: all 0.2s ease;
+}
+
+.menu-item.erosion-button:hover {
+  background-color: rgba(0, 0, 0, 0.1);
 }
 
 /* ==========================================================================
