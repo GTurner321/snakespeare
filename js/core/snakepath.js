@@ -256,6 +256,7 @@ window.SnakePath = class SnakePath {
    * Clear all snake images from the grid
    */
   clearSnakeImages() {
+    this.stopTailRotation(); // Add this line
     const snakeImages = document.querySelectorAll('.snake-piece');
     snakeImages.forEach(image => image.remove());
   }
