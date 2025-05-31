@@ -1268,7 +1268,7 @@ body {
   align-items: flex-start; /* Changed from center to flex-start */
   z-index: 2000;
   opacity: 1;
-  transition: opacity 1s ease;
+  transition: opacity 2s ease;
   /* Moved higher up on page */
   padding-top: 40px; /* Reduced from 80px */
   padding-bottom: 20px; /* Reduced from 120px */
@@ -1297,7 +1297,7 @@ body {
   height: auto;
   filter: drop-shadow(3px 3px 5px rgba(0, 0, 0, 0.3));
   margin-top: 20px;
-  transition: opacity 1s ease, transform 0.8s ease;
+  transition: opacity 2s ease, transform 2s ease;
   z-index: 2060; /* FIXED: Reduced from 2100 to avoid blocking info box */
   pointer-events: none; /* FIXED: Allow clicks to pass through image */
 }
@@ -1421,7 +1421,7 @@ body {
   z-index: 2100; /* FIXED: Higher than Shakespeare image to ensure clickability */
   padding: 20px;
   opacity: 1;
-  transition: opacity 1s ease, transform 0.5s ease;
+  transition: opacity 2s ease, transform 1s ease;
   pointer-events: auto; /* FIXED: Ensure this container is fully interactive */
 }
 
