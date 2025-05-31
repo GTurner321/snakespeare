@@ -2394,38 +2394,7 @@ injectWordCompletionCSS() {
   `;
   document.head.appendChild(style);
 }
-  
-/**
- * FIXED: Modified resetSelections method to preserve sea icons
- */
-resetSelections() {
-  this.gridRenderer.clearSelections();
-  this.handleSelectionChange();
-  
-  // Reset the phrase display to show just the template
-  if (this.phraseTemplate) {
-    const displayElement = document.getElementById('phrase-text');
-    if (displayElement) {
-      displayElement.textContent = this.phraseTemplate;
-      
-      // Adjust phrase display height
-      if (this.scrollHandler && this.scrollHandler.adjustPhraseDisplayHeight) {
-        setTimeout(() => {
-          this.scrollHandler.adjustPhraseDisplayHeight();
-        }, 50);
-      }
-    }
-  }
-  
-  // FIXED: Don't refresh sea icons on selection reset - they should persist
-  // Force island appearance update after reset (but preserve sea icons)
-  if (window.islandRenderer && typeof window.islandRenderer.updateIslandAppearance === 'function') {
-    setTimeout(() => {
-      window.islandRenderer.updateIslandAppearance();
-    }, 100);
-  }
-}
-  
+    
 /**
  * Modified setIslandReductionLevel method with forced island updates
  */
