@@ -8,7 +8,7 @@
    2b. Snake cells
    2c. Sea Icons
    2d. Wordchecker
-   3. Scroll Areas (removed)
+   3. Scroll button controller
    4. Phrase Display
    5. Menu System (Replacing Refresh Buttons)
    6. Menu Animations & Erosion Pause
@@ -811,8 +811,337 @@ body {
 }
 
 /* ==========================================================================
-   3. Scroll Areas - removed
+   3. Scroll Button Controller
    ========================================================================== */
+
+/* ==========================================================================
+   Updated Triangular Controller Styles - 75% Size with Center Circle
+   ========================================================================== */
+
+/* Triangular Controller Styles */
+.triangular-controller-container {
+  width: 90px; /* Reduced from 120px (75% size) */
+  height: 90px; /* Reduced from 120px (75% size) */
+  position: relative;
+  margin: 20px auto;
+  user-select: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+.triangle-button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  /* Base metallic styling from buttonsboxes.css */
+  background: repeating-linear-gradient(
+    120deg,
+    var(--btn-metal-light, #e8e8e8) 0px,
+    var(--btn-metal-medium, #d5d5d5) 10px,
+    var(--btn-metal-light, #e8e8e8) 30px,
+    var(--btn-metal-mediumlight, #dfdfdf) 55px,
+    var(--btn-metal-medium, #d5d5d5) 80px,
+    var(--btn-metal-mediumlight, #dfdfdf) 95px,
+    var(--btn-metal-light, #e8e8e8) 120px,
+    var(--btn-metal-medium, #d5d5d5) 135px
+  );
+  border: 2px solid var(--btn-metal-border, #b8b8b8);
+  box-shadow: 
+    0 4px 8px 1px var(--btn-metal-shadow, rgba(0, 0, 0, 0.25)),
+    0 1px 3px 1px rgba(0, 0, 0, 0.15),
+    inset 0 1px 2px var(--btn-metal-inner-highlight, rgba(255, 255, 255, 0.6)),
+    inset 0 -1px 2px var(--btn-metal-inner-shadow, rgba(0, 0, 0, 0.2));
+}
+
+/* Top triangle pointing down toward center */
+.triangle-up {
+  grid-column: 1 / 3;
+  grid-row: 1;
+  height: 45px; /* Reduced from 60px (75% size) */
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  z-index: 2;
+  border-bottom: none;
+}
+
+/* Right triangle pointing left toward center */
+.triangle-right {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  width: 45px; /* Reduced from 60px (75% size) */
+  clip-path: polygon(100% 0, 100% 100%, 0 50%);
+  z-index: 2;
+  border-left: none;
+}
+
+/* Bottom triangle pointing up toward center */
+.triangle-down {
+  grid-column: 1 / 3;
+  grid-row: 2;
+  height: 45px; /* Reduced from 60px (75% size) */
+  clip-path: polygon(0 100%, 100% 100%, 50% 0);
+  z-index: 2;
+  border-top: none;
+}
+
+/* Left triangle pointing right toward center */
+.triangle-left {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  width: 45px; /* Reduced from 60px (75% size) */
+  clip-path: polygon(0 0, 0 100%, 100% 50%);
+  z-index: 2;
+  border-right: none;
+}
+
+/* Center decorative circle */
+.triangular-controller-container::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 24px; /* Small circle in the center */
+  height: 24px;
+  border-radius: 50%;
+  z-index: 3; /* Above the triangles */
+  pointer-events: none; /* Non-functional */
+  
+  /* Same metallic styling as buttons */
+  background: repeating-linear-gradient(
+    45deg,
+    var(--btn-metal-light, #e8e8e8) 0px,
+    var(--btn-metal-medium, #d5d5d5) 3px,
+    var(--btn-metal-light, #e8e8e8) 6px,
+    var(--btn-metal-mediumlight, #dfdfdf) 9px,
+    var(--btn-metal-medium, #d5d5d5) 12px,
+    var(--btn-metal-mediumlight, #dfdfdf) 15px,
+    var(--btn-metal-light, #e8e8e8) 18px,
+    var(--btn-metal-medium, #d5d5d5) 21px
+  );
+  border: 1px solid var(--btn-metal-border, #b8b8b8);
+  box-shadow: 
+    0 2px 4px var(--btn-metal-shadow, rgba(0, 0, 0, 0.25)),
+    0 1px 2px rgba(0, 0, 0, 0.15),
+    inset 0 1px 1px var(--btn-metal-inner-highlight, rgba(255, 255, 255, 0.6)),
+    inset 0 -1px 1px var(--btn-metal-inner-shadow, rgba(0, 0, 0, 0.2));
+}
+
+.triangle-arrow {
+  font-size: 14px; /* Reduced from 18px (proportional to size reduction) */
+  color: var(--btn-text-color, #444);
+  text-shadow: 
+    0px 1px 1px var(--btn-text-shadow-light, rgba(255, 255, 255, 0.8)),
+    0px -1px 1px var(--btn-text-shadow-dark, rgba(0, 0, 0, 0.2));
+  transition: transform 0.15s ease, color 0.15s ease;
+  pointer-events: none;
+  z-index: 10;
+  position: relative;
+}
+
+/* Position the arrows in the correct locations - adjusted for smaller size */
+.triangle-up .triangle-arrow {
+  transform: translateY(-8px); /* Reduced from -10px */
+}
+
+.triangle-right .triangle-arrow {
+  transform: translateX(8px); /* Reduced from 10px */
+}
+
+.triangle-down .triangle-arrow {
+  transform: translateY(8px); /* Reduced from 10px */
+}
+
+.triangle-left .triangle-arrow {
+  transform: translateX(-8px); /* Reduced from -10px */
+}
+
+/* Hover effects */
+@media (hover: hover) {
+  .triangle-button:hover:not(.disabled) {
+    background: repeating-linear-gradient(
+      120deg,
+      var(--btn-metal-lighter, #f0f0f0) 0px,
+      var(--btn-metal-light, #e8e8e8) 15px,
+      var(--btn-metal-lighter, #f0f0f0) 35px,
+      var(--btn-metal-mediumlight, #dfdfdf) 60px,
+      var(--btn-metal-light, #e8e8e8) 85px,
+      var(--btn-metal-mediumlight, #dfdfdf) 100px,
+      var(--btn-metal-lighter, #f0f0f0) 125px,
+      var(--btn-metal-light, #e8e8e8) 140px
+    );
+  }
+  
+  .triangle-button:hover:not(.disabled) .triangle-arrow {
+    transform: scale(1.15);
+    color: var(--btn-text-hover, #222);
+  }
+  
+  /* Keep the positioning transforms with scaling */
+  .triangle-up:hover:not(.disabled) .triangle-arrow {
+    transform: translateY(-8px) scale(1.15);
+  }
+  
+  .triangle-right:hover:not(.disabled) .triangle-arrow {
+    transform: translateX(8px) scale(1.15);
+  }
+  
+  .triangle-down:hover:not(.disabled) .triangle-arrow {
+    transform: translateY(8px) scale(1.15);
+  }
+  
+  .triangle-left:hover:not(.disabled) .triangle-arrow {
+    transform: translateX(-8px) scale(1.15);
+  }
+}
+
+/* Active/pressed state matching buttonsboxes.css */
+.triangle-button.active {
+  background: repeating-linear-gradient(
+    120deg,
+    var(--btn-metal-dark, #b8b8b8) 0px,
+    var(--btn-metal-darker, #a0a0a0) 10px,
+    var(--btn-metal-dark, #b8b8b8) 30px,
+    var(--btn-metal-mediumdark, #c8c8c8) 55px,
+    var(--btn-metal-darker, #a0a0a0) 80px,
+    var(--btn-metal-mediumdark, #c8c8c8) 95px,
+    var(--btn-metal-dark, #b8b8b8) 120px,
+    var(--btn-metal-darker, #a0a0a0) 135px
+  ) !important;
+  box-shadow: 
+    inset 0 4px 8px rgba(0, 0, 0, 0.5),
+    inset 0 2px 4px rgba(0, 0, 0, 0.6);
+  transform: scale(0.95);
+  animation: triangle-button-pulse 0.2s ease;
+}
+
+.triangle-button.active .triangle-arrow {
+  color: var(--btn-text-active, #000);
+  text-shadow: 
+    0px 1px 0px var(--btn-text-shadow-pressed-light, rgba(255, 255, 255, 0.3)),
+    0px -1px 0px var(--btn-text-shadow-pressed-dark, rgba(0, 0, 0, 0.5));
+}
+
+/* Keep the positioning transforms for active state with scaling */
+.triangle-up.active .triangle-arrow {
+  transform: translateY(-8px) scale(0.95);
+}
+
+.triangle-right.active .triangle-arrow {
+  transform: translateX(8px) scale(0.95);
+}
+
+.triangle-down.active .triangle-arrow {
+  transform: translateY(8px) scale(0.95);
+}
+
+.triangle-left.active .triangle-arrow {
+  transform: translateX(-8px) scale(0.95);
+}
+
+/* Long press pulsing animation */
+.triangle-button.long-pressing {
+  background: repeating-linear-gradient(
+    120deg,
+    var(--btn-metal-dark, #b8b8b8) 0px,
+    var(--btn-metal-darker, #a0a0a0) 10px,
+    var(--btn-metal-dark, #b8b8b8) 30px,
+    var(--btn-metal-mediumdark, #c8c8c8) 55px,
+    var(--btn-metal-darker, #a0a0a0) 80px,
+    var(--btn-metal-mediumdark, #c8c8c8) 95px,
+    var(--btn-metal-dark, #b8b8b8) 120px,
+    var(--btn-metal-darker, #a0a0a0) 135px
+  ) !important;
+  animation: triangle-long-press-pulse 0.6s infinite;
+  transform: scale(0.95);
+}
+
+@keyframes triangle-button-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.95); }
+  100% { transform: scale(0.95); }
+}
+
+@keyframes triangle-long-press-pulse {
+  0%, 100% { 
+    box-shadow: 
+      inset 0 4px 8px rgba(0, 0, 0, 0.5),
+      inset 0 2px 4px rgba(0, 0, 0, 0.6);
+  }
+  50% { 
+    box-shadow: 
+      inset 0 6px 12px rgba(0, 0, 0, 0.7),
+      inset 0 3px 6px rgba(0, 0, 0, 0.8);
+  }
+}
+
+/* Disabled state */
+.triangle-button.disabled {
+  opacity: 0.3;
+  cursor: default;
+  pointer-events: none;
+}
+
+.triangle-button.disabled .triangle-arrow {
+  color: #999;
+  text-shadow: none;
+}
+
+/* Responsive adjustments - updated for new base size */
+@media (max-width: 768px) {
+  .triangular-controller-container {
+    width: 75px; /* Reduced from 100px (75% of 100px) */
+    height: 75px;
+  }
+  
+  .triangle-up, .triangle-down {
+    height: 37px; /* Reduced from 50px (75% size) */
+  }
+  
+  .triangle-left, .triangle-right {
+    width: 37px; /* Reduced from 50px (75% size) */
+  }
+  
+  .triangle-arrow {
+    font-size: 12px; /* Reduced from 16px */
+  }
+  
+  /* Adjust center circle for mobile */
+  .triangular-controller-container::after {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .triangular-controller-container {
+    width: 64px; /* Reduced from 85px (75% size) */
+    height: 64px;
+    margin: 15px auto;
+  }
+  
+  .triangle-up, .triangle-down {
+    height: 32px; /* Reduced from 42px (75% size) */
+  }
+  
+  .triangle-left, .triangle-right {
+    width: 32px; /* Reduced from 42px (75% size) */
+  }
+  
+  .triangle-arrow {
+    font-size: 11px; /* Reduced from 14px */
+  }
+  
+  /* Adjust center circle for small screens */
+  .triangular-controller-container::after {
+    width: 16px;
+    height: 16px;
+  }
+}
 
 /* ==========================================================================
    4. Redesigned Phrase Display
