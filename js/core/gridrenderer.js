@@ -1091,20 +1091,61 @@ handleAutoScroll() {
   return false; // No scrolling needed
 }
   
-  /**
-   * Update grid template based on screen size
-   */
- updateGridTemplate() {
-    const isMobile = window.innerWidth < 768;
-    const width = isMobile ? this.options.gridWidthSmall : this.options.gridWidth;
-    const height = isMobile ? this.options.gridHeightSmall : this.options.gridHeight;
+/**
+ * Add this method to your GridRenderer class to replace the existing updateGridTemplate method
+ * This version calculates cell sizes dynamically for mobile to ensure all 9 cells fit
+ */
+updateGridTemplate() {
+  const isMobile = window.innerWidth < 768;
+  const width = isMobile ? this.options.gridWidthSmall : this.options.gridWidth;
+  const height = isMobile ? this.options.gridHeightSmall : this.options.gridHeight;
+  
+  // Set data attribute for CSS to use
+  this.gridElement.dataset.gridSize = isMobile ? 'mobile' : 'desktop';
+  
+  if (isMobile) {
+    // Mobile: Calculate cell size based on available screen width
+    const availableWidth = Math.min(window.innerWidth - 40, 450); // Max 450px, min padding 40px
+    const gapSize = width > 7 ? 1 : 2; // Smaller gaps for larger grids
+    const totalGapWidth = (width - 1) * gapSize;
+    const cellSize = Math.floor((availableWidth - totalGapWidth) / width);
     
-    // Set data attribute for CSS to use
-    this.gridElement.dataset.gridSize = isMobile ? 'mobile' : 'desktop';
+    // Ensure minimum cell size
+    const finalCellSize = Math.max(cellSize, 28);
     
-    // Set explicit grid template columns and rows
+    // Set CSS custom properties for mobile
+    this.gridElement.style.setProperty('--mobile-cell-size', `${finalCellSize}px`);
+    this.gridElement.style.setProperty('--mobile-gap-size', `${gapSize}px`);
+    
+    // Use CSS Grid with calculated sizes
+    this.gridElement.style.gridTemplateColumns = `repeat(${width}, ${finalCellSize}px)`;
+    this.gridElement.style.gridTemplateRows = `repeat(${height}, ${finalCellSize}px)`;
+    this.gridElement.style.gap = `${gapSize}px`;
+    
+    // Set container dimensions
+    const totalWidth = width * finalCellSize + (width - 1) * gapSize;
+    const totalHeight = height * finalCellSize + (height - 1) * gapSize;
+    
+    this.gridElement.style.width = `${totalWidth}px`;
+    this.gridElement.style.height = `${totalHeight}px`;
+    this.gridElement.style.maxWidth = '100%';
+    
+    // Update the cellSize option for other calculations
+    this.options.cellSize = finalCellSize;
+    
+    console.log('Mobile grid template updated:', {
+      cellSize: finalCellSize,
+      gap: gapSize,
+      totalWidth,
+      totalHeight,
+      availableWidth
+    });
+    
+  } else {
+    // Desktop: Use original fixed sizing
     this.gridElement.style.gridTemplateColumns = `repeat(${width}, ${this.options.cellSize}px)`;
     this.gridElement.style.gridTemplateRows = `repeat(${height}, ${this.options.cellSize}px)`;
+    this.gridElement.style.gap = '2px';
     
     // Set explicit dimensions including gaps
     const totalWidth = width * this.options.cellSize + (width - 1) * 2; // 2px gap
@@ -1112,26 +1153,29 @@ handleAutoScroll() {
     
     this.gridElement.style.width = `${totalWidth}px`;
     this.gridElement.style.height = `${totalHeight}px`;
-    this.gridElement.style.maxWidth = '100%'; // Prevent overflow on small screens
-    
-    // Add this line here:
-    this.gridElement.style.overflow = 'hidden'; // Hide anything outside the grid boundaries
-    
-    console.log('Updated grid template:', {
-      width,
-      height,
-      isMobile,
-      gridTemplateColumns: this.gridElement.style.gridTemplateColumns,
-      gridTemplateRows: this.gridElement.style.gridTemplateRows,
-      totalWidth,
-      totalHeight
-    });
-    
-    // Dispatch an event when grid size changes
-    document.dispatchEvent(new CustomEvent('gridResized', { 
-      detail: { width: totalWidth, height: totalHeight, gridRenderer: this }
-    }));
+    this.gridElement.style.maxWidth = '100%';
   }
+  
+  // Always ensure overflow is hidden
+  this.gridElement.style.overflow = 'hidden';
+  
+  console.log('Updated grid template:', {
+    width,
+    height,
+    isMobile,
+    gridTemplateColumns: this.gridElement.style.gridTemplateColumns,
+    gridTemplateRows: this.gridElement.style.gridTemplateRows
+  });
+  
+  // Dispatch an event when grid size changes
+  document.dispatchEvent(new CustomEvent('gridResized', { 
+    detail: { 
+      width: parseInt(this.gridElement.style.width), 
+      height: parseInt(this.gridElement.style.height), 
+      gridRenderer: this 
+    }
+  }));
+}
   
 /**
  * Render visible portion of the grid with scroll optimization
@@ -2067,20 +2111,28 @@ updatePhraseWithRevealedLetters() {
     }
   }));
 }  
-  
+
 /**
- * Updated createCellElement method to use SVG sea icons
- * @param {number} x - X coordinate
- * @param {number} y - Y coordinate
- * @return {HTMLElement} The created cell element
+ * Also add this method to properly handle cell element sizing on mobile
+ * This should replace or supplement your existing createCellElement method
  */
 createCellElement(x, y) {
   const cellElement = document.createElement('div');
   cellElement.className = 'grid-cell';
   
-  // Ensure proper cell dimensions
-  cellElement.style.width = `${this.options.cellSize}px`;
-  cellElement.style.height = `${this.options.cellSize}px`;
+  // Dynamic cell sizing for mobile
+  const isMobile = window.innerWidth < 768;
+  if (isMobile) {
+    // Use CSS Grid sizing - let the grid handle the sizing
+    cellElement.style.width = '100%';
+    cellElement.style.height = '100%';
+  } else {
+    // Desktop: use fixed sizing
+    cellElement.style.width = `${this.options.cellSize}px`;
+    cellElement.style.height = `${this.options.cellSize}px`;
+  }
+  
+  // ... rest of your existing createCellElement code remains the same ...
   
   // If cell is within grid bounds
   if (y >= 0 && y < this.grid.length && x >= 0 && x < this.grid[0].length) {
@@ -2131,7 +2183,7 @@ createCellElement(x, y) {
   
   return cellElement;
 }
-
+  
 /**
  * Add SVG sea icon to cell element
  * @param {HTMLElement} cellElement - The cell element
