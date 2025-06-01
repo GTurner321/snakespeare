@@ -222,8 +222,8 @@ class ShakespeareResponse {
     
     const instructions = [
       "Begin thy quest where the emerald square doth lie, and seek a hidden phrase 'mongst neighboring tiles.",
-      "Shouldst thou falter, find counsel within the menu.",
-      "Unveil the phrase ere the surging sea o'ertake the isle."
+      "Unveil the phrase ere the surging sea o'ertake the isle.",      
+      "Shouldst thou falter, find counsel within the menu."
       ];
     
     const instructionsList = document.createElement('ul');
