@@ -223,9 +223,8 @@ class ShakespeareResponse {
     const instructions = [
       "Begin thy quest where the emerald square doth lie, and seek a hidden phrase 'mongst neighboring tiles.",
       "Shouldst thou falter, find counsel within the menu.",
-      "Unveil the phrase ere the surging sea o'ertake the isle.",
-      "Come, let us assay the measure of thy wit."
-    ];
+      "Unveil the phrase ere the surging sea o'ertake the isle."
+      ];
     
     const instructionsList = document.createElement('ul');
     instructionsList.className = 'instructions-list';
@@ -273,7 +272,7 @@ class ShakespeareResponse {
     
     this.farewellMessage = document.createElement('p');
     this.farewellMessage.className = 'farewell-message';
-    this.farewellMessage.textContent = 'Fortune attend thee!';
+    this.farewellMessage.textContent = 'Come, let us assay the measure of thy wit!';
     this.farewellContainer.appendChild(this.farewellMessage);
   }
 
