@@ -287,6 +287,32 @@ body {
     box-shadow: 0 0 6px rgba(0, 77, 64, 0.5) !important;
 }
 
+/* Flashing animation for unselected start cell */
+@keyframes start-cell-flash {
+  0% { 
+    background-color: var(--startgreen) !important;
+    opacity: 1;
+  }
+  50% { 
+    background-color: transparent !important;
+    opacity: 0.3;
+  }
+  100% { 
+    background-color: var(--startgreen) !important;
+    opacity: 1;
+  }
+}
+
+/* Apply flashing to unselected start cell */
+.grid-cell.start-cell.flash-unselected {
+  animation: start-cell-flash 1s infinite ease-in-out;
+}
+
+/* Stop flashing when selected */
+.grid-cell.start-cell.selected-cell {
+  animation: none !important;
+}
+
 /* Style for revealed hint cells - preserve as red */
 .grid-cell.revealed-cell {
     background-color: #ffcdd2 !important; /* Light red */
