@@ -3300,54 +3300,53 @@ stopFlashingStartCell() {
   }
 }
   
-/**
- * New method to trigger flash animation for the snake
- * Adds necessary CSS and toggles visibility
- */
 triggerFlashAnimation() {
   // First, ensure we have the flash animation CSS
   this.ensureFlashAnimationCSS();
   
-  // Get all snake pieces currently in the DOM
-  const snakePieces = document.querySelectorAll('.snake-piece');
-  const cellsWithSnake = document.querySelectorAll('.grid-cell .snake-piece');
-  
-  // If no snake pieces found, log and return
-  if (snakePieces.length === 0) {
-    console.log('No snake pieces found to animate');
-    return;
-  }
-  
-  console.log(`Triggering flash animation for ${snakePieces.length} snake pieces`);
-  
-  // Flash the snake twice (off-on, off-on) with 500ms intervals
-  let flashCount = 0;
-  const maxFlashes = 4; // 2 complete cycles (off-on, off-on)
-  
-  const flashInterval = setInterval(() => {
-    // Toggle visibility
-    const isVisible = flashCount % 2 === 0;
+  // Wait for snake pieces to be fully placed and settled
+  setTimeout(() => {
+    // Get all snake pieces currently in the DOM
+    const snakePieces = document.querySelectorAll('.snake-piece');
     
-    snakePieces.forEach(piece => {
-      piece.style.visibility = isVisible ? 'hidden' : 'visible';
-    });
+    // If no snake pieces found, log and return
+    if (snakePieces.length === 0) {
+      console.log('No snake pieces found to animate');
+      return;
+    }
     
-    flashCount++;
+    console.log(`Triggering phrase completion flash for ${snakePieces.length} snake pieces`);
     
-    // Stop after max flashes
-    if (flashCount >= maxFlashes) {
-      clearInterval(flashInterval);
+    // Flash the snake twice (off-on, off-on) with 500ms intervals
+    let flashCount = 0;
+    const maxFlashes = 4; // 2 complete cycles (off-on, off-on)
+    
+    const flashInterval = setInterval(() => {
+      // Toggle visibility
+      const isVisible = flashCount % 2 === 0;
       
-      // Ensure snake is visible at the end
       snakePieces.forEach(piece => {
-        piece.style.visibility = 'visible';
+        piece.style.visibility = isVisible ? 'hidden' : 'visible';
       });
       
-      console.log('Snake flash animation complete');
-    }
-  }, 500); // 500ms = half a second
+      flashCount++;
+      
+      // Stop after max flashes
+      if (flashCount >= maxFlashes) {
+        clearInterval(flashInterval);
+        
+        // Ensure snake is visible at the end
+        snakePieces.forEach(piece => {
+          piece.style.visibility = 'visible';
+        });
+        
+        console.log('Snake phrase completion flash animation complete');
+      }
+    }, 500); // 500ms = half a second
+    
+  }, 600); // Wait 600ms for snake pieces to be fully placed
 }
-
+  
 /**
  * Ensure flash animation CSS exists and uses the correct colors
  */
