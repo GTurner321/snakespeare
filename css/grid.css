@@ -1581,11 +1581,11 @@ body {
 }
 
 /* ==========================================================================
-   10. Shakespeare Response Components - FIXED Z-INDEX LAYERING
-   Interactive Shakespeare response boxes with quiz functionality
+   10. Shakespeare Response Components - Universal Styles
+   Base styles used across all Shakespeare modals
    ========================================================================== */
 
-/* Modal overlay for Shakespeare response - MOVED HIGHER */
+/* Universal modal overlay styles */
 .shakespeare-modal-overlay {
   position: fixed;
   top: 0;
@@ -1595,52 +1595,46 @@ body {
   background-color: rgba(0, 0, 0, 0.7);
   display: flex;
   justify-content: center;
-  align-items: flex-start; /* Changed from center to flex-start */
+  align-items: flex-start;
   z-index: 2000;
   opacity: 1;
   transition: opacity 2s ease;
-  /* Moved higher up on page */
-  padding-top: 40px; /* Reduced from 80px */
-  padding-bottom: 20px; /* Reduced from 120px */
-  pointer-events: none; /* FIXED: Allow clicks to pass through overlay */
+  padding-top: 40px;
+  padding-bottom: 20px;
+  pointer-events: none;
 }
 
 .shakespeare-modal-overlay.fade-out {
   opacity: 0;
 }
 
-/* Container for Shakespeare image and speech bubble */
+/* Universal container for Shakespeare image and content */
 .shakespeare-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   max-width: 85%;
   margin: 0 auto;
-  transition: transform 0.8s ease; /* Smooth transition for upward movement */
-  pointer-events: auto; /* FIXED: Re-enable pointer events for this container */
-  z-index: 2050; /* FIXED: Ensure proper layering */
+  transition: transform 0.8s ease;
+  pointer-events: auto;
+  z-index: 2050;
 }
 
-/* Shakespeare image */
+/* Universal Shakespeare image styles */
 .shakespeare-image {
   width: 200px;
   height: auto;
   filter: drop-shadow(3px 3px 5px rgba(0, 0, 0, 0.3));
   margin-top: 20px;
   transition: opacity 2s ease, transform 2s ease;
-  z-index: 2060; /* FIXED: Reduced from 2100 to avoid blocking info box */
-  pointer-events: none; /* FIXED: Allow clicks to pass through image */
+  z-index: 2060;
+  pointer-events: none;
 }
 
-/* Shakespeare container moves up when info box appears - IMPROVED */
-.info-box-container:not([style*="display: none"]) ~ .shakespeare-modal-overlay .shakespeare-container {
-  transform: translateY(-120px); /* Move entire container up */
-}
-
-/* Post-it note style speech bubble - response box */
+/* Universal speech bubble styles */
 .speech-bubble {
   position: relative;
-  background: #fffacd; /* Light yellow post-it color */
+  background: #fffacd;
   border: none;
   border-radius: 8px;
   padding: 25px;
@@ -1650,7 +1644,7 @@ body {
   width: 100%;
   text-align: center;
   transition: opacity 1s ease;
-  pointer-events: auto; /* FIXED: Ensure speech bubble is clickable when visible */
+  pointer-events: auto;
 }
 
 /* Triangle pointer for speech bubble - pointing down */
@@ -1667,39 +1661,19 @@ body {
   width: 0;
 }
 
-/* Response text styling - UNIFIED FONT SIZE */
-.response-text {
-  margin: 0 0 20px 0;
+/* Universal text styles - ALL TREBUCHET MS */
+.response-text,
+.question-text,
+.feedback-message,
+.info-text,
+.instructions-container,
+.farewell-message {
   font-family: 'Trebuchet MS', Arial, sans-serif;
-  font-size: 18px;
-  line-height: 1.5;
-  color: #555;
-}
-
-/* Question container */
-.question-container {
-  margin-top: 20px;
-  padding-top: 20px;
-}
-
-/* Question text - UNIFIED FONT SIZE */
-.question-text {
-  margin: 0 0 20px 0;
-  font-family: 'Trebuchet MS', Arial, sans-serif;
-  font-size: 18px;
   color: #555;
   line-height: 1.5;
 }
 
-/* Button container */
-.button-container {
-  display: flex;
-  gap: 20px;
-  justify-content: center;
-  margin-top: 15px;
-}
-
-/* Choice buttons */
+/* Universal button styles */
 .choice-button {
   padding: 12px 30px;
   border: none;
@@ -1740,121 +1714,11 @@ body {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-/* Info/Context Box Container - FIXED Z-INDEX AND POINTER EVENTS */
-.info-box-container {
-  position: fixed;
-  bottom: 20px; /* Positioned at bottom */
-  left: 0;
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  z-index: 2100; /* FIXED: Higher than Shakespeare image to ensure clickability */
-  padding: 20px;
-  opacity: 1;
-  transition: opacity 2s ease, transform 1s ease;
-  pointer-events: auto; /* FIXED: Ensure this container is fully interactive */
-}
+/* ==========================================================================
+   10a. Welcome Modal Styles
+   Initial welcome screen with game title and instructions
+   ========================================================================== */
 
-.info-box-container.fade-out {
-  opacity: 0;
-  transform: translateY(100%);
-}
-
-/* Info/Context Box - speech bubble style */
-.info-box {
-  position: relative;
-  background: #fffacd;
-  border: none;
-  border-radius: 8px;
-  padding: 20px 25px;
-  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.15);
-  max-width: 580px;
-  width: 100%;
-  text-align: center;
-  pointer-events: auto; /* FIXED: Ensure info box is fully interactive */
-}
-
-/* Triangle pointer for info box - pointing up */
-.info-box:before {
-  content: '';
-  position: absolute;
-  top: -15px;
-  left: 50%;
-  transform: translateX(-50%);
-  border-width: 0 15px 15px;
-  border-style: solid;
-  border-color: transparent transparent #fffacd;
-  display: block;
-  width: 0;
-}
-
-/* Close button - FIXED TO ENSURE FULL CLICKABILITY */
-.info-box-close {
-  position: absolute;
-  top: 8px;
-  right: 12px;
-  width: 24px;
-  height: 24px;
-  background: none;
-  color: #555;
-  border: none;
-  font-size: 20px;
-  line-height: 1;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  transition: color 0.2s ease;
-  z-index: 2110; /* FIXED: Highest z-index to ensure close button is always clickable */
-  font-weight: bold;
-  pointer-events: auto; /* FIXED: Explicitly enable pointer events */
-}
-
-.info-box-close:hover {
-  color: #333;
-}
-
-.info-box-close:active {
-  color: #000;
-}
-
-/* Feedback message - UNIFIED FONT SIZE */
-.feedback-message {
-  margin: 0 0 15px 0;
-  font-family: 'Trebuchet MS', Arial, sans-serif;
-  font-size: 18px;
-  font-weight: normal;
-  line-height: 1.5;
-  color: #555;
-  padding: 0;
-  border-radius: 0;
-  background-color: transparent;
-  border: none;
-}
-
-.feedback-message.correct {
-  color: #555;
-  background-color: transparent;
-  border: none;
-}
-
-.feedback-message.incorrect {
-  color: #555;
-  background-color: transparent;
-  border: none;
-}
-
-/* Info text - UNIFIED FONT SIZE */
-.info-text {
-  margin: 0;
-  font-family: 'Trebuchet MS', Arial, sans-serif;
-  font-size: 18px;
-  line-height: 1.5;
-  color: #555;
-}
-
-/* Welcome modal specific styles */
 .welcome-modal-overlay {
   padding-top: 20px !important;
 }
@@ -1864,16 +1728,16 @@ body {
 }
 
 .welcome-shakespeare-image {
-  margin-top: 40px; /* Position Shakespeare image lower */
+  margin-top: 40px;
 }
 
 .welcome-speech-bubble {
-  max-width: 520px !important; /* Larger speech bubble */
+  max-width: 520px !important;
   padding: 30px !important;
   margin-bottom: 20px !important;
 }
 
-/* Game title styles using grid cell appearance */
+/* Game title using grid cell appearance */
 .game-title-container {
   margin-bottom: 25px;
   text-align: center;
@@ -1882,13 +1746,12 @@ body {
 .title-grid {
   display: flex;
   justify-content: center;
-  gap: 4px;
+  gap: 0; /* No gap between tiles */
   flex-wrap: wrap;
   margin: 0 auto;
 }
 
 .title-cell {
-  /* Inherit from game cell styles */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1907,12 +1770,17 @@ body {
   box-sizing: border-box;
 }
 
+/* Snake icon replaces the 'S' completely */
 .title-snake-icon {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  font-size: 12px;
-  z-index: 1;
+  position: static;
+  font-size: 1.2rem;
+  color: var(--text-dark);
+  text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8);
+}
+
+/* Hide the 'S' letter when snake icon is present */
+.title-cell:has(.title-snake-icon) .title-letter {
+  display: none;
 }
 
 .title-letter {
@@ -1922,10 +1790,8 @@ body {
 
 /* Instructions styles */
 .instructions-container {
-  font-family: 'Trebuchet MS', Arial, sans-serif;
   font-size: 16px;
   line-height: 1.4;
-  color: #555;
 }
 
 .instructions-list {
@@ -1936,20 +1802,16 @@ body {
 
 .instruction-item {
   margin-bottom: 12px;
-  padding-left: 20px;
+  padding-left: 0; /* No bullet point padding */
   position: relative;
 }
 
+/* No bullet points */
 .instruction-item:before {
-  content: "•";
-  color: var(--maingreen-dark);
-  font-weight: bold;
-  position: absolute;
-  left: 0;
-  font-size: 1.2em;
+  display: none;
 }
 
-/* Enter button and farewell styles */
+/* Enter button styles */
 .enter-button-container {
   text-align: center;
   margin: 20px 0;
@@ -1960,25 +1822,175 @@ body {
   min-width: 100px;
 }
 
+/* Farewell message styles */
 .farewell-container {
   text-align: center;
   margin: 20px 0;
 }
 
 .farewell-message {
-  font-family: 'Trebuchet MS', Arial, sans-serif;
   font-size: 18px;
-  font-weight: bold;
-  color: var(--maingreen-dark);
+  font-weight: normal; /* Not bold */
   margin: 0;
-  font-style: italic;
+  font-style: normal; /* Not italic */
 }
 
-/* Mobile responsive adjustments */
+/* ==========================================================================
+   10b. Interactive Response Modal Styles
+   Shakespeare response with quiz functionality
+   ========================================================================== */
+
+/* Shakespeare container moves up when info box appears */
+.info-box-container:not([style*="display: none"]) ~ .shakespeare-modal-overlay .shakespeare-container {
+  transform: translateY(-120px);
+}
+
+/* Response text styling */
+.response-text {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+}
+
+/* Question container */
+.question-container {
+  margin-top: 20px;
+  padding-top: 20px;
+}
+
+/* Question text */
+.question-text {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+}
+
+/* Button container */
+.button-container {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin-top: 15px;
+}
+
+/* ==========================================================================
+   10c. Info/Feedback Box Styles
+   Bottom feedback box with context information
+   ========================================================================== */
+
+.info-box-container {
+  position: fixed;
+  bottom: 20px;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  z-index: 2100;
+  padding: 20px;
+  opacity: 1;
+  transition: opacity 2s ease, transform 1s ease;
+  pointer-events: auto;
+}
+
+.info-box-container.fade-out {
+  opacity: 0;
+  transform: translateY(100%);
+}
+
+.info-box {
+  position: relative;
+  background: #fffacd;
+  border: none;
+  border-radius: 8px;
+  padding: 20px 25px;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.15);
+  max-width: 580px;
+  width: 100%;
+  text-align: center;
+  pointer-events: auto;
+}
+
+/* Triangle pointer for info box - pointing up */
+.info-box:before {
+  content: '';
+  position: absolute;
+  top: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 0 15px 15px;
+  border-style: solid;
+  border-color: transparent transparent #fffacd;
+  display: block;
+  width: 0;
+}
+
+/* Close button */
+.info-box-close {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  width: 24px;
+  height: 24px;
+  background: none;
+  color: #555;
+  border: none;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: color 0.2s ease;
+  z-index: 2110;
+  font-weight: bold;
+  pointer-events: auto;
+}
+
+.info-box-close:hover {
+  color: #333;
+}
+
+.info-box-close:active {
+  color: #000;
+}
+
+/* Feedback message */
+.feedback-message {
+  margin: 0 0 15px 0;
+  font-size: 18px;
+  font-weight: normal;
+  padding: 0;
+  border-radius: 0;
+  background-color: transparent;
+  border: none;
+}
+
+.feedback-message.correct {
+  color: #555;
+  background-color: transparent;
+  border: none;
+}
+
+.feedback-message.incorrect {
+  color: #555;
+  background-color: transparent;
+  border: none;
+}
+
+/* Info text */
+.info-text {
+  margin: 0;
+  font-size: 18px;
+}
+
+/* ==========================================================================
+   10d. Mobile Responsive Adjustments
+   Media queries for all Shakespeare components
+   ========================================================================== */
+
 @media (max-width: 768px) {
   .shakespeare-modal-overlay {
-    padding-top: 30px; /* Reduced */
-    padding-bottom: 15px; /* Reduced */
+    padding-top: 30px;
+    padding-bottom: 15px;
   }
   
   .shakespeare-container {
@@ -1990,7 +2002,7 @@ body {
   }
   
   .info-box-container:not([style*="display: none"]) ~ .shakespeare-modal-overlay .shakespeare-container {
-    transform: translateY(-100px); /* Adjusted for mobile */
+    transform: translateY(-100px);
   }
   
   .speech-bubble {
@@ -1998,11 +2010,11 @@ body {
     max-width: 350px;
   }
   
-  .response-text {
-    font-size: 16px;
-  }
-  
-  .question-text {
+  .response-text,
+  .question-text,
+  .feedback-message,
+  .info-text,
+  .farewell-message {
     font-size: 16px;
   }
   
@@ -2017,21 +2029,12 @@ body {
   }
   
   .info-box-container {
-    bottom: 15px; /* Reduced */
+    bottom: 15px;
   }
   
   .info-box {
     padding: 15px 20px;
     max-width: 90%;
-  }
-  
-  .feedback-message {
-    font-size: 16px;
-    font-weight: normal;
-  }
-  
-  .info-text {
-    font-size: 16px;
   }
   
   .welcome-speech-bubble {
@@ -2046,23 +2049,18 @@ body {
   }
   
   .title-snake-icon {
-    font-size: 10px;
+    font-size: 1rem;
   }
   
   .instructions-container {
     font-size: 15px;
   }
-  
-  .farewell-message {
-    font-size: 16px;
-  }
 }
 
-/* Small screens */
 @media (max-width: 480px) {
   .shakespeare-modal-overlay {
-    padding-top: 20px; /* Further reduced */
-    padding-bottom: 10px; /* Further reduced */
+    padding-top: 20px;
+    padding-bottom: 10px;
   }
   
   .shakespeare-container {
@@ -2074,7 +2072,7 @@ body {
   }
   
   .info-box-container:not([style*="display: none"]) ~ .shakespeare-modal-overlay .shakespeare-container {
-    transform: translateY(-80px); /* Adjusted for small screens */
+    transform: translateY(-80px);
   }
   
   .speech-bubble {
@@ -2082,11 +2080,11 @@ body {
     max-width: 280px;
   }
   
-  .response-text {
-    font-size: 15px;
-  }
-  
-  .question-text {
+  .response-text,
+  .question-text,
+  .feedback-message,
+  .info-text,
+  .farewell-message {
     font-size: 15px;
   }
   
@@ -2094,6 +2092,7 @@ body {
     padding: 8px 16px;
     font-size: 14px;
     min-width: 60px;
+    width: 120px;
   }
   
   .button-container {
@@ -2102,25 +2101,12 @@ body {
     align-items: center;
   }
   
-  .choice-button {
-    width: 120px;
-  }
-  
   .info-box-container {
-    bottom: 10px; /* Further reduced */
+    bottom: 10px;
   }
   
   .info-box {
     padding: 12px 15px;
-  }
-  
-  .feedback-message {
-    font-size: 15px;
-    font-weight: normal;
-  }
-  
-  .info-text {
-    font-size: 15px;
   }
   
   .info-box-close {
@@ -2140,14 +2126,10 @@ body {
   }
   
   .title-snake-icon {
-    font-size: 8px;
+    font-size: 0.9rem;
   }
   
   .instructions-container {
     font-size: 14px;
-  }
-  
-  .farewell-message {
-    font-size: 15px;
   }
 }
