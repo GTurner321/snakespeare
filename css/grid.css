@@ -1611,7 +1611,6 @@ body {
    Base styles used across all Shakespeare modals
    ========================================================================== */
 
-/* Universal modal overlay styles */
 .shakespeare-modal-overlay {
   position: fixed;
   top: 0;
@@ -1624,7 +1623,7 @@ body {
   align-items: flex-start;
   z-index: 2000;
   opacity: 1;
-  transition: opacity 2s ease;
+  transition: opacity 3s ease; /* Increased from 2s to 3s for slower fade */
   padding-top: 40px;
   padding-bottom: 20px;
   pointer-events: none;
@@ -1634,25 +1633,23 @@ body {
   opacity: 0;
 }
 
-/* Universal container for Shakespeare image and content */
 .shakespeare-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   max-width: 85%;
   margin: 0 auto;
-  transition: transform 0.8s ease;
+  transition: transform 0.8s ease, opacity 3s ease; /* Added opacity transition matching overlay */
   pointer-events: auto;
   z-index: 2050;
 }
 
-/* Universal Shakespeare image styles */
 .shakespeare-image {
   width: 200px;
   height: auto;
   filter: drop-shadow(3px 3px 5px rgba(0, 0, 0, 0.3));
   margin-top: 20px;
-  transition: opacity 2s ease, transform 2s ease;
+  transition: opacity 3s ease, transform 2s ease; /* Increased opacity transition from 2s to 3s */
   z-index: 2060;
   pointer-events: none;
 }
@@ -1669,7 +1666,7 @@ body {
   max-width: 420px;
   width: 100%;
   text-align: center;
-  transition: opacity 1s ease;
+  transition: opacity 3s ease; /* Increased from 1s to 3s for slower fade */
   pointer-events: auto;
 }
 
@@ -1747,6 +1744,7 @@ body {
 
 .welcome-modal-overlay {
   padding-top: 20px !important;
+  transition: opacity 3s ease; /* Increased from 2s to 3s for slower farewell fade */
 }
 
 .welcome-shakespeare-container {
@@ -1823,7 +1821,7 @@ body {
 .instructions-list {
   list-style: none;
   padding: 0;
-  margin: 0 0 15px 0; /* Reduced bottom margin from 20px to 15px */
+  margin: 0 0 25px 0; /* Increased from 15px for more space before ENTER button */
 }
 
 .instruction-item {
@@ -1846,6 +1844,7 @@ body {
 
 .enter-button {
   min-width: 100px;
+  font-size: 18px; /* Increased button text size */
 }
 
 /* Farewell message styles */
@@ -1897,11 +1896,6 @@ body {
   margin-top: 15px;
 }
 
-/* ==========================================================================
-   10c. Info/Feedback Box Styles
-   Bottom feedback box with context information
-   ========================================================================== */
-
 .info-box-container {
   position: fixed;
   bottom: 20px;
@@ -1912,7 +1906,7 @@ body {
   z-index: 2100;
   padding: 20px;
   opacity: 1;
-  transition: opacity 2s ease, transform 1s ease;
+  transition: opacity 3s ease, transform 1s ease; /* Increased opacity transition from 2s to 3s */
   pointer-events: auto;
 }
 
@@ -2069,13 +2063,13 @@ body {
   }
   
   .title-cell {
-    width: 35px;
-    height: 35px;
-    font-size: 1rem;
+    width: 42px; /* Increased from 35px */
+    height: 42px; /* Increased from 35px */
+    font-size: 1.2rem; /* Increased from 1rem */
   }
   
   .title-snake-icon {
-    font-size: 1.3rem; /* Increased from 1rem */
+    font-size: 1.5rem; /* Increased from 1.3rem */
   }
   
   .instructions-container {
@@ -2150,13 +2144,13 @@ body {
   }
   
   .title-cell {
-    width: 30px;
-    height: 30px;
-    font-size: 0.9rem;
+    width: 36px; /* Increased from 30px */
+    height: 36px; /* Increased from 30px */
+    font-size: 1.1rem; /* Increased from 0.9rem */
   }
   
   .title-snake-icon {
-    font-size: 1.1rem; /* Increased from 0.9rem */
+    font-size: 1.3rem; /* Increased from 1.1rem */
   }
   
   .instructions-container {
