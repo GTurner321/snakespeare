@@ -743,6 +743,16 @@ handleCellSelection(x, y, forceSelect = false) {
     return false;
   }
   
+  // NEW: Check if this is the start cell being selected for the first time
+  const centerX = 35;
+  const centerY = 35;
+  const isStartCell = (x === centerX && y === centerY);
+  
+  // If selecting the start cell and no cells are currently selected, stop flashing
+  if (isStartCell && this.selectedCells.length === 0) {
+    this.stopFlashingStartCell();
+  }
+  
   // Check if coordinates are within grid bounds
   if (y >= 0 && y < this.grid.length && x >= 0 && x < this.grid[0].length) {
     const cell = this.grid[y][x];
@@ -2304,7 +2314,7 @@ handleSeaIconClick(e) {
   }
   
 /**
- * Set the path for the grid
+ * Set the path for the grid - MODIFIED to add start cell flashing
  * @param {Array} path - Array of {x, y, letter} objects
  * @return {boolean} True if all path cells were successfully placed
  */
@@ -2325,10 +2335,10 @@ setPath(path) {
       this.grid[y][x].letter = ''; // Clear all letters initially
       // Reset the completed state for each cell
       this.grid[y][x].isCompleted = false;
-      // NEW: Reset the revealed state
+      // Reset the revealed state
       this.grid[y][x].isRevealed = false;
-      // NEW: Reset sea icon properties (they'll be re-decided when cells are created)
-      this.grid[y][x].hasSeaIcon = undefined; // undefined = no decision made yet
+      // Reset sea icon properties
+      this.grid[y][x].hasSeaIcon = undefined;
       this.grid[y][x].seaIconData = null;
     }
   }
@@ -2339,7 +2349,7 @@ setPath(path) {
   this.grid[centerY][centerX].isPath = true;
   this.grid[centerY][centerX].isStart = true;
   this.grid[centerY][centerX].pathIndex = 0;
-  // NEW: Start cell never has sea icon
+  // Start cell never has sea icon
   this.grid[centerY][centerX].hasSeaIcon = false;
   this.grid[centerY][centerX].seaIconData = null;
   
@@ -2358,8 +2368,7 @@ setPath(path) {
       this.grid[gridY][gridX].isPath = true;
       this.grid[gridY][gridX].pathIndex = index;
       
-      // NEW: Path cells never have sea icons
-      // Clear any existing sea icon decision for path cells
+      // Path cells never have sea icons
       if (this.grid[gridY][gridX].letter && this.grid[gridY][gridX].letter.trim() !== '') {
         this.grid[gridY][gridX].hasSeaIcon = false;
         this.grid[gridY][gridX].seaIconData = null;
@@ -2377,12 +2386,17 @@ setPath(path) {
   // Re-render grid
   this.renderVisibleGrid();
   
+  // NEW: Start flashing the start cell after a short delay
+  setTimeout(() => {
+    this.startFlashingStartCell();
+  }, 500); // Half second delay to let the grid settle
+  
   // Notify that path has been set
   document.dispatchEvent(new CustomEvent('pathSet', { 
     detail: { 
       path: path, 
       gridRenderer: this,
-      success: allCellsPlaced // Add success flag to the event
+      success: allCellsPlaced
     }
   }));
   
@@ -3256,6 +3270,31 @@ setCompleted(completed, isCorrect = true) {
   }));
 }
 
+/**
+ * Start flashing the start cell to indicate it should be selected first
+ */
+startFlashingStartCell() {
+  // Only flash if the start cell is not already selected
+  if (this.selectedCells.length === 0) {
+    const startCellElement = document.querySelector('.grid-cell.start-cell');
+    if (startCellElement) {
+      startCellElement.classList.add('flash-unselected');
+      console.log('Started flashing start cell');
+    }
+  }
+}
+
+/**
+ * Stop flashing the start cell
+ */
+stopFlashingStartCell() {
+  const startCellElement = document.querySelector('.grid-cell.start-cell');
+  if (startCellElement) {
+    startCellElement.classList.remove('flash-unselected');
+    console.log('Stopped flashing start cell');
+  }
+}
+  
 /**
  * New method to trigger flash animation for the snake
  * Adds necessary CSS and toggles visibility
