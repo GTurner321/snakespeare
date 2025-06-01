@@ -879,7 +879,7 @@ body {
   width: 100%;
   max-width: 650px;
   margin: 0 auto;
-  padding: 15px;
+  padding: 2px;
   background-color: transparent;
   border: none;
   box-shadow: none;
@@ -1183,7 +1183,7 @@ body {
     font-size: 1.3rem; /* Larger font size as requested */
     letter-spacing: 1.8px;
     line-height: 1.5;
-    padding: 12px;
+    padding: 2px;
     min-height: 55px;
   }
   
@@ -1262,7 +1262,7 @@ body {
   /* PHRASE DISPLAY - Mobile optimized */
   .phrase-display {
     margin-top: 55px;
-    padding: 10px;
+    padding: 2px;
     min-height: 50px;
     font-size: 1.2rem; /* Still larger than before */
   }
@@ -1585,7 +1585,7 @@ body {
   }
   
   .phrase-display {
-    margin-top: 20px;
+    margin-top: 10px;
     box-shadow: none;
     border: 1px solid #000;
   }
