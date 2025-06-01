@@ -1202,13 +1202,7 @@ checkPhraseCompleted() {
  */
 checkForCompletedWords() {
   if (!this.enableWordCompletionFeedback) return;
-  
-  // NEW: Don't check for word completions if the phrase is already completed
-  if (this.gridRenderer && this.gridRenderer.isCompleted) {
-    console.log('Phrase is completed - skipping word completion checks');
-    return;
-  }
-  
+    
   // If no word boundaries parsed yet, do it now
   if (this.wordBoundaries.length === 0) {
     this.parseWordBoundaries();
@@ -1262,6 +1256,13 @@ showSuccessMessage() {
 flashCompletedWord(wordIndex) {
   const wordBoundary = this.wordBoundaries[wordIndex];
   if (!wordBoundary) return;
+
+  // Skip flashing if phrase is completed - just update text color
+  if (this.gridRenderer && this.gridRenderer.isCompleted) {
+    console.log(`Phrase completed - updating text color for word "${wordBoundary.word}" without flashing`);
+    this.updateWordTextColor(wordIndex);
+    return;
+  }
   
   console.log(`Flashing snake pieces for CORRECTLY completed word "${wordBoundary.word}"`);
   
