@@ -3184,26 +3184,31 @@ getSelectedLetters() {
   /**
    * Clear all selected cells
    */
-  clearSelections() {
-    // Reset selected state for all cells
-    for (let y = 0; y < this.grid.length; y++) {
-      for (let x = 0; x < this.grid[0].length; x++) {
-        this.grid[y][x].isSelected = false;
-      }
+clearSelections() {
+  // Reset selected state for all cells
+  for (let y = 0; y < this.grid.length; y++) {
+    for (let x = 0; x < this.grid[0].length; x++) {
+      this.grid[y][x].isSelected = false;
     }
-    
-    // Clear selected cells array
-    this.selectedCells = [];
-    this.lastSelectedCell = null; // Reset last selected cell
-    
-    // Re-render grid
-    this.renderVisibleGrid();
-    
-    // Dispatch event for selections cleared
-    document.dispatchEvent(new CustomEvent('selectionsCleared', { 
-      detail: { gridRenderer: this }
-    }));
   }
+  
+  // Clear selected cells array
+  this.selectedCells = [];
+  this.lastSelectedCell = null; // Reset last selected cell
+  
+  // Re-render grid
+  this.renderVisibleGrid();
+  
+  // NEW: Restart flashing the start cell since no cells are selected
+  setTimeout(() => {
+    this.startFlashingStartCell();
+  }, 100); // Small delay to let the grid update
+  
+  // Dispatch event for selections cleared
+  document.dispatchEvent(new CustomEvent('selectionsCleared', { 
+    detail: { gridRenderer: this }
+  }));
+}
 
   /**
  * Modified setCompleted method to visually indicate if the path is correct
