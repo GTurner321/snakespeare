@@ -1203,6 +1203,12 @@ checkPhraseCompleted() {
 checkForCompletedWords() {
   if (!this.enableWordCompletionFeedback) return;
   
+  // NEW: Don't check for word completions if the phrase is already completed
+  if (this.gridRenderer && this.gridRenderer.isCompleted) {
+    console.log('Phrase is completed - skipping word completion checks');
+    return;
+  }
+  
   // If no word boundaries parsed yet, do it now
   if (this.wordBoundaries.length === 0) {
     this.parseWordBoundaries();
