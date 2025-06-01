@@ -3276,27 +3276,76 @@ setCompleted(completed, isCorrect = true) {
 }
 
 /**
- * Start flashing the start cell to indicate it should be selected first
+ * Enhanced start flashing method with better debugging
  */
 startFlashingStartCell() {
+  console.log('startFlashingStartCell called');
+  console.log('Selected cells length:', this.selectedCells.length);
+  
   // Only flash if the start cell is not already selected
   if (this.selectedCells.length === 0) {
-    const startCellElement = document.querySelector('.grid-cell.start-cell');
-    if (startCellElement) {
-      startCellElement.classList.add('flash-unselected');
-      console.log('Started flashing start cell');
+    // Try multiple selectors to find the start cell
+    let startCellElement = document.querySelector('.grid-cell.start-cell');
+    
+    if (!startCellElement) {
+      // Alternative: find by data attributes
+      startCellElement = document.querySelector('.grid-cell[data-grid-x="35"][data-grid-y="35"]');
+      console.log('Found start cell by coordinates:', startCellElement);
     }
+    
+    if (!startCellElement) {
+      // Wait a bit longer for DOM to be ready
+      console.log('Start cell not found, retrying in 500ms...');
+      setTimeout(() => {
+        this.startFlashingStartCell();
+      }, 500);
+      return;
+    }
+    
+    console.log('Start cell element found:', startCellElement);
+    console.log('Current classes:', startCellElement.className);
+    
+    // Remove any existing flash class first
+    startCellElement.classList.remove('flash-unselected');
+    
+    // Force a reflow
+    void startCellElement.offsetWidth;
+    
+    // Add the flash class
+    startCellElement.classList.add('flash-unselected');
+    
+    console.log('Added flash-unselected class');
+    console.log('Classes after adding flash:', startCellElement.className);
+    
+    // Verify the animation is applied
+    const computedStyle = window.getComputedStyle(startCellElement);
+    console.log('Animation name:', computedStyle.animationName);
+    console.log('Animation duration:', computedStyle.animationDuration);
+    
+  } else {
+    console.log('Start cell not flashing because cells are already selected');
   }
 }
 
 /**
- * Stop flashing the start cell
+ * Enhanced stop flashing method with better debugging
  */
 stopFlashingStartCell() {
-  const startCellElement = document.querySelector('.grid-cell.start-cell');
+  console.log('stopFlashingStartCell called');
+  
+  // Try multiple selectors
+  let startCellElement = document.querySelector('.grid-cell.start-cell');
+  
+  if (!startCellElement) {
+    startCellElement = document.querySelector('.grid-cell[data-grid-x="35"][data-grid-y="35"]');
+  }
+  
   if (startCellElement) {
+    console.log('Removing flash-unselected class from start cell');
     startCellElement.classList.remove('flash-unselected');
     console.log('Stopped flashing start cell');
+  } else {
+    console.log('Start cell element not found when trying to stop flashing');
   }
 }
   
