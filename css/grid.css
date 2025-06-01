@@ -852,18 +852,9 @@ body {
   max-width: 650px;
   margin: 0 auto;
   padding: 15px;
-  background-color: var(--box-bg-color);
-  border: 1px solid var(--box-border-color);
-  border-top: 2px solid var(--btn-metal-lighter);
-  border-left: 2px solid var(--btn-metal-light);
-  border-right: 2px solid var(--btn-metal-dark);
-  border-bottom: 3px solid var(--btn-metal-darker);
-  border-radius: 0 0 8px 8px;
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
-  box-shadow: 
-    0 8px 15px 3px rgba(0, 0, 0, 0.2),
-    0 2px 8px 2px var(--btn-metal-shadow);
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
   box-sizing: border-box;
   min-height: 60px;
   transition: min-height 0.3s ease;
@@ -1714,7 +1705,7 @@ body {
 }
 
 .welcome-shakespeare-container {
-  max-width: 95%;
+  max-width: 105%;
 }
 
 .welcome-shakespeare-image {
