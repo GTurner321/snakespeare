@@ -108,6 +108,26 @@ body {
   display: none;
 }
 
+/* Mobile layout optimizations */
+@media (max-width: 768px) {
+  .game-container {
+    padding: 35px 10px 20px 10px; /* Reduced top padding from 70px to 35px */
+    gap: 0; /* Remove any flex gap */
+  }
+}
+
+@media (max-width: 480px) {
+  .game-container {
+    padding: 30px 8px 15px 8px; /* Further reduced top padding from 60px to 30px */
+  }
+}
+
+@media (max-width: 320px) {
+  .game-container {
+    padding: 25px 5px 10px 5px; /* Very tight spacing for tiny screens */
+  }
+}
+
 /* ==========================================================================
    3. Grid Container & Responsive Sizing
    ========================================================================== */
@@ -189,6 +209,14 @@ body {
 
 .grid-container.slow-scroll {
   transition-duration: 350ms !important;
+}
+
+/* Mobile spacing optimizations for grid wrapper */
+@media (max-width: 768px) {
+  .grid-container-wrapper,
+  #grid-container {
+    margin: 0; /* Ensure no extra margins */
+  }
 }
 
 /* ==========================================================================
