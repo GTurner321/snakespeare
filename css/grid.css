@@ -1244,7 +1244,7 @@ body {
   .snake-piece {
     width: 100% !important;
     height: 100% !important;
-    padding: 1px;
+    padding: 0px;
   }
   
   /* Sea icons mobile scaling */
@@ -1316,7 +1316,7 @@ body {
   
   /* Snake pieces very small screens */
   .snake-piece {
-    padding: 2px;
+    padding: 0px;
   }
   
   /* Sea icons very small screens */
