@@ -1157,7 +1157,7 @@ body {
 @media (max-width: 768px) {
   /* Game container mobile layout */
   .game-container {
-    padding: 70px 10px 20px 10px; /* Top padding for menu clearance */
+    padding: 50px 10px 20px 10px; /* Top padding for menu clearance */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1178,8 +1178,8 @@ body {
   
   /* PHRASE DISPLAY - Larger font and menu clearance */
   .phrase-display {
-    margin-top: 60px; /* Height of burger menu + buffer */
-    margin-bottom: 15px;
+    margin-top: 40px; /* Height of burger menu + buffer */
+    margin-bottom: 5px;
     font-size: 1.3rem; /* Larger font size as requested */
     letter-spacing: 1.8px;
     line-height: 1.5;
@@ -1196,7 +1196,7 @@ body {
   .triangular-controller-container {
     width: 97px; /* Increased from 75px (30% larger) */
     height: 97px; /* Increased from 75px (30% larger) */
-    margin-top: 15px;
+    margin-top: 10px;
     margin-bottom: 20px;
   }
   
@@ -1256,12 +1256,12 @@ body {
 /* Small screens (480px and below) */
 @media (max-width: 480px) {
   .game-container {
-    padding: 60px 8px 15px 8px;
+    padding: 40px 8px 15px 8px;
   }
   
   /* PHRASE DISPLAY - Mobile optimized */
   .phrase-display {
-    margin-top: 55px;
+    margin-top: 35px;
     padding: 2px;
     min-height: 50px;
     font-size: 1.2rem; /* Still larger than before */
@@ -1276,7 +1276,7 @@ body {
   .triangular-controller-container {
     width: 83px; /* 30% larger than the 64px it was before */
     height: 83px;
-    margin: 18px auto;
+    margin: 10px auto;
   }
   
   .triangle-up, .triangle-down {
