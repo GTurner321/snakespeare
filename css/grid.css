@@ -1173,7 +1173,7 @@ body {
   
   /* Mobile grid cells - responsive sizing */
   .grid-cell {
-    font-size: clamp(1rem, 3vw, 1.3rem);
+    font-size: clamp(1.2rem, 4vw, 1.6rem);
   }
   
   /* PHRASE DISPLAY - Larger font and menu clearance */
@@ -1326,7 +1326,7 @@ body {
   
   /* Grid cells font size */
   .grid-cell {
-    font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+    font-size: clamp(1.1rem, 4.5vw, 1.5rem);
   }
 }
 
