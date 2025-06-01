@@ -2003,7 +2003,7 @@ body {
   }
   
   .shakespeare-image {
-    width: 150px;
+    width: 180px;
   }
   
   .info-box-container:not([style*="display: none"]) ~ .shakespeare-modal-overlay .shakespeare-container {
@@ -2078,7 +2078,7 @@ body {
   }
   
   .shakespeare-image {
-    width: 120px;
+    width: 160px;
   }
   
   .info-box-container:not([style*="display: none"]) ~ .shakespeare-modal-overlay .shakespeare-container {
