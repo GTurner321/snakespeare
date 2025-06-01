@@ -294,8 +294,9 @@ body {
     opacity: 1;
   }
   50% { 
-    background-color: transparent !important;
-    opacity: 0.3;
+    background-color: var(--maingreen) !important; /* Change to sea color instead of transparent */
+    opacity: 0.5 !important;
+    transform: scale(1.05) !important; /* Add slight scale for more visibility */
   }
   100% { 
     background-color: var(--startgreen) !important;
