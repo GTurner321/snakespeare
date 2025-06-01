@@ -1773,7 +1773,7 @@ body {
 /* Snake icon replaces the 'S' completely */
 .title-snake-icon {
   position: static;
-  font-size: 1.2rem;
+  font-size: 1.6rem; /* Increased from 1.2rem to make it larger */
   color: var(--text-dark);
   text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8);
 }
@@ -1790,14 +1790,14 @@ body {
 
 /* Instructions styles */
 .instructions-container {
-  font-size: 16px;
+  font-size: 20px; /* Increased from 16px */
   line-height: 1.4;
 }
 
 .instructions-list {
   list-style: none;
   padding: 0;
-  margin: 0 0 20px 0;
+  margin: 0 0 15px 0; /* Reduced bottom margin from 20px to 15px */
 }
 
 .instruction-item {
@@ -1814,7 +1814,7 @@ body {
 /* Enter button styles */
 .enter-button-container {
   text-align: center;
-  margin: 20px 0;
+  margin: 15px 0; /* Reduced from 20px 0 */
   transition: opacity 0.5s ease-in-out;
 }
 
@@ -1825,11 +1825,11 @@ body {
 /* Farewell message styles */
 .farewell-container {
   text-align: center;
-  margin: 20px 0;
+  margin: 15px 0 10px 0; /* Reduced bottom margin from 20px to 10px */
 }
 
 .farewell-message {
-  font-size: 18px;
+  font-size: 22px; /* Increased from 18px */
   font-weight: normal; /* Not bold */
   margin: 0;
   font-style: normal; /* Not italic */
@@ -2049,11 +2049,15 @@ body {
   }
   
   .title-snake-icon {
-    font-size: 1rem;
+    font-size: 1.3rem; /* Increased from 1rem */
   }
   
   .instructions-container {
-    font-size: 15px;
+    font-size: 18px; /* Increased from 15px */
+  }
+  
+  .farewell-message {
+    font-size: 20px; /* Increased from 16px */
   }
 }
 
@@ -2126,10 +2130,14 @@ body {
   }
   
   .title-snake-icon {
-    font-size: 0.9rem;
+    font-size: 1.1rem; /* Increased from 0.9rem */
   }
   
   .instructions-container {
-    font-size: 14px;
+    font-size: 17px; /* Increased from 14px */
+  }
+  
+  .farewell-message {
+    font-size: 18px; /* Increased from 15px */
   }
 }
