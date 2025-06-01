@@ -879,7 +879,7 @@ body {
   width: 100%;
   max-width: 650px;
   margin: 0 auto;
-  padding: 2px;
+  padding: 10px;
   background-color: transparent;
   border: none;
   box-shadow: none;
@@ -889,8 +889,8 @@ body {
 }
 
 #phrase-text {
-  font-size: clamp(1rem, 3vw, 1.3rem);
-  letter-spacing: clamp(1px, 0.5vw, 2px);
+  font-size: clamp(1.15rem, 3.5vw, 1.5rem);
+  letter-spacing: clamp(1.2px, 0.6vw, 2.4px);
   text-align: center;
   margin: 0;
   padding: 0;
