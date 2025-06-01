@@ -1765,7 +1765,7 @@ body {
 
 /* Game title using grid cell appearance */
 .game-title-container {
-  margin-bottom: 25px;
+  margin-bottom: 35px; /* Increased from 25px for more space after title */
   text-align: center;
 }
 
@@ -1787,11 +1787,11 @@ body {
   border-radius: 4px;
   font-family: 'Trebuchet MS', Arial, sans-serif;
   font-weight: bold;
-  font-size: 1.2rem;
+  font-size: 1.4rem; /* Increased from 1.2rem */
   text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8) !important; /* Match path-cell text shadow */
   box-shadow: 0 2px 4px var(--box-shadow-color); /* Keep existing shadow for depth */
-  width: 40px;
-  height: 40px;
+  width: 46px; /* Increased from 40px */
+  height: 46px; /* Increased from 40px */
   position: relative;
   box-sizing: border-box;
 }
@@ -1799,7 +1799,7 @@ body {
 /* Snake icon replaces the 'S' completely */
 .title-snake-icon {
   position: static;
-  font-size: 1.6rem; /* Increased from 1.2rem to make it larger */
+  font-size: 1.8rem; /* Increased from 1.6rem to match larger cell */
   color: var(--text-dark);
   text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.8);
 }
@@ -1855,7 +1855,7 @@ body {
 }
 
 .farewell-message {
-  font-size: 22px; /* Increased from 18px */
+  font-size: 20px; /* Increased from 18px */
   font-weight: normal; /* Not bold */
   margin: 0;
   font-style: normal; /* Not italic */
@@ -2083,7 +2083,7 @@ body {
   }
   
   .farewell-message {
-    font-size: 20px; /* Increased from 16px */
+    font-size: 18px; /* Increased from 16px */
   }
 }
 
@@ -2164,6 +2164,6 @@ body {
   }
   
   .farewell-message {
-    font-size: 18px; /* Increased from 15px */
+    font-size: 17px; /* Increased from 15px */
   }
 }
